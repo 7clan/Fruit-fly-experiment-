@@ -18,23 +18,34 @@ real fly is NEVER connected to game input in this phase.
 | `PHASE2_REPORT.md` | Honest status report (what was built / what the real fly demonstrated / what is UNKNOWN) |
 | `config/gate.yaml` | Machine-readable pre-registered gate (single source of truth) |
 | `config/tracking.yaml` | Detector/recording parameters (apparatus level) |
+| `config/apparatus_checks.yaml` | Pre-session apparatus checks (preflight/blank/intake thresholds; Amendment 2) |
 
 ## Quick start
 
 ```bash
-# 1. validate the MEASUREMENT CODE on synthetic ground-truth videos (~2 min)
+# 1. validate the MEASUREMENT CODE on synthetic ground-truth videos
 #    (software test only — NOT evidence about real flies)
-python phase2/run_phase2.py validate
+python phase2/run_phase2.py validate --duration 120
 
-# 2. record a live session on the camera machine (after reading the protocol)
-python phase2/run_phase2.py record --camera 0 --minutes 10 --label baseline \
-    --fly-id F01 --px-per-mm 6.7 \
-    --arena '{"type":"circle","center_px":[640,360],"radius_px":450}'
-python phase2/run_phase2.py record --minutes 10 --label stimulus \
-    --stimulus --session-index 0 --fly-id F01 --px-per-mm 6.7 \
-    --arena '{"type":"circle","center_px":[640,360],"radius_px":450}'
+# 2. ON THE RIG MACHINE, every recording day, in this order (no fly yet):
+python phase2/run_phase2.py calibrate --camera 0 --arena-mm 95   # once per build
+python phase2/run_phase2.py calibrate --recheck-scale            # daily drift check
+python phase2/run_phase2.py preflight --camera 0                 # ~20 s
+python phase2/run_phase2.py blank --camera 0                     # >= 3 min + LED blinks
 
-# 3. track + annotate + analyze + gate
+# 3. fly sessions (record REFUSES unless 2 passed today; labels unique):
+python phase2/run_phase2.py record --minutes 10 --label baseline_01 \
+    --fly-id F01 --age 5 --sex M --temperature 23 --humidity 45
+python phase2/run_phase2.py record --minutes 10 --label stimulus_01 \
+    --stimulus --session-index 0 --fly-id F01 --age 5 --sex M \
+    --temperature 23 --humidity 45
+
+# 4. after every recording day: immutable, verified backup
+python phase2/run_phase2.py backup --to /path/to/usb-drive
+
+# 5. when recordings come back: INTAKE FIRST (integrity + compliance,
+#    no analysis, no tuning), then the fixed pre-registered sequence:
+python phase2/run_phase2.py intake data/sessions
 python phase2/run_phase2.py track   data/sessions/<dir>
 python phase2/run_phase2.py annotate data/sessions/<dir> --n 50
 python phase2/run_phase2.py analyze data/sessions/<a> data/sessions/<b> ... \
@@ -42,6 +53,10 @@ python phase2/run_phase2.py analyze data/sessions/<a> data/sessions/<b> ... \
 python phase2/run_phase2.py gate --analysis results/first_analysis \
     --annotations data/sessions/<a>/annotations.csv ...
 ```
+
+See `docs/PHASE2_START_GUIDE.md` for the full physical-experiment
+procedure (shopping list, arena construction, camera/lighting setup,
+calibration, blank test, recording, backup, pass/fail criteria).
 
 ## What the software measures (all pre-registered constants in gate.yaml)
 

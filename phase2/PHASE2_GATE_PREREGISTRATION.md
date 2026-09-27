@@ -190,3 +190,78 @@ threshold value:
    `lead_in_s` and excluded from coverage/pause statistics — they are not
    "lost tracking" and must not create a phantom leading pause. Thresholds
    unchanged.
+
+### Amendment 2 (2026-09-28, while preparing the PHYSICAL experiment, BEFORE any real-fly data)
+
+Registered when moving from software validation to the physical apparatus.
+**No G1–G5 threshold, no analysis constant, no session-structure rule, and
+no welfare rule is changed.** Everything below is apparatus-level. The
+machine-readable additions live in `phase2/config/apparatus_checks.yaml`
+(id `PHASE2-APPARATUS-1.0.0`), deliberately separate from this gate file.
+
+**Motivating problem found during physical-experiment preparation:** the
+pre-registered session flow (PHASE2_PROTOCOL §5.1: the fly habituates
+≥ 30 min INSIDE the closed enclosure, then recording starts) means real
+sessions have **no fly-free lead-in** — but the `static` detector builds
+its background from the first 40 recorded frames. The fly-free-lead-in
+assumption holds for the synthetic validation videos only; the protocol
+and the tracker were incompatible as written for the real rig.
+
+1. **Pre-session apparatus checks (new, pre-registered):** `preflight`
+   (~20 s live capture: fps, exposure/lighting stability, focus, resolution
+   vs calibration, background stability, sensor noise, arena/marker
+   geometry) and a **blank-arena test** (≥ 3 min no-fly recording: zero
+   confident false detections, no raw foreground motion, lighting
+   stability, no static "fly-like" dark features, sensor noise, and an
+   N/E/S/W stimulus-LED blink check read back from the video margin). The
+   recorder REFUSES animal sessions unless both passed within 24 h under
+   the same config/code hash; `--force` overrides are recorded as protocol
+   deviations in `session.json` and flagged by `intake`.
+2. **Detector `reference` background mode (new):** the background is the
+   per-pixel median of the day's PASSED blank recording (identical
+   lighting, fly-free by construction). Real fly sessions are tracked in
+   this mode, which keeps the pre-registered session flow (habituation →
+   record) intact. The `static` mode and the synthetic validation suite
+   are unchanged — re-run after this amendment: **bit-identical tracks and
+   identical SA1–SA11 outcomes** (SA8 p = 0.014 / 0.005).
+3. **New software acceptance SA12:** reference-mode tracking on synthetic
+   sessions rendered with the fly present FROM FRAME 0, background built
+   from a separate fly-free clip (exactly the real-rig flow), must meet the
+   SA1/SA2 thresholds (coverage ≥ 0.98, median error ≤ 1.0 mm, p95
+   ≤ 2.5 mm). Observed: coverage 1.000, median error 0.08 mm, p95 0.12 mm
+   — PASS.
+4. **Data provenance (new):** every `session.json` records `session_id`,
+   config/code hashes (tracking.yaml, gate.yaml, apparatus_checks.yaml,
+   flyrec source tree, git revision), the rig calibration reference +
+   hash, preflight/blank PASS references, the background reference + hash,
+   and the camera's reported vs measured frame rate (the container fps is
+   set to the measured rate when the camera report is implausible, so
+   timestamps stay truthful). Raw video is never overwritten; session
+   directories are immutable and labels unique; backups are
+   content-addressed (SHA-256 manifests) and never overwrite.
+5. **Per-frame derived export (new):** `analyze` additionally writes
+   `per_frame.csv` (session id, frame, t, calibrated x/y, speed, heading,
+   pause flag, wall-in-band, wall-following, stimulus state, confidence,
+   interpolated flag) — derived and regenerable like `tracks.csv`; nothing
+   feeds back from it into any metric or gate criterion.
+6. **Intake procedure (new, fixed order):** when recordings come back,
+   `intake` verifies file integrity (video opens, frame count, metadata,
+   SHA-256 manifest) and protocol compliance (the §2 data requirements,
+   seeded stimulus schedule regeneration, provenance consistency, welfare
+   duration cap) BEFORE any tracking/analysis/gate evaluation. No tuning
+   precedes a PASS/FAIL report.
+7. **Camera/geometry clarification (derived from the pre-registered
+   software geometry, not a new degree of freedom):** the working
+   resolution must place the arena (≥ 600 px across, §3) with ≥ 60 px
+   clearance between the arena rim and every frame edge (recommended
+   ≥ 150 px) so the four stimulus marker boxes (tracking.yaml
+   `stimulus_markers`: 30×14 px at an 18 px frame margin) lie outside the
+   arena ROI. In practice this requires ≥ 1280×960 or 1920×1080 at
+   ≥ 30 fps; **1280×720 cannot satisfy the pre-registered software
+   geometry and is not acceptable for the real rig.**
+8. **Validation duration note (reproduction):** the registered software
+   validation run uses `--duration 120` (8 stimulus events per synthetic
+   session). A 60 s run halves the number of stimulus events and reduces
+   the permutation test's power (observed: stimulus_01 p = 0.142 at 60 s
+   vs p = 0.014 at 120 s). Reproduce with
+   `python phase2/run_phase2.py validate --duration 120`.

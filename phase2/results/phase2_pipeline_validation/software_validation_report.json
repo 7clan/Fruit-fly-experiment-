@@ -21,6 +21,17 @@
       "p95_mm": 0.12088010589009186,
       "pass": true
     },
+    "SA12_reference_mode": {
+      "purpose": "reference-background tracking (real-rig path): fly present from frame 0, background from a fly-free clip",
+      "coverage": {
+        "baseline_01": 1.0,
+        "baseline_02": 1.0,
+        "baseline_03": 1.0
+      },
+      "median_err_mm": 0.07962411694957536,
+      "p95_err_mm": 0.12106279357027099,
+      "pass": true
+    },
     "SA3_speed": {
       "tracked_vs_gt": {
         "baseline_01": [

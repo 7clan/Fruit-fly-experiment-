@@ -33,6 +33,15 @@ def load_tracking_cfg() -> dict:
     return _load("tracking")
 
 
+def load_checks_cfg() -> dict:
+    """Apparatus pre-session check thresholds (preflight / blank / intake).
+
+    Apparatus-level acceptance (PHASE2-APPARATUS-1.0.0), registered before
+    any real-fly data. Deliberately separate from the pre-registered gate.
+    """
+    return _load("apparatus_checks")
+
+
 def analysis_constants(gate_cfg: dict | None = None) -> dict:
     """Flat view of gate.yaml:analysis_constants (the frozen analysis params)."""
     g = gate_cfg if gate_cfg is not None else load_gate_cfg()

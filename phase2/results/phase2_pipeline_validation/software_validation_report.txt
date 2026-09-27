@@ -5,6 +5,7 @@ NOT evidence about real flies)
 [PASS] SA11_blank_zero_detections
 [PASS] SA1_coverage
 [PASS] SA2_position_error
+[PASS] SA12_reference_mode
 [PASS] SA3_speed
 [PASS] SA4_pause_frequency
 [PASS] SA5_bout_duration

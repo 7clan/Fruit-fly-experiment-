@@ -120,6 +120,70 @@ def validate(out_dir: Path | None = None, regenerate: bool = True,
                      np.percentile(all_err, 95) <= float(sa["SA2_p95_err_max_mm"])),
     }
 
+    # SA12 — reference-background mode (Amendment 2; the REAL-RIG path)
+    # The pre-registered real-fly session flow (habituation inside the closed
+    # enclosure BEFORE recording starts) means real sessions have NO fly-free
+    # lead-in. This check validates the reference mode used for real data:
+    # synthetic sessions rendered with the fly present FROM FRAME 0, tracked
+    # against a background image built from a separate fly-free clip (exactly
+    # the real-rig flow: blank recording -> stored background -> fly session).
+    try:
+        from .synthetic_video import (generate_reference_background,
+                                      generate_session)
+        ref_root = DATA_DIR / "validation_reference"
+        bg_path = ref_root / "reference_bg.png"
+        ref_specs = [("baseline_01", 20260927), ("baseline_02", 20260928),
+                     ("baseline_03", 20260929)]
+        if regenerate or not bg_path.exists() or not \
+                (ref_root / "baseline_01").exists():
+            print("generating reference-mode synthetic sessions (SA12) ...",
+                  flush=True)
+            generate_reference_background(bg_path)
+            for label, seed in ref_specs:
+                generate_session(ref_root / label, label, "baseline", seed,
+                                 duration_s=duration_s, lead_in_s=0.0)
+        ref_det_cfg = dict(tcfg.get("detector", {}))
+        ref_det_cfg["mode"] = "reference"
+        ref_det_cfg["reference_file"] = str(bg_path)
+        ref_cfg = {**tcfg, "detector": ref_det_cfg}
+        ref_cov, ref_err = {}, {}
+        for label, _seed in ref_specs:
+            sdir = ref_root / label
+            gt = _gt(sdir)
+            present = gt["present"].astype(int) == 1
+            gp = np.stack([_to_float(gt["x_px"]), _to_float(gt["y_px"])],
+                          axis=1)
+            tstats = track_video(next(sdir.glob("video.*")),
+                                 sdir / "tracks.csv", ref_cfg,
+                                 calibration_from_session(
+                                     json.loads((sdir / "session.json")
+                                                .read_text(encoding="utf-8"))),
+                                 read_stimulus=True)
+            tr = load_tracks(sdir / "tracks.csv")
+            det = tr["found"]
+            ref_cov[label] = float(((det) & (tr["conf"] >= 0.5))[present]
+                                   .mean())
+            both = present & det
+            ref_err[label] = np.hypot(tr["x_px"][both] - gp[both, 0],
+                                      tr["y_px"][both] - gp[both, 1]) / 5.0
+        ref_err_all = np.concatenate(list(ref_err.values()))
+        results["criteria"]["SA12_reference_mode"] = {
+            "purpose": "reference-background tracking (real-rig path): fly "
+                       "present from frame 0, background from a fly-free clip",
+            "coverage": {k: round(v, 4) for k, v in ref_cov.items()},
+            "median_err_mm": float(np.median(ref_err_all)),
+            "p95_err_mm": float(np.percentile(ref_err_all, 95)),
+            "pass": bool(min(ref_cov.values()) >=
+                         float(sa["SA1_min_coverage"]) and
+                         np.median(ref_err_all) <=
+                         float(sa["SA2_median_err_max_mm"]) and
+                         np.percentile(ref_err_all, 95) <=
+                         float(sa["SA2_p95_err_max_mm"])),
+        }
+    except Exception as exc:                     # never mask SA1-SA11
+        results["criteria"]["SA12_reference_mode"] = {
+            "pass": False, "error": f"{type(exc).__name__}: {exc}"}
+
     # -------------------------------------------- behavioral metric checks
     # GT reference metrics are computed by pushing the GROUND-TRUTH positions
     # through the IDENTICAL analysis code path (same smoothing, same bout

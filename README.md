@@ -20,6 +20,10 @@ and action translation.**
 >   only** — no surgery, implants, genetic modification, toxic substances,
 >   injury, extreme temperatures, or harmful manipulation. See
 >   `phase2/PHASE2_GATE_PREREGISTRATION.md` and `phase2/PHASE2_PROTOCOL.md`.
+> - **Phase-2 physical experiment is READY**: apparatus software validated
+>   (SA1–SA12 all PASS), pre-session checks pre-registered (Amendment 2),
+>   and the bench procedure is in `docs/PHASE2_START_GUIDE.md`. **No
+>   real-fly data has been collected — every real-fly outcome is UNKNOWN.**
 > - **No game input has ever been sent.** No game automation exists here.
 >   The only permitted game source is the single Grand Piece Online page;
 >   all other game facts remain UNKNOWN (see `docs/GPO_PLAN.md`).

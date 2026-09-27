@@ -1,0 +1,77 @@
+# ============================================================================
+# PHASE-2 APPARATUS CHECKS — pre-session acceptance thresholds (MACHINE-READABLE)
+# Registered 2026-09-28 BEFORE any real-fly data was collected (git commit is
+# the tamper-evident timestamp). See PHASE2_GATE_PREREGISTRATION.md Amendment 2.
+#
+# These are APPARATUS-LEVEL acceptance checks (camera / environment / rig),
+# evaluated BEFORE any animal session. They are deliberately SEPARATE from
+# config/gate.yaml: the pre-registered behavioral gate G1-G5 and every
+# analysis constant there remain untouched.
+#
+# Order enforced by the software:
+#   calibrate  ->  preflight  ->  blank  ->  record (animal sessions)
+# A session with a live fly is REFUSED unless preflight AND blank passed
+# within `max_age_hours` under the SAME config/code hash.
+# ============================================================================
+apparatus_checks_id: PHASE2-APPARATUS-1.0.0
+registered: 2026-09-28
+
+general:
+  max_age_hours: 24          # a PASS is valid this long (then re-run)
+  require_calibration: true  # preflight needs a rig calibration on file
+
+preflight:                   # ~20 s live capture, no fly in the arena
+  capture_seconds: 20
+  warmup_seconds: 3          # discard first frames (sensor settle)
+  min_fps: 30                # pre-registered data requirement (min_fps)
+  target_fps: 60             # preferred (informational)
+  probe_fps_floor: 25        # record() aborts below this measured rate
+  # exposure / lighting stability (8-bit gray, frame means)
+  mean_gray_std_max: 2.0     # flicker / auto-exposure pumping
+  mean_gray_drift_max: 2.0   # |mean(first 5 s) - mean(last 5 s)|
+  # background stability inside the arena ROI
+  consec_frame_diff_max: 2.0 # median |frame - previous| (gray levels)
+  max_fg_frames: 0           # frames with any foreground blob >= min_area_px
+  # sensor noise
+  temporal_noise_median_max: 8.0   # FAIL above (median per-pixel temporal std)
+  temporal_noise_warn: 4.0         # warn above
+  # focus (Laplacian variance over the arena-center target region;
+  # requires the printed calibration sheet for this check)
+  laplacian_var_min: 60.0
+  # geometry (from the rig calibration; derived from the pre-registered
+  # software geometry: arena >= 600 px across, marker boxes at an 18 px
+  # frame margin must sit OUTSIDE the arena ROI)
+  arena_diameter_px_min: 600
+  rim_clearance_px_min: 60       # marker box (32 px) + ROI inflate (8) + buffer
+  rim_clearance_px_recommended: 150
+  marker_boxes_outside_arena: true
+  px_per_mm_range: [3.0, 20.0]
+  radius_vs_physical_max_mm: 3.0 # |fitted radius_mm - measured ID/2|
+  scale_anisotropy_max: 0.02     # |px/mm_x - px/mm_y| / mean (camera tilt)
+
+blank:                       # >= 3 min recording, no fly, LEDs blink-checked
+  minutes: 3
+  marker_check: true         # each of N/E/S/W must be read back once
+  marker_blink:              # operator follows this printed timetable
+    start_s: 30
+    on_s: 10
+    gap_s: 20                # N at 30 s, E at 60 s, S at 90 s, W at 120 s
+  # tracker / detection false positives (SA11 semantics on the real rig)
+  confident_detections_max: 0    # frames with found & confidence >= 0.5
+  any_detections_frac_max: 0.001
+  raw_fg_frames_frac_max: 0.01   # frames with foreground area >= min_area_px
+  # lighting stability across the whole blank
+  mean_gray_std_max: 3.0
+  mean_gray_drift_max: 3.0
+  # static "fly-like" dark features inside the arena ROI (smudges, rim arcs,
+  # shadows) found by morphological black-hat on the mean frame
+  static_dark_blobs_max: 0
+  static_dark_blob_min_area_px: 12
+  # sensor noise (same scale as preflight)
+  temporal_noise_median_max: 8.0
+  temporal_noise_warn: 4.0
+
+intake:                      # verification BEFORE any analysis (fixed order)
+  min_frame_completion: 0.90     # frames >= duration_s * fps * this
+  verify_config_hash_consistency: true
+  flag_overridden_checks: true

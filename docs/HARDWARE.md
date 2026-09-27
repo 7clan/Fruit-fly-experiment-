@@ -1,5 +1,14 @@
 # HARDWARE — the exact physical setup
 
+> **PHASE-2 BUILD?** This file is the original Phase-1 hardware sketch.
+> For the real-fly Phase-2 experiment, build instead to
+> **`docs/PHASE2_START_GUIDE.md`** (the authoritative shopping list, arena
+> construction dimensions, camera/lighting/LED setup, calibration and
+> blank-test procedure). Phase-2 requirements supersede this sketch where
+> they differ: circular arena 90–100 mm inner diameter, camera ≥ 30 fps at
+> ≥ 1280×960 or 1920×1080 (720p cannot fit the marker margin geometry), and
+> the pre-session preflight + blank-arena checks are mandatory.
+
 ## 1. System overview
 
 ```

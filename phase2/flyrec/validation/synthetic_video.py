@@ -189,10 +189,18 @@ def stim_angle_of(side: str | None) -> float | None:
 
 def generate_session(out_dir: Path, label: str, kind: str, seed: int,
                      duration_s: float = 60.0, stimulus: bool = False,
-                     session_index: int = 0) -> Path:
-    """Render one ground-truth session into out_dir (label name)."""
+                     session_index: int = 0,
+                     lead_in_s: float | None = None) -> Path:
+    """Render one ground-truth session into out_dir (label name).
+
+    lead_in_s: seconds of fly-free arena before the subject appears. Default
+    LEAD_IN_S (the software-test structure SA1-SA11 were registered on).
+    Set 0.0 to emulate the REAL-RIG situation (fly present from the first
+    frame) for the reference-background mode check SA12.
+    """
     out_dir = Path(out_dir)
     out_dir.mkdir(parents=True, exist_ok=True)
+    lead_in_s = LEAD_IN_S if lead_in_s is None else float(lead_in_s)
     rng = np.random.default_rng(seed)
     events = []
     if stimulus:
@@ -210,7 +218,7 @@ def generate_session(out_dir: Path, label: str, kind: str, seed: int,
         events = [{"t_on": o, "t_off": o + 5.0, "side": s}
                   for o, s in zip(onsets, sides)]
     n_frames = int(round(duration_s * FPS))
-    lead = int(LEAD_IN_S * FPS)
+    lead = int(lead_in_s * FPS)
 
     fly = TestPatternFly(np.random.default_rng(seed + 999))
     gt_rows = []
@@ -263,7 +271,7 @@ def generate_session(out_dir: Path, label: str, kind: str, seed: int,
                    "evidence about real flies",
         "seed": seed,
         "fps": FPS, "width": W, "height": H,
-        "duration_s": duration_s, "lead_in_s": LEAD_IN_S,
+        "duration_s": duration_s, "lead_in_s": lead_in_s,
         "calibration": {"px_per_mm": PX_PER_MM},
         "arena": ARENA,
         "stimulus_schedule": events,
@@ -280,6 +288,50 @@ def generate_session(out_dir: Path, label: str, kind: str, seed: int,
     }
     (out_dir / "session.json").write_text(
         json.dumps(meta, indent=2, default=str), encoding="utf-8")
+    return out_dir
+
+
+def generate_reference_background(out_path: Path, seed: int = 424243,
+                                 duration_s: float = 8.0) -> Path:
+    """Fly-free clip -> per-pixel median background image (SA12).
+
+    Mirrors the REAL-RIG flow exactly: a no-fly recording under identical
+    lighting becomes the stored `reference` detector background.
+    """
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed)
+    stack = []
+    for i in range(int(duration_s * FPS)):
+        frame = render_frame(i / FPS, None, rng, None,
+                             np.full((H, W), BG_LEVEL, np.float32))
+        stack.append(cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY))
+    bg = np.median(np.stack(stack, axis=0), axis=0).astype(np.uint8)
+    if not cv2.imwrite(str(out_path), bg):
+        raise RuntimeError(f"cannot write {out_path}")
+    return out_path
+
+
+def generate_blank_session(out_dir: Path, label: str = "blank_01",
+                           duration_s: float = 20.0,
+                           seed: int = 424242) -> Path:
+    """Fly-free arena recording (SA11 / blank-arena test pattern)."""
+    out_dir = Path(out_dir)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    rng = np.random.default_rng(seed)
+    writer = cv2.VideoWriter(str(out_dir / "video.mp4"),
+                             cv2.VideoWriter_fourcc(*"mp4v"), FPS, (W, H))
+    base = np.full((H, W), BG_LEVEL, np.float32)
+    n = int(duration_s * FPS)
+    for i in range(n):
+        writer.write(render_frame(i / FPS, None, rng, None, base))
+    writer.release()
+    (out_dir / "session.json").write_text(json.dumps({
+        "label": label, "kind": "blank", "fps": FPS, "width": W,
+        "height": H, "duration_s": duration_s,
+        "calibration": {"px_per_mm": PX_PER_MM}, "arena": ARENA,
+        "purpose": "blank-arena test pattern - no fly present"},
+        indent=2), encoding="utf-8")
     return out_dir
 
 
@@ -302,21 +354,6 @@ def generate_validation_suite(root: Path | None = None,
                                      duration_s=duration_s, stimulus=stim,
                                      session_index=idx))
     # blank: no fly at all
-    blank = root / "blank_01"
-    blank.mkdir(parents=True, exist_ok=True)
-    rng = np.random.default_rng(424242)
-    writer = cv2.VideoWriter(str(blank / "video.mp4"),
-                             cv2.VideoWriter_fourcc(*"mp4v"), FPS, (W, H))
-    base = np.full((H, W), BG_LEVEL, np.float32)
-    n = int(20 * FPS)
-    for i in range(n):
-        writer.write(render_frame(i / FPS, None, rng, None, base))
-    writer.release()
-    (blank / "session.json").write_text(json.dumps({
-        "label": "blank_01", "kind": "blank", "fps": FPS, "width": W,
-        "height": H, "duration_s": 20.0,
-        "calibration": {"px_per_mm": PX_PER_MM}, "arena": ARENA,
-        "purpose": "SA11 false-positive check - no fly present"},
-        indent=2), encoding="utf-8")
-    dirs.append(blank)
+    dirs.append(generate_blank_session(root / "blank_01", "blank_01",
+                                       duration_s=20.0))
     return dirs

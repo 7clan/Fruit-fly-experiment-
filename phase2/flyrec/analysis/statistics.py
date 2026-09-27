@@ -189,6 +189,13 @@ def analyze_session(session_dir, gate_constants: dict,
         pause_speed=float(gate_constants.get("pause_speed_mm_s", 2.0)))
     occ = occupancy(windows, STATES_A)
 
+    # ---- per-frame derived export (Amendment 2; regenerable like tracks.csv)
+    if any((sdir / f"video{ext}").exists() for ext in (".mp4", ".avi")):
+        _export_per_frame(
+            sdir, meta, t, kin, valid, interp, pauses, calib, wall_dist,
+            speed, heading, conf_s, tracks["stimulus"][first:],
+            lead_in_frames, gate_constants)
+
     return {
         "session_dir": str(sdir),
         "label": meta.get("label", sdir.name),
@@ -216,6 +223,69 @@ def analyze_session(session_dir, gate_constants: dict,
         "windows": windows,          # consumed by vocabulary/gate (not JSON-dumped)
         "state_occupancy_L_A": occ,
     }
+
+
+def _export_per_frame(sdir, meta, t, kin, valid, interp, pauses, calib,
+                      wall_dist, speed, heading, conf, stim_col,
+                      lead_in_frames, gate_constants):
+    """Write <session_dir>/per_frame.csv — the full derived per-frame record:
+    session id, timestamp, calibrated position, velocity, heading, pause
+    state, wall interaction, stimulus state, tracking confidence. Pure
+    OUTPUT of already-computed pre-registered pipeline values; nothing here
+    feeds back into any metric or gate criterion. Covers the analyzed span
+    (from the subject's first appearance; `frame` keeps original indices).
+    """
+    import csv
+    import math
+    session_id = meta.get("session_id", sdir.name)
+    # pause intervals -> per-frame flag (pauses use t_on/t_off like bouts)
+    pause_flag = np.zeros(len(t), dtype=int)
+    for p in pauses:
+        i0 = int(np.searchsorted(t, p["t_on"]))
+        i1 = int(np.searchsorted(t, p["t_off"], side="right"))
+        pause_flag[i0:i1] = 1
+    band = float(gate_constants.get("wall_band_mm", 10.0))
+    parallel = math.radians(float(gate_constants.get(
+        "wall_parallel_angle_deg", 45.0)))
+    in_band = (wall_dist <= band) & valid & (wall_dist >= -1.0)
+    following = np.zeros(len(t), dtype=int)
+    for i in range(len(t)):
+        if not in_band[i] or not np.isfinite(heading[i]) or \
+                not (np.isfinite(speed[i]) and speed[i] >= 2.0):
+            continue
+        # bidirectional tangent check, same as analysis.behaviors.wall_metrics
+        tang = calib.wall_tangent_angle(kin["x"][i], kin["y"][i])
+        d1 = abs((heading[i] - tang + math.pi) % (2 * math.pi) - math.pi)
+        d2 = abs((heading[i] - tang - math.pi + math.pi) % (2 * math.pi)
+                 - math.pi)
+        if min(d1, d2) <= parallel:
+            following[i] = 1
+    cols = ["session_id", "frame", "t_s", "x_mm", "y_mm", "speed_mm_s",
+            "heading_deg", "pause", "wall_in_band", "wall_following",
+            "stimulus", "found", "confidence", "interpolated"]
+    with open(sdir / "per_frame.csv", "w", newline="", encoding="utf-8") \
+            as f:
+        w = csv.writer(f)
+        w.writerow(cols)
+        for i in range(len(t)):
+            moving = bool(np.isfinite(speed[i]) and speed[i] >= 2.0 and
+                          np.isfinite(heading[i]))
+            w.writerow([
+                session_id,
+                i + int(lead_in_frames),
+                f"{t[i]:.4f}",
+                f"{kin['x'][i]:.3f}" if np.isfinite(kin['x'][i]) else "",
+                f"{kin['y'][i]:.3f}" if np.isfinite(kin['y'][i]) else "",
+                f"{speed[i]:.3f}" if np.isfinite(speed[i]) else "",
+                f"{math.degrees(heading[i]):.1f}" if moving else "",
+                int(pause_flag[i]),
+                1 if in_band[i] else 0,
+                int(following[i]),
+                stim_col[i] if i < len(stim_col) else "",
+                1 if valid[i] else 0,
+                f"{conf[i]:.3f}" if np.isfinite(conf[i]) else "",
+                1 if interp[i] else 0,
+            ])
 
 
 def summarize_cross_session(session_analyses: list[dict],

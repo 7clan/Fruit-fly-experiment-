@@ -1,12 +1,19 @@
 """Fly detection: dark blob on bright background + tracking confidence.
 
-Two background modes (config `tracking.yaml: detector.mode`):
-  static — background = per-pixel MEDIAN of the first `bg_frames` frames
-           (the recording protocol starts BEFORE the fly is introduced /
-           the synthetic videos have an empty lead-in, so those frames are
-           fly-free). Fully deterministic; best for a fixed, light-tight rig.
-  mog2   — running Gaussian-mixture background (Phase-1 style, tiny learning
-           rate); use when illumination drifts slowly.
+Three background modes (config `tracking.yaml: detector.mode`):
+  static    — background = per-pixel MEDIAN of the first `bg_frames` frames
+              (the recording protocol starts BEFORE the fly is introduced /
+              the synthetic videos have an empty lead-in, so those frames are
+              fly-free). Fully deterministic; best for a fixed, light-tight rig.
+  reference — background = a stored fly-free image (median of the day's
+              passed BLANK recording, `data/rig/background.png`), set via
+              `reference_file`. This is the REAL-RIG mode (Amendment 2): the
+              pre-registered session flow habituates the fly inside the
+              closed enclosure BEFORE recording starts, so a real session
+              has NO fly-free lead-in — the blank recording taken minutes
+              earlier under identical lighting supplies the background.
+  mog2      — running Gaussian-mixture background (Phase-1 style, tiny
+              learning rate); use when illumination drifts slowly.
 
 Detection: dark-blob threshold -> morphology -> contours -> area filter ->
 nearest-to-last-position candidate. Confidence combines area plausibility
@@ -42,6 +49,7 @@ class FlyDetector:
             varThreshold=float(d.get("mog2_varThreshold", 32)),
             detectShadows=False) if self.mode == "mog2" else None
         self._mog_lr = float(d.get("mog2_learning_rate", 0.0005))
+        self._reference_file = d.get("reference_file")
         self.last_xy: tuple[float, float] | None = None
         self.n_frames = 0
 
@@ -75,6 +83,23 @@ class FlyDetector:
                     stack = np.stack(self._bg_stack, axis=0)
                     self._bg = np.median(stack, axis=0).astype(np.uint8)
                 return None, None, 0.0, 0.0          # still building background
+            diff = cv2.subtract(self._bg, gray)       # fly darker than bg > 0
+            mask = (diff > self.dark_threshold).astype(np.uint8) * 255
+        elif self.mode == "reference":
+            if self._bg is None:
+                if not self._reference_file:
+                    raise RuntimeError("detector mode 'reference' requires "
+                                       "'reference_file' in the config")
+                self._bg = cv2.imread(str(self._reference_file),
+                                       cv2.IMREAD_GRAYSCALE)
+                if self._bg is None:
+                    raise RuntimeError(f"cannot read background reference "
+                                       f"image {self._reference_file}")
+                if self._bg.shape != gray.shape:
+                    raise RuntimeError(
+                        f"background reference shape {self._bg.shape} != "
+                        f"frame shape {gray.shape} - re-run the blank test "
+                        "at the current camera resolution")
             diff = cv2.subtract(self._bg, gray)       # fly darker than bg > 0
             mask = (diff > self.dark_threshold).astype(np.uint8) * 255
         else:  # mog2

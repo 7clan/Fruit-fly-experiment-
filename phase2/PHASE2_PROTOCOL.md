@@ -75,7 +75,12 @@ Key requirements:
 
 | Capability | Command / module |
 |---|---|
+| Rig calibration (ruler + arena circle, geometry checks) | `python phase2/run_phase2.py calibrate` |
+| Camera/environment PREFLIGHT (fail-closed) | `python phase2/run_phase2.py preflight` |
+| Blank-arena test + reference background | `python phase2/run_phase2.py blank` |
 | Continuous recording + immutable session dirs | `python phase2/run_phase2.py record` |
+| Session intake: integrity + compliance (no analysis) | `python phase2/run_phase2.py intake` |
+| Immutable content-addressed backup | `python phase2/run_phase2.py backup --to <dir>` |
 | Fly detection, position, tracking confidence | `flyrec/tracking/detector.py`, `tracker.py` |
 | px→mm calibration + arena geometry (circle/rect) | `flyrec/tracking/calibration.py` |
 | Velocity / heading estimation | `flyrec/analysis/trajectory.py` |
@@ -91,6 +96,38 @@ Key requirements:
 
 ## 5. Session structure (pre-registered)
 
+### 5.0 Pre-session apparatus checks (Amendment 2 — REQUIRED, enforced by software)
+
+Every recording day, BEFORE any fly is introduced, in this exact order:
+
+1. **`calibrate`** (once per rig build; re-verify daily): with the printed
+   reference card mounted beside the arena, measure px/mm on the ruler dot
+   pairs (X and Y — the camera-tilt/anisotropy check is ≤ 2 %) and fit the
+   arena circle from ≥ 3 clicks on the INNER wall edge. Built-in checks:
+   arena ≥ 600 px across, ≥ 60 px rim-to-frame-edge clearance (marker boxes
+   must lie outside the ROI), fitted radius vs measured physical inner
+   diameter within ± 3 mm. Daily quick check: `calibrate --recheck-scale`
+   (≤ 1 % drift) or full `--verify`.
+2. **`preflight`** (~20 s, no fly, enclosure closed, LEDs off): frame rate
+   ≥ 30 fps, exposure/lighting stability (frame-mean gray std ≤ 2.0,
+   drift ≤ 2.0), focus (Laplacian variance on the reference card ≥ 60),
+   background stability (no fly-like blobs in the arena ROI), sensor noise,
+   camera resolution vs the stored calibration. FAIL closes the day.
+3. **`blank`** (≥ 3 min, no fly): the software records and tracks an empty
+   arena and requires: **zero** confident false detections, no raw
+   foreground motion, lighting stability, **no static "fly-like" dark
+   features** (smudges/shadows/rim arcs), sensor noise within limits, and —
+   with the operator switching each stimulus LED on for 10 s in turn
+   following the printed timetable — all four N/E/S/W markers readable
+   from the video margin. A PASS stores the day's reference background
+   (`data/rig/background.png`) used to track all fly sessions that day.
+
+`record` refuses baseline/stimulus sessions unless steps 2–3 passed within
+24 h under the current config/code hash (checked automatically). A `--force`
+override is legal only for apparatus debugging and is recorded as a
+protocol deviation (flagged by `intake`). No animal session may begin on a
+failed or skipped blank test.
+
 For each fly:
 1. **Habituation**: fly in arena ≥ 30 min before recording starts (enclosure
    closed, stimulus LEDs off, camera already running).
@@ -103,14 +140,34 @@ For each fly:
 5. Record metadata every session: fly id, age (days post-eclosion), sex,
    temperature, humidity, start time, stimulus seed, any deviations.
 
-Session directory (immutable):
+Session directory (immutable — files are only ever ADDED, raw video never
+modified):
 ```
 data/sessions/<UTC-timestamp>_<label>/
-    video.(mp4|avi)        # raw recording, never edited
-    session.json           # metadata + stimulus schedule
+    video.(mp4|avi)        # raw recording, never edited, never overwritten
+    session.json           # metadata + provenance + stimulus schedule
     tracks.csv             # derived (regenerable): per-frame tracking
+    per_frame.csv          # derived (regenerable): t, x/y mm, speed, heading,
+                           #   pause, wall-in-band, wall-following, stimulus
+                           #   state, confidence, interpolated flag
+    annotations.csv        # manual G2 annotations (added by `annotate`)
     ground_truth.csv       # synthetic validation sessions only
 ```
+`session.json` records (Amendment 2): unique `session_id`, fly metadata,
+reported vs measured frame rate, `config_hashes` (tracking.yaml, gate.yaml,
+apparatus_checks.yaml, flyrec source tree, git revision), the rig
+`calibration` reference + hash, the `preflight`/`blank` PASS references, the
+`tracking` recipe (reference mode + background hash) and any `--force`
+override. Session labels must be unique (enforced).
+
+Data management (Amendment 2):
+- **Backup after every recording day**: `python phase2/run_phase2.py backup
+  --to <drive>` — content-addressed copies (SHA-256 verified), never
+  overwrites; a changed raw file after backup raises an immutability alarm.
+- **When recordings come back for analysis**: run `intake` FIRST (file
+  integrity + protocol compliance, SHA-256 manifest). Only after intake
+  reports no FAIL: `track` → `annotate` → `analyze` → `gate`. Never tune
+  anything before the gate verdict is reported.
 
 ## 6. Manual annotation protocol (for gate criterion G2)
 
