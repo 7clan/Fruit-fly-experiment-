@@ -1,0 +1,37 @@
+{
+  "repo": "https://github.com/philshiu/Drosophila_brain_model.git",
+  "pinned_commit": "91bdd1e7dcf193f3e7ca5a8933497fcef63b7960",
+  "license": "MIT (Philip Shiu and Nico Spiller)",
+  "files_sha256": {
+    ".gitignore": "0cd064765b740a9d791f15266ee55d644b4b0cf40294754c21d5901ed9c781c3",
+    "2023_03_23_completeness_630_final.csv": "e6b71e17671a9bdb05f55e4bc6774640a1418cb7a05125e0fc994ad40f9bfdfb",
+    "2023_03_23_connectivity_630_final.parquet": "94db8c650533bc36ffa3223f2e62325d5648b8d6bd31c3a4e1c804628c7557b3",
+    "Completeness_783.csv": "bbb847a4cc2caaa7a16349722d220c087317b946d148d4d592d94d250617a311",
+    "Connectivity_783.parquet": "efeb23fb99098e9c390f6869969b2a121a2ee92c833cfc45ecb2c1d8e1af0347",
+    "LICENSE": "3621f6d6476189190e2960fa43f11b275ba4eca848fdac50a1ba2925de6223e8",
+    "Readme.md": "0654ac53f9af85000b50f6a5d2297aade8602c507a44e811f8aff602629c2625",
+    "environment.yml": "52991bcc78eb5a18534c2c02e8240330f8ad376f31f63546756ad0724924a667",
+    "environment_full.yml": "402fcef4968c99397b0e908b3323ab9e6ef86af5583e46e6427f96f3d1091adf",
+    "example.ipynb": "1737c3043af700504c4791c4bfc02d1856bbeb0d36c469832e4b9399dfddda3a",
+    "figures.ipynb": "33cd73c0b4b4a291c51b7bab639c4fa28978e49e111ff0d6adbca5687addb84c",
+    "model.py": "fc45837d7122c6ce2a7f3f2f23c515992e4b232aadb919efabb72337fac88e4e",
+    "results/example/sugarR-720575940617937543.parquet": "e0d39699bd979a5761138dbab964dbfe1c55feb945349cd24bc1c1f9a925753b",
+    "results/example/sugarR-720575940621754367.parquet": "f7d7cd7386663cbce864d6ca132ce5992d0cdb65f281b30768c3afe0804514a6",
+    "results/example/sugarR-720575940622695448.parquet": "c6b5e102249e23c30989ad66ad897d81a6453681ba3756dd30c83e956aee803e",
+    "results/example/sugarR.parquet": "83921d50089d966785e402d6c0e3be5ab3eba5beb680410a09c557b0f22dcc28",
+    "results/example/sugarR_100Hz.parquet": "93722ec03c3faa5a85790d77ed16bdd7f1e38a7c847ed0bc3af3dc2e4d0c3d34",
+    "sez_neurons.pickle": "2bc5a2a8289924f2de39a8e68bdc07025cb6d6c6c6ddc83a973c0cace7cec2ce",
+    "utils.py": "f378cf0b464f2ac5e1daf3609ba25fd51c7e34f294846281707ffe006c3e9ef1"
+  },
+  "includes_flywire": {
+    "v630": [
+      "2023_03_23_completeness_630_final.csv",
+      "2023_03_23_connectivity_630_final.parquet"
+    ],
+    "v783": [
+      "Completeness_783.csv",
+      "Connectivity_783.parquet"
+    ]
+  },
+  "generated": "by brain/setup/setup_model.py make-manifest"
+}

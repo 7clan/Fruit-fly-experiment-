@@ -1,37 +1,41 @@
-# FlyAgent — Phase 1
+# DigitalFlyLab — a connectome-derived Drosophila brain learns to play a game
 
-**A hybrid biological/computational game-playing agent: a fruit fly's behavior
-drives a game agent, while the computer provides perception, memory, planning,
-and action translation.**
+**A simulated Drosophila neural agent — derived as closely as practical
+from real fruit-fly neuroscience — eventually learns and plays Grand Piece
+Online (Roblox), with the Drosophila brain model meaningfully in the
+control path.**
 
-> ### Scientific status — read this first
+> ### Project status — read this first
 >
-> - **Phase 1 is SYNTHETIC-ONLY.** The Phase-1 "fly" is a synthetic
->   behavioral model, not an animal. Phase 1 does **NOT** demonstrate that a
->   real fruit fly can control a game; it demonstrates that the
->   biological-behavior → decoder → virtual-action closed loop can be built,
->   tested with control groups, and that a cue-modulated behavior source
->   contributes useful goal-directed behavior through it. Full statement:
->   `PHASE1_REPORT.md`.
-> - **Phase 1 is FROZEN and REPRODUCED** as baseline
->   `PHASE1-BASELINE-1.0.0` (tag `phase1-baseline-v1.0.0`); the reproduction
->   was bitwise-identical. Freeze record: `PHASE1_BASELINE.md`.
-> - **Phase 2 (real-fly behavioral validation) is NON-INVASIVE observation
->   only** — no surgery, implants, genetic modification, toxic substances,
->   injury, extreme temperatures, or harmful manipulation. See
->   `phase2/PHASE2_GATE_PREREGISTRATION.md` and `phase2/PHASE2_PROTOCOL.md`.
-> - **Phase-2 physical experiment is READY**: apparatus software validated
->   (SA1–SA12 all PASS), pre-session checks pre-registered (Amendment 2),
->   and the bench procedure is in `docs/PHASE2_START_GUIDE.md`. **No
->   real-fly data has been collected — every real-fly outcome is UNKNOWN.**
-> - **No game input has ever been sent.** No game automation exists here.
->   The only permitted game source is the single Grand Piece Online page;
->   all other game facts remain UNKNOWN (see `docs/GPO_PLAN.md`).
+> - **There is NO real biological fruit fly** (project correction,
+>   2026-09-28). The entire experiment is digital and runs on a laptop.
+>   The earlier physical real-fly direction is ARCHIVED under `legacy/`
+>   as history — no real-fly data was ever collected, and no game input
+>   has ever been sent.
+> - **Canonical digital brain:** the Shiu et al. whole-brain Drosophila
+>   leaky-integrate-and-fire model
+>   (github.com/philshiu/Drosophila_brain_model) on the public FlyWire
+>   v783 adult connectome. We do NOT create an ordinary neural network
+>   and call it a fruit fly. Terminology labels (connectome data /
+>   modeled dynamics / engineered sensory interface / engineered motor
+>   interface / added learning / external systems) are mandatory in every
+>   report. We never claim exact biological equivalence or consciousness.
+> - **Current phase: D1–D3** — install/reproduce the brain model,
+>   configure FlyWire v783, benchmark. Gate 1: the connectome-derived
+>   brain runs locally and produces REPRODUCIBLE neural activity. No
+>   Roblox control until Gate 1 passes. See `docs/ROADMAP.md` (D1–D24).
+> - **Windows target:** the finished application is `DigitalFlyLab.exe`
+>   (window-capture mirror of the Roblox process, CV overlays, neural +
+>   internal-state visualization, replay). Full addendum:
+>   `docs/WINDOWS_RUNTIME_SPEC.md`; implementation gated at D14–D15.
+> - **Source policy (corrected):** only the single Grand Piece Online
+>   Roblox page may be accessed on Roblox properties; NON-Roblox guides/
+>   wikis/videos are allowed as **UNVERIFIED GUIDE KNOWLEDGE**, upgraded
+>   to **VERIFIED IN GAME** only by direct observation
+>   (`docs/GPO_PLAN.md`).
 
-Phase 1 delivers the complete experimental apparatus, validated end-to-end
-WITHOUT any animal, against a 2D artificial environment. Nothing in Phase 1
-touches the real game (Grand Piece Online). See `docs/ROADMAP.md` for the
-full 15-phase plan from here to autonomous long-term game progression.
+Governing specification: **`docs/MASTER_SPEC.md`** (reconciles the project
+correction with the Windows runtime addendum).
 
 ---
 
@@ -40,107 +44,80 @@ full 15-phase plan from here to autonomous long-term game progression.
 ```bash
 pip install -r requirements.txt
 
-# 1. verify the whole pipeline (tracker, decoder, game, reward, DB, calibration)
-python -m tests.test_pipeline
+# 1. verify the (legacy-compatible) Phase-1 pipeline still passes
+python -m pytest tests/test_pipeline.py -q
 
-# 2. run the Phase-1 control-group demonstration (headless, ~5 min)
-python main.py demo
-
-# 3. inspect the results
-#    runs/demo_<timestamp>/comparison.txt   <- table + bootstrap CIs
-#    runs/demo_<timestamp>/comparison.png   <- learning curves
-#    runs/<timestamp>_<condition>/          <- per-run SQLite DB + manifest
-```
-
-Expected demo outcome (30 trials/condition, synthetic fly):
-
-| condition           | what it is                                  | success rate |
-|---------------------|---------------------------------------------|--------------|
-| `random`            | floor: random actions                       | ~3–10%       |
-| `fixed`             | ceiling: computer picks greedy direction    | 100%         |
-| `fly_random`        | fly-controlled, fly ignores the cue         | ~floor       |
-| `fly_cue`           | fly-controlled, goal-directed cue           | **~70–90%**  |
-| `fly_cue_shuffled`  | same fly, cue position randomized           | ~floor       |
-
-If the bootstrap CIs for `fly_cue − random` and `fly_cue − fly_cue_shuffled`
-exclude 0, the apparatus can detect a biological-behavior contribution
-(Phase-1 gate). This is the machine-checkable precondition before any real
-fly is ever involved.
-
-## Other commands
-
-```bash
-python main.py run --controller random  --trials 30       # one condition
-python main.py run --controller fly --cue-mode shuffled   # cue control
-python main.py run --controller fly --cue-bias 0.0        # random-walk fly
-python main.py run --controller fly --source video --video fly.mp4
-python main.py run --controller keyboard --show           # human control (display)
-python main.py run --controller fly --source webcam --show # live camera (display)
-python main.py report --runs runs/<a> runs/<b>             # compare runs
-python main.py calibrate                                  # 4-click arena calibration
+# 2. brain model setup + verification (D1-D3, see brain/README.md)
+#    clone pinned Shiu model, configure FlyWire v783 data, run examples,
+#    verify spike propagation + reproducibility, benchmark
+python brain/setup/setup_model.py --help
 ```
 
 ## Repository layout
 
 ```
 fly-agent/
-├── main.py                    # CLI (demo / run / report / calibrate)
-├── config/
-│   ├── actions.yaml           # fly behavior -> action mapping (CHANGE HERE)
-│   ├── experiment.yaml        # game, reward, controllers, demo conditions
-│   └── tracking.yaml          # camera / tracker / calibration parameters
-├── flyagent/
-│   ├── fly_tracker/           # sources (synthetic/webcam/video), MOG2+diff
-│   │                          #   tracker, 4-point homography, trajectory
-│   ├── biological_agent/      # behavior classifier, action decoder,
-│   │                          #   synthetic Drosophila (burst-pause + taxis)
-│   ├── environment/           # 2D arena (player, target, obstacles) + render
-│   ├── controller/            # fly / random / fixed / keyboard controllers
-│   ├── learning/              # sparse + shaped reward
-│   ├── experiments/           # trial loop, runner, control groups, bootstrap
-│   ├── data/                  # SQLite schema, immutable run directories
-│   └── visualization/         # live dashboard (display) + learning curves
-├── tests/test_pipeline.py     # pipeline smoke tests
-├── scripts/calibrate_arena.py # interactive 4-click calibration tool
-├── docs/                      # ROADMAP, METHODOLOGY, HARDWARE, GPO_PLAN
-└── runs/                      # every run: manifest.json + experiment.db + summary.json
+├── docs/
+│   ├── MASTER_SPEC.md          # THE governing spec (reconciled, 2026-09-28)
+│   ├── WINDOWS_RUNTIME_SPEC.md # Windows addendum (authoritative for D14+)
+│   ├── ROADMAP.md              # D1-D24 development order + gates
+│   ├── GPO_PLAN.md             # game source policy + fact/UNKNOWN register
+│   └── METHODOLOGY.md          # control-group + attribution methodology
+├── brain/                      # ACTIVE: the digital Drosophila brain track
+│   ├── README.md               # D1-D3 record: setup, run, reproduce
+│   ├── THIRD_PARTY.md          # pinned model commit, license, patches
+│   ├── setup/                  # reproducible clone/data scripts
+│   ├── scripts/                # spike-propagation / reproducibility / benchmark
+│   └── results/                # evidence artifacts + reports
+├── flyagent/                   # Phase-1 synthetic apparatus (frozen baseline;
+│                               #   2D arena + experiment framework reused at D7/D10)
+├── legacy/                     # ARCHIVED physical real-fly direction
+├── tests/                      # active test suite
+├── main.py                     # Phase-1 CLI (frozen baseline reproduction)
+└── runs/                       # immutable run directories
 ```
 
-## The scientific rule this repo enforces
+## The control path (what the project enforces)
 
-Never say "the fly learned X" unless the experiment establishes it. The
-correct phrasing is: *"the fly-controlled system showed improved performance
-under condition X"* — and then the control conditions (random, fixed,
-shuffled-cue) rule out the alternative explanations (computer algorithm,
-cue regularity, environmental structure). All conditions run through the
-SAME trial loop, the SAME metrics, and the SAME database, so any performance
-difference is attributable to the controller alone. See `docs/METHODOLOGY.md`.
+```
+GAME SCREEN -> COMPUTER VISION -> SENSORY ENCODER
+  -> DIGITAL DROSOPHILA BRAIN (Shiu LIF model on FlyWire v783)
+  -> NEURAL ACTIVITY -> MOTOR DECODER -> GAME ACTION
+  -> OBSERVED RESULT -> REWARD / MEMORY / LEARNING -> (back to brain)
+```
 
-## Attribution (what does what)
+The Drosophila neural system stays meaningfully in the control path;
+`COMPUTER VISION -> DIRECT ACTION` bypasses are forbidden. Scientific
+control conditions A–E (random / conventional RL / fixed connectome /
+adaptive Drosophila / hybrid) measure what the Drosophila-derived
+architecture actually contributes (`docs/MASTER_SPEC.md` §8).
 
-- **Computer provides**: cue placement (goal selection), action translation,
-  reward, metrics, logging, statistics.
-- **Fly provides**: movement behavior that selects among the presented
-  options (approach the cued edge or not).
-- **Hard-coded**: the action vocabulary, the decoder rules, the reward
-  definition. Nothing is "learned" in Phase 1 — the synthetic fly's cue
-  preference is a MODEL PARAMETER, not a learned skill.
-- **Learned**: nothing yet. Learning enters in Phase 4+ (`docs/ROADMAP.md`).
+## Learning is staged, and everything added is labeled
 
-## Animal welfare
+A — fixed connectome (baseline, no learning) · B — trainable readout only ·
+C — Drosophila-inspired plasticity (mushroom bodies, Kenyon cells, MBONs,
+PAM/PPL1 dopamine, valence) where scientifically defensible · D — hybrid
+RL/planning with the brain as the measured central recurrent computation.
+Reports always separate biological connectome data from modeled dynamics
+from engineered additions.
 
-Phase 1 uses NO animal. When real flies arrive (Phase 2), the protocol is
-observation + benign visual stimuli only: no surgery, no implants, no
-chemicals, no aversive stimuli, no injury. Drosophila melanogaster from a
-registered stock center, sessions <= 30 min, rest days between sessions.
-If any procedure would require institutional oversight, the protocol stops
-and says so. See `docs/METHODOLOGY.md` (welfare section) and `docs/HARDWARE.md`.
+## Honesty rules
+
+Never say the system "understands", "feels", or "experiences" anything.
+The dashboard (D12/D14) shows actual computational variables (valence,
+reward expectation, prediction error, novelty, threat/exploration drives,
+uncertainty, arousal-like state) — friendly labels only alongside the raw
+variable, never natural-language fabricated thoughts.
+
+## Animal welfare (historical note)
+
+No animals are used. The archived real-fly protocol was non-invasive by
+design; it never ran. See `legacy/README.md`.
 
 ## Source policy for the target game
 
-The ONLY game-related source permitted is
-`https://www.roblox.com/fr/games/1730877806/Grand-Piece-Online`.
-Everything not observable on that page or by direct observation of the game
-screen is UNKNOWN and must be discovered experimentally. The full register
-of page-observable facts vs UNKNOWNs is in `docs/GPO_PLAN.md`. Game
-integration begins at Phase 6, after the 2D milestones.
+Only `https://www.roblox.com/games/1730877806/Grand-Piece-Online` may be
+accessed on Roblox properties. Non-Roblox third-party resources are
+permitted for learning GPO facts but are stored as UNVERIFIED GUIDE
+KNOWLEDGE until verified by direct in-game observation; direct observation
+always wins. Full register: `docs/GPO_PLAN.md`.

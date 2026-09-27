@@ -1,16 +1,30 @@
 # GPO_PLAN — Grand Piece Online integration (source policy + perception + phases)
 
-## 0. Source policy (binding)
+> **POLICY CORRECTED 2026-09-28** (see `docs/MASTER_SPEC.md` §6). The
+> single-permitted-source rule now applies ONLY to Roblox properties.
+> Non-Roblox websites and resources (independent GPO wikis, guides,
+> YouTube gameplay, community discussions, independent databases,
+> articles) ARE permitted for learning GPO facts, but everything obtained
+> from them is stored as **UNVERIFIED GUIDE KNOWLEDGE** until confirmed by
+> direct game observation (**VERIFIED IN GAME**). If a guide conflicts
+> with current direct observation, the direct observation wins. The
+> knowledge database with these tiers is built at D17.
 
-The ONLY game-related source permitted by this project is:
+## 0. Source policy (binding, corrected)
 
-    https://www.roblox.com/fr/games/1730877806/Grand-Piece-Online
+The ONLY Roblox URLs permitted by this project:
 
-No Roblox documentation, no developer pages, no APIs, no wikis, no other
-game pages, no videos, no third-party guides. Anything not observable on
-that page, or by direct observation of the game screen during experiments,
-is **UNKNOWN — must be discovered experimentally**. No game mechanic is
-ever hard-coded from assumption. This document is the living register.
+    https://www.roblox.com/games/1730877806/Grand-Piece-Online
+    https://www.roblox.com/fr/games/1730877806/Grand-Piece-Online   (historical form, same page)
+
+No other Roblox URL, no Roblox documentation, developer/Creator pages,
+APIs, support pages, forums, or experiences. NON-Roblox third-party
+resources are permitted under the UNVERIFIED/VERIFIED discipline above.
+Anything not obtained from the permitted page, an allowed non-Roblox
+source (as UNVERIFIED), or direct observation of the game screen during
+experiments is **UNKNOWN — must be discovered experimentally**. No game
+mechanic is ever hard-coded from assumption. This document is the living
+register.
 
 ## 1. Register of page-observable facts (fetched 2026-09-27)
 

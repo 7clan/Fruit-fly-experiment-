@@ -1,0 +1,14 @@
+# Digital Drosophila brain environment (D1, pinned 2026-09-28).
+# Deviation from the model's environment.yml (python 3.10 / brian2 2.5.1):
+# this environment has only Python 3.12, so the newest Brian2 that supports
+# it is used. Recorded honestly in brain/THIRD_PARTY.md. Our reproducibility
+# claim (Gate 1) is over THIS pinned stack.
+Brian2==2.10.1
+numpy==2.5.3
+pandas==3.0.6
+pyarrow==25.0.1
+joblib==1.6.0
+matplotlib==3.11.2
+# transitive but pinned for completeness
+Cython==3.1.3
+sympy==1.14.0
