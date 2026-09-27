@@ -4,6 +4,26 @@
 drives a game agent, while the computer provides perception, memory, planning,
 and action translation.**
 
+> ### Scientific status — read this first
+>
+> - **Phase 1 is SYNTHETIC-ONLY.** The Phase-1 "fly" is a synthetic
+>   behavioral model, not an animal. Phase 1 does **NOT** demonstrate that a
+>   real fruit fly can control a game; it demonstrates that the
+>   biological-behavior → decoder → virtual-action closed loop can be built,
+>   tested with control groups, and that a cue-modulated behavior source
+>   contributes useful goal-directed behavior through it. Full statement:
+>   `PHASE1_REPORT.md`.
+> - **Phase 1 is FROZEN and REPRODUCED** as baseline
+>   `PHASE1-BASELINE-1.0.0` (tag `phase1-baseline-v1.0.0`); the reproduction
+>   was bitwise-identical. Freeze record: `PHASE1_BASELINE.md`.
+> - **Phase 2 (real-fly behavioral validation) is NON-INVASIVE observation
+>   only** — no surgery, implants, genetic modification, toxic substances,
+>   injury, extreme temperatures, or harmful manipulation. See
+>   `phase2/PHASE2_GATE_PREREGISTRATION.md` and `phase2/PHASE2_PROTOCOL.md`.
+> - **No game input has ever been sent.** No game automation exists here.
+>   The only permitted game source is the single Grand Piece Online page;
+>   all other game facts remain UNKNOWN (see `docs/GPO_PLAN.md`).
+
 Phase 1 delivers the complete experimental apparatus, validated end-to-end
 WITHOUT any animal, against a 2D artificial environment. Nothing in Phase 1
 touches the real game (Grand Piece Online). See `docs/ROADMAP.md` for the
