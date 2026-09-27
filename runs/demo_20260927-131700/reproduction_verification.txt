@@ -1,0 +1,17 @@
+==============================================================================
+condition          trials mismatches    max |diff|  verdict
+------------------------------------------------------------------------------
+fixed                  30          0             0  IDENTICAL
+fly_cue                30          0             0  IDENTICAL
+fly_cue_shuffled       30          0             0  IDENTICAL
+fly_random             30          0             0  IDENTICAL
+random                 30          0             0  IDENTICAL
+------------------------------------------------------------------------------
+Bootstrap contrasts (10,000 iterations, seed 20260927):
+  fly_cue__vs__random                        IDENTICAL
+  fly_cue__vs__fly_random                    IDENTICAL
+  fly_cue__vs__fly_cue_shuffled              IDENTICAL
+  fixed__vs__random                          IDENTICAL
+  gate_phase1.passed                         True -> True  IDENTICAL
+==============================================================================
+VERDICT: IDENTICAL - reproduction matches the frozen baseline exactly (all per-trial metrics, all aggregates, all bootstrap contrasts, gate outcome).
