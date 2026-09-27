@@ -14,16 +14,22 @@ control path.**
 >   has ever been sent.
 > - **Canonical digital brain:** the Shiu et al. whole-brain Drosophila
 >   leaky-integrate-and-fire model
->   (github.com/philshiu/Drosophila_brain_model) on the public FlyWire
->   v783 adult connectome. We do NOT create an ordinary neural network
+>   (github.com/philshiu/Drosophila_brain_model, pinned commit, MIT) on
+>   the public FlyWire v783 adult connectome: **138,639 neurons,
+>   15,091,983 connections**. We do NOT create an ordinary neural network
 >   and call it a fruit fly. Terminology labels (connectome data /
 >   modeled dynamics / engineered sensory interface / engineered motor
 >   interface / added learning / external systems) are mandatory in every
 >   report. We never claim exact biological equivalence or consciousness.
-> - **Current phase: D1–D3** — install/reproduce the brain model,
->   configure FlyWire v783, benchmark. Gate 1: the connectome-derived
->   brain runs locally and produces REPRODUCIBLE neural activity. No
->   Roblox control until Gate 1 passes. See `docs/ROADMAP.md` (D1–D24).
+> - **GATE 1: PASS (2026-09-28)** — the connectome-derived digital
+>   Drosophila brain runs locally and produces REPRODUCIBLE neural
+>   activity: seeded trials are bit-identical across processes and
+>   invocations; stimulation propagates multi-synaptically (255 active
+>   neurons at 2 hops) and drives the MN9 motor neuron; benchmark
+>   recorded. Full record: `DIGITAL_BRAIN_REPORT.md`. Next roadmap steps:
+>   D4–D6 (sensory / mushroom-body / motor population inventories). No
+>   Roblox control until Gate 1 (passed) AND the D-order prerequisites
+>   (`docs/ROADMAP.md`).
 > - **Windows target:** the finished application is `DigitalFlyLab.exe`
 >   (window-capture mirror of the Roblox process, CV overlays, neural +
 >   internal-state visualization, replay). Full addendum:

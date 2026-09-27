@@ -7,12 +7,22 @@ Third-party model + data: `THIRD_PARTY.md`.
 
 | Step | State |
 |---|---|
-| D1 install/reproduce Shiu model | DONE — pinned `91bdd1e`, manifest PASS, tutorial reproduced (v630) |
-| D2 FlyWire v783 configured | DONE — 138,639 neurons / 15,091,983 connections, SHA-256 verified |
-| D1/D2 verification runs | `results/repro_783/` + `results/spikes_783/` |
-| D3 benchmark | `results/benchmark/benchmark_783.{json,md}` |
+| D1 install/reproduce Shiu model | **DONE** — pinned `91bdd1e`, manifest PASS; tutorial reproduced on v630 (401 active neurons ≈ notebook's "~400"; MN9 driven; silencing changes MN9) |
+| D2 FlyWire v783 configured | **DONE** — 138,639 neurons / 15,091,983 connections, SHA-256 manifest verified |
+| D1/D2 verification (v783) | **GATE PASS** — `results/repro_783/verdict.json` (cross-process + cross-invocation identical, sha `9e3acaa361f5e477` for seed 11), `results/spikes_783/verdict.json` (negative control, 353 propagated neurons incl. 255 at 2 hops, MN9 80 Hz, silencing causality) |
+| D3 benchmark | **DONE** — `results/benchmark/benchmark_783.{json,md}`: init 10.3 s/process, peak RSS 2.92 GB, 0.148 bio-s per wall-s (this 2-core box) |
 
-(Updated as the runs complete — see `results/` and the gate verdicts.)
+**GATE 1: PASS** — the connectome-derived digital Drosophila brain runs
+locally and produces reproducible neural activity. Full record:
+`DIGITAL_BRAIN_REPORT.md`.
+
+Operational notes learned here (matter for every later step):
+
+- One whole-brain network per process, peak ~2.9 GB; NEVER hold big
+  pandas/pyarrow buffers in a parent while trial children run (OOM).
+- Trial children run serially on machines with < 8 GB RAM.
+- The first-ever run pays a one-time Cython codegen compile (~40 s);
+  every later run is warm (~10 s per fresh process end-to-end).
 
 ## One-time setup (reproducible)
 

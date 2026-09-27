@@ -1,0 +1,20 @@
+{
+  "seed": 101,
+  "version": "783",
+  "t_run_ms": 1000,
+  "r_poi_hz": 150,
+  "n_exc": 20,
+  "n_exc2": 0,
+  "n_slnc": 1,
+  "missing_exc": [
+    720575940620900446
+  ],
+  "missing_exc2": [],
+  "missing_slnc": [],
+  "wall_build_s": 1.517,
+  "wall_run_s": 7.354,
+  "n_spikes": 12120,
+  "n_active_neurons": 381,
+  "n_neurons_total": 138639,
+  "peak_rss_kb": 2983764
+}

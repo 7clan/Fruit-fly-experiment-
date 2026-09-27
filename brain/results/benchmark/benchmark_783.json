@@ -1,0 +1,115 @@
+{
+  "machine": {
+    "cores": 2,
+    "model": "Intel(R) Xeon(R) Processor",
+    "mem_total_mb": 4041.6,
+    "platform": "Linux-5.10.134-013.15.kangaroo.al8.x86_64-x86_64-with-glibc2.41",
+    "python": "3.12.14",
+    "brian2": "2.10.1",
+    "numpy": "2.5.3",
+    "pandas": "3.0.6"
+  },
+  "counts": {
+    "neurons": 138639,
+    "connections": 15091983,
+    "connectome": "FlyWire v783 (public release, 138,639 neurons) - CANONICAL"
+  },
+  "data_load_s": 0.72,
+  "trials": [
+    {
+      "seed": 500,
+      "version": "783",
+      "t_run_ms": 1000,
+      "r_poi_hz": 150,
+      "n_exc": 20,
+      "n_exc2": 0,
+      "n_slnc": 0,
+      "missing_exc": [
+        720575940620900446
+      ],
+      "missing_slnc": [],
+      "wall_build_s": 1.425,
+      "wall_run_s": 6.742,
+      "n_spikes": 13309,
+      "n_active_neurons": 368,
+      "n_neurons_total": 138639,
+      "peak_rss_kb": 2991648,
+      "wall_total_process_s": 10.58
+    },
+    {
+      "seed": 501,
+      "version": "783",
+      "t_run_ms": 1000,
+      "r_poi_hz": 150,
+      "n_exc": 20,
+      "n_exc2": 0,
+      "n_slnc": 0,
+      "missing_exc": [
+        720575940620900446
+      ],
+      "missing_slnc": [],
+      "wall_build_s": 1.381,
+      "wall_run_s": 6.691,
+      "n_spikes": 13011,
+      "n_active_neurons": 370,
+      "n_neurons_total": 138639,
+      "peak_rss_kb": 2978864,
+      "wall_total_process_s": 10.01
+    },
+    {
+      "seed": 502,
+      "version": "783",
+      "t_run_ms": 1000,
+      "r_poi_hz": 150,
+      "n_exc": 20,
+      "n_exc2": 0,
+      "n_slnc": 0,
+      "missing_exc": [
+        720575940620900446
+      ],
+      "missing_slnc": [],
+      "wall_build_s": 1.431,
+      "wall_run_s": 6.777,
+      "n_spikes": 12741,
+      "n_active_neurons": 370,
+      "n_neurons_total": 138639,
+      "peak_rss_kb": 2986768,
+      "wall_total_process_s": 10.19
+    }
+  ],
+  "init_per_fresh_process_s": {
+    "mean": 10.26,
+    "note": "interpreter + imports + data load + network build + run"
+  },
+  "network_build_s": [
+    1.425,
+    1.381,
+    1.431
+  ],
+  "run_wall_s": [
+    6.742,
+    6.691,
+    6.777
+  ],
+  "sim_speed_bio_s_per_wall_s": {
+    "mean": 0.14845,
+    "min": 0.14756,
+    "max": 0.14945,
+    "note": "stimulated network (sugar set, 150 Hz), codegen cache warm"
+  },
+  "spikes_per_trial": [
+    13309,
+    13011,
+    12741
+  ],
+  "active_neurons_per_trial": [
+    368,
+    370,
+    370
+  ],
+  "peak_rss_mb": {
+    "mean": 2915.8,
+    "max": 2921.5
+  },
+  "memory_note": "single whole-brain network per process; serial trials only on machines with < 8 GB RAM"
+}

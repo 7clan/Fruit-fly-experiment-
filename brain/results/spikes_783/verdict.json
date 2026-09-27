@@ -1,0 +1,47 @@
+{
+  "version": "783 (canonical)",
+  "seed": 101,
+  "stimulated": {
+    "requested": 21,
+    "present_in_v783": 20,
+    "missing": [
+      720575940620900446
+    ]
+  },
+  "c1_negative_control_silent": true,
+  "baseline_spikes": 0,
+  "c2_propagation": true,
+  "activation": {
+    "n_spikes": 13105,
+    "n_active": 373,
+    "n_active_beyond_stim_set": 353,
+    "hop_histogram_active_neurons": {
+      "0": 20,
+      "1": 85,
+      "2": 255,
+      "3": 13,
+      "4": 0,
+      "unreached_within_4hops": 0
+    }
+  },
+  "c3_motor_readout_mn9": true,
+  "mn9_rate_hz": {
+    "activation": 80.0,
+    "silenced": 68.0
+  },
+  "c4_causality_silencing_reduces_activity": true,
+  "silencing": {
+    "silenced_flywire_id": 720575940617937543,
+    "was_stimulated_neuron": true,
+    "n_spikes_after": 12120,
+    "n_active_after": 381
+  },
+  "peak_rss_kb": 2988448,
+  "checks": {
+    "c1": true,
+    "c2": true,
+    "c3": true,
+    "c4": true
+  },
+  "gate_spike_propagation": true
+}

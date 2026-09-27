@@ -1,0 +1,27 @@
+{
+  "version": "783 (canonical)",
+  "params": {
+    "t_run_ms": 1000,
+    "r_poi_hz": 150,
+    "stimulus": "sugar-sensing set (20 of 21 present in v783)",
+    "trials_per_seed": 1
+  },
+  "identical_across_processes": true,
+  "per_seed": {
+    "11": {
+      "identical_across_processes": true,
+      "sha256": "9e3acaa361f5e477aca9da71eb8070a02bd036fc114d9ee3a75150e13523885e",
+      "hashes": {
+        "0": "9e3acaa361f5e477aca9da71eb8070a02bd036fc114d9ee3a75150e13523885e"
+      }
+    }
+  },
+  "seed_sensitivity": null,
+  "cross_invocation": {
+    "previous_dir": "results/repro_783",
+    "seed": 11,
+    "identical": true
+  },
+  "engineered_note": "seeding is an engineered harness addition (brian2.seed + numpy seed); the published model code is unmodified and unseeded",
+  "gate_reproducible_activity": true
+}

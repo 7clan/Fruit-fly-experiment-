@@ -1,0 +1,33 @@
+{
+  "version": "630 (as shipped for the paper)",
+  "n_run": 3,
+  "n_proc": 1,
+  "r_poi_hz": {
+    "sugarR": 150,
+    "sugarR_100Hz": 100
+  },
+  "silenced_top_neuron": 720575940622695448,
+  "is_stimulated_neuron": false,
+  "active_neurons": {
+    "sugarR": 401,
+    "sugarR_100Hz": 375,
+    "silenced": 369
+  },
+  "mn9_rate_hz": {
+    "sugarR": 82.33333333333333,
+    "sugarR_100Hz": 74.66666666666667,
+    "silenced": 72.66666666666667
+  },
+  "notebook_expectation_check": {
+    "active_neurons_order_of_magnitude_~400": 401,
+    "mn9_responds": true,
+    "silencing_changes_mn9": true
+  },
+  "deviations_from_notebook": [
+    "n_run=3 instead of 30 (machine: 2 cores / 4 GB RAM)",
+    "n_proc=1 instead of -1 (memory limit)",
+    "silenced top-1 instead of top-3 most active neurons",
+    "one experiment per process (OOM otherwise)",
+    "run_exp is unseeded (published behavior); reproducibility is established separately by verify_reproducibility.py (v783)"
+  ]
+}

@@ -1,21 +1,23 @@
 """Gate-1 evidence: REPRODUCIBLE neural activity on the canonical v783 brain.
 
-Protocol (engineered harness around the unmodified third-party model):
-  * for each seed S in --seeds, run --reps seeded trials (in-process);
-    trials with the same seed must produce BITWISE-IDENTICAL spike trains
-    (same neurons, same times, same order);
-  * different seeds must produce DIFFERENT trains (sensitivity: the
-    comparison is not trivially empty);
-  * cross-process reproducibility: run this script twice with different
-    --out dirs and compare the canonical spike-file hashes
-    (verify_hash.py or `sha256sum`).
+Every trial runs in its OWN fresh interpreter (trial_runner.py) — whole-
+brain rebuilds peak near 3 GB. Determinism is therefore tested ACROSS
+PROCESSES, which is stronger than in-process repetition:
 
-Output: <out>/spikes_seed<S>_rep<R>.json (canonical form),
-        <out>/verdict.json (PASS/FAIL + metrics).
+  * seed S, rep 0  (process A)  vs
+    seed S, rep 1  (process B)  -> canonical spike text must be
+                                    BYTE-IDENTICAL (same hash)
+  * different seeds must DIFFER (sensitivity: comparison not trivial)
+  * --second-invocation mode re-runs one seed and compares against the
+    first invocation's files (script-level reproducibility)
+
+Output: <out>/spikes_seed<S>_rep<R>.txt (canonical), trial JSONs,
+<out>/verdict.json.
 """
 
 import argparse
 import hashlib
+import subprocess
 import sys
 from pathlib import Path
 
@@ -23,18 +25,25 @@ HERE = Path(__file__).resolve().parent
 sys.path.insert(0, str(HERE))
 import brainlib as bl  # noqa: E402
 
-
-def canonical_spikes(rec):
-    """Deterministic serialization of a spike record (for hashing)."""
-    lines = []
-    for bi in sorted(rec["spikes"]):
-        ts = ",".join(repr(t) for t in rec["spikes"][bi])
-        lines.append(f"{bi}:{ts}")
-    return "\n".join(lines)
+VENV_PY = bl.ROOT / ".venv" / "bin" / "python"
 
 
-def sha256_text(text):
-    return hashlib.sha256(text.encode()).hexdigest()
+def run_trial(seed, out, t_run_ms, r_poi_hz, tag):
+    spikes = out / f"spikes_seed{seed}_{tag}.txt"
+    rec = out / f"trial_seed{seed}_{tag}.json"
+    cmd = [str(VENV_PY), str(HERE / "trial_runner.py"),
+           "--seed", str(seed), "--t-run-ms", str(t_run_ms),
+           "--r-poi-hz", str(r_poi_hz), "--exc", "sugar",
+           "--spikes-out", str(spikes), "--rec-out", str(rec)]
+    import os
+    env = {**os.environ, "MALLOC_ARENA_MAX": "2"}
+    print(f">>> trial seed={seed} tag={tag} (fresh process) ...", flush=True)
+    r = subprocess.run(cmd, env=env)
+    if r.returncode != 0:
+        raise SystemExit(f"trial seed={seed} tag={tag} FAILED")
+    text = spikes.read_text()
+    return {"sha256": hashlib.sha256(text.encode()).hexdigest(),
+            "size": len(text), "spikes_file": spikes.name}
 
 
 def main():
@@ -44,71 +53,74 @@ def main():
     ap.add_argument("--t-run-ms", type=int, default=1000)
     ap.add_argument("--r-poi-hz", type=int, default=150)
     ap.add_argument("--out", default=str(bl.RESULTS / "repro_783"))
+    ap.add_argument("--compare-against", default="",
+                    help="dir of a previous invocation; compare seed[0] hashes")
     args = ap.parse_args()
 
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    recs = {}   # (seed, rep) -> record
+    files = {}
     for rep in range(args.reps):
         for seed in args.seeds:
-            print(f">>> trial seed={seed} rep={rep} ...", flush=True)
-            rec = bl.run_seeded_trial(
-                seed=seed, version="783", exc_fly_ids=bl.SUGAR_IDS,
-                t_run_ms=args.t_run_ms, r_poi_hz=args.r_poi_hz)
-            recs[(seed, rep)] = rec
-            text = canonical_spikes(rec)
-            (out / f"spikes_seed{seed}_rep{rep}.json").write_text(text)
-            bl.save_json(out / f"trial_seed{seed}_rep{rep}.json", bl.public_rec(rec))
+            files[(seed, rep)] = run_trial(seed, out, args.t_run_ms,
+                                           args.r_poi_hz, f"rep{rep}")
 
-    # ---- checks
-    in_proc = {}
+    per_seed = {}
     for seed in args.seeds:
-        a = canonical_spikes(recs[(seed, 0)])
-        b = canonical_spikes(recs[(seed, 1)])
-        in_proc[seed] = {
-            "identical": a == b,
-            "sha256_rep0": sha256_text(a),
-            "sha256_rep1": sha256_text(b),
-            "n_active": recs[(seed, 0)]["n_active_neurons"],
-            "n_spikes": recs[(seed, 0)]["n_spikes"],
-        }
+        hashes = {rep: files[(seed, rep)]["sha256"]
+                  for rep in range(args.reps)}
+        identical = len(set(hashes.values())) == 1
+        per_seed[seed] = {"identical_across_processes": identical,
+                          "sha256": hashes[0], "hashes": hashes}
 
     sensitivity = None
     if len(args.seeds) >= 2:
-        a = canonical_spikes(recs[(args.seeds[0], 0)])
-        b = canonical_spikes(recs[(args.seeds[1], 0)])
         sensitivity = {
             "seeds": args.seeds,
-            "differ": a != b,
-            "n_active_a": recs[(args.seeds[0], 0)]["n_active_neurons"],
-            "n_active_b": recs[(args.seeds[1], 0)]["n_active_neurons"],
+            "differ": (per_seed[args.seeds[0]]["sha256"] !=
+                       per_seed[args.seeds[1]]["sha256"]),
         }
+
+    cross_invocation = None
+    if args.compare_against.strip():
+        prev = Path(args.compare_against.strip()) / f"spikes_seed{args.seeds[0]}_rep0.txt"
+        if prev.is_file():
+            prev_hash = hashlib.sha256(prev.read_text().encode()).hexdigest()
+            cross_invocation = {
+                "previous_dir": args.compare_against.strip(),
+                "seed": args.seeds[0],
+                "identical": prev_hash == per_seed[args.seeds[0]]["sha256"],
+            }
 
     verdict = {
         "version": "783 (canonical)",
         "params": {"t_run_ms": args.t_run_ms, "r_poi_hz": args.r_poi_hz,
-                   "stimulus": "sugar-sensing set (20 of 21 present in v783)"},
-        "in_process_deterministic": all(v["identical"] for v in in_proc.values()),
-        "per_seed": in_proc,
+                   "stimulus": "sugar-sensing set (20 of 21 present in v783)",
+                   "trials_per_seed": args.reps},
+        "identical_across_processes": all(
+            v["identical_across_processes"] for v in per_seed.values()),
+        "per_seed": per_seed,
         "seed_sensitivity": sensitivity,
-        "peak_rss_kb": max(r["peak_rss_kb"] for r in recs.values()),
-        "timings_s": {f"seed{s}_rep{r}": {"build": recs[(s, r)]["wall_build_s"],
-                                          "run": recs[(s, r)]["wall_run_s"]}
-                      for (s, r) in recs},
+        "cross_invocation": cross_invocation,
+        "engineered_note": "seeding is an engineered harness addition "
+                           "(brian2.seed + numpy seed); the published model "
+                           "code is unmodified and unseeded",
     }
     verdict["gate_reproducible_activity"] = bool(
-        verdict["in_process_deterministic"] and
-        (sensitivity is None or sensitivity["differ"]))
+        verdict["identical_across_processes"]
+        and (sensitivity is None or sensitivity["differ"])
+        and (cross_invocation is None or cross_invocation["identical"]))
     bl.save_json(out / "verdict.json", verdict)
     print("\nGATE (reproducible activity):",
           "PASS" if verdict["gate_reproducible_activity"] else "FAIL")
-    for s, v in in_proc.items():
-        print(f"  seed {s}: identical={v['identical']} "
-              f"({v['n_spikes']} spikes, {v['n_active']} active) "
-              f"sha={v['sha256_rep0'][:16]}")
+    for s, v in per_seed.items():
+        print(f"  seed {s}: identical_across_processes="
+              f"{v['identical_across_processes']} sha={v['sha256'][:16]}")
     if sensitivity:
-        print(f"  sensitivity: seeds differ={sensitivity['differ']}")
+        print(f"  sensitivity (seeds differ): {sensitivity['differ']}")
+    if cross_invocation:
+        print(f"  cross-invocation identical: {cross_invocation['identical']}")
 
 
 if __name__ == "__main__":

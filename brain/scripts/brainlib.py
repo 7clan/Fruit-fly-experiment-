@@ -132,6 +132,22 @@ def rss_kb():
     return -1
 
 
+def trim_memory():
+    """Return freed heap to the OS (glibc malloc_trim) + full GC.
+
+    Engineered-harness helper: whole-brain rebuilds peak near 3 GB; without
+    trimming, allocator arenas fragment and repeated in-process trials OOM
+    small machines. No-op where unsupported.
+    """
+    import gc
+    gc.collect()
+    try:
+        import ctypes
+        ctypes.CDLL("libc.so.6").malloc_trim(0)
+    except Exception:
+        pass
+
+
 def cpu_info():
     info = {"cores": __import__("os").cpu_count()}
     try:
@@ -242,7 +258,12 @@ _GRAPH = {}
 
 
 def adjacency(version: str):
-    """CSR adjacency (presynaptic -> postsynaptic) via scipy.sparse."""
+    """CSR adjacency (presynaptic -> postsynaptic) via scipy.sparse.
+
+    Memory discipline: the 15M-row pandas dataframe is FREED after the
+    CSR is built (~350 MB kept). The parent must stay light while trial
+    subprocesses (each ~2.9 GB) run — coexistence OOMs small machines.
+    """
     if version in _GRAPH:
         return _GRAPH[version]
     from scipy.sparse import csr_matrix
@@ -253,7 +274,9 @@ def adjacency(version: str):
          (con["Presynaptic_Index"].to_numpy(), con["Postsynaptic_Index"].to_numpy())),
         shape=(n, n),
     )
-    _GRAPH[version] = (adj, con)
+    del con
+    trim_memory()
+    _GRAPH[version] = (adj, None)
     return _GRAPH[version]
 
 
