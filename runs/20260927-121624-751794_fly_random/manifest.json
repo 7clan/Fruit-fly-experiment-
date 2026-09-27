@@ -1,0 +1,154 @@
+{
+  "condition": "fly_random",
+  "controller": "fly",
+  "seed": 20262927,
+  "software_version": "0.1.0",
+  "python_version": "3.12.14",
+  "platform": "Linux-5.10.134-013.15.kangaroo.al8.x86_64-x86_64-with-glibc2.41",
+  "created_at": "2026-09-27T12:16:24",
+  "config_snapshot": {
+    "actions": {
+      "action_vocabulary": [
+        "FORWARD",
+        "BACKWARD",
+        "LEFT",
+        "RIGHT",
+        "STOP"
+      ],
+      "scheme": "motion_direction",
+      "zone_grid": {
+        "cols": 3,
+        "rows": 3
+      },
+      "zone_actions": {
+        "top_left": "LEFT",
+        "top_center": "FORWARD",
+        "top_right": "RIGHT",
+        "middle_left": "LEFT",
+        "middle_center": "STOP",
+        "middle_right": "RIGHT",
+        "bottom_left": "LEFT",
+        "bottom_center": "BACKWARD",
+        "bottom_right": "RIGHT"
+      },
+      "dwell_frames": 5,
+      "pause_speed_mm_s": 8.0,
+      "pause_dwell_frames": 12,
+      "cooldown_frames": 20,
+      "max_lost_frames": 25,
+      "motion_scheme": {
+        "heading_dwell_frames": 10,
+        "map": {
+          "up": "FORWARD",
+          "down": "BACKWARD",
+          "left": "LEFT",
+          "right": "RIGHT"
+        }
+      }
+    },
+    "experiment": {
+      "run": {
+        "fps": 30,
+        "out_dir": "runs"
+      },
+      "game": {
+        "width": 640,
+        "height": 480,
+        "player_radius": 10,
+        "player_speed": 80,
+        "target_radius": 18,
+        "spawn_min_dist": 260,
+        "spawn_max_dist": 420,
+        "timeout_s": 30.0,
+        "scenario": "open_field",
+        "obstacles": [
+          [
+            280,
+            180,
+            80,
+            120
+          ]
+        ]
+      },
+      "reward": {
+        "mode": "both",
+        "sparse_success": 1.0,
+        "shaped_per_px": 0.004,
+        "time_penalty_per_s": 0.002,
+        "obstacle_penalty": 0.05
+      },
+      "trial": {
+        "log_stride": 3,
+        "save_frames": false
+      },
+      "controllers": {
+        "random": {
+          "interval_s": [
+            0.5,
+            1.2
+          ],
+          "stop_probability": 0.1
+        },
+        "fixed": {
+          "interval_s": 0.5
+        }
+      },
+      "synthetic_fly": {
+        "walk_duration_s": [
+          0.8,
+          2.5
+        ],
+        "pause_duration_s": [
+          0.2,
+          1.0
+        ],
+        "walk_speed_mm_s": [
+          16.0,
+          34.0
+        ],
+        "turn_rate_sigma": 1.2,
+        "cue_bias": 0.85,
+        "start_mode": "walk"
+      },
+      "demo": {
+        "trials_per_condition": 30,
+        "conditions": [
+          "random",
+          "fixed",
+          "fly_random",
+          "fly_cue",
+          "fly_cue_shuffled"
+        ],
+        "bootstrap_iterations": 10000,
+        "rolling_window": 10
+      }
+    },
+    "tracking": {
+      "source": {
+        "type": "synthetic",
+        "camera_index": 0,
+        "video_path": "",
+        "width": 360,
+        "height": 280,
+        "arena_mm": [
+          90,
+          60
+        ]
+      },
+      "tracker": {
+        "history": 300,
+        "var_threshold": 32,
+        "min_area": 25,
+        "max_area": 2500,
+        "warmup_frames": 20,
+        "learning_rate": 0.0005
+      },
+      "calibration": {
+        "file": "",
+        "flip_x": false,
+        "flip_y": false
+      }
+    }
+  },
+  "notes": "phase1 demo"
+}

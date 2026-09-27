@@ -1,0 +1,15 @@
+condition            n   succ%  med TTT  med pathEff  meanAct  meanReward
+-------------------------------------------------------------------------
+random              30    3.3%    18.8s         0.19     34.6        0.24
+fixed               30  100.0%     4.8s         0.81      9.9        2.24
+fly_random          30    6.7%    25.6s         0.27     32.1       -0.01
+fly_cue             30   76.7%    12.2s         0.36     20.5        1.96
+fly_cue_shuffled    30    3.3%     5.7s         0.80     31.7        0.11
+
+Bootstrap 95% CI of success-rate differences:
+  fly_cue__vs__random                        diff=+0.733  CI[+0.567, +0.900] p(diff<=0)=0.0000  *
+  fly_cue__vs__fly_random                    diff=+0.700  CI[+0.533, +0.867] p(diff<=0)=0.0000  *
+  fly_cue__vs__fly_cue_shuffled              diff=+0.733  CI[+0.567, +0.900] p(diff<=0)=0.0000  *
+  fixed__vs__random                          diff=+0.967  CI[+0.900, +1.000] p(diff<=0)=0.0000  *
+
+PHASE-1 GATE: PASSED - Apparatus validated if fly_cue - random AND fly_cue - fly_cue_shuffled CIs exclude 0

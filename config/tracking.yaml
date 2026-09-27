@@ -1,0 +1,34 @@
+# ============================================================================
+# Camera + fly-tracking configuration
+# ============================================================================
+source:
+  # synthetic : simulated fly rendered to frames (validates whole pipeline
+  #             without any animal; goes through the SAME tracker code path)
+  # webcam    : real overhead camera over the behavioral arena
+  # video     : offline analysis of a recorded video
+  type: synthetic
+  camera_index: 0
+  video_path: ""
+  width: 360          # synthetic frame size (px)
+  height: 280
+  arena_mm: [90, 60]  # physical arena size (width_mm, height_mm) -> mm/s units
+
+tracker:
+  history: 300        # MOG2 background model history
+  var_threshold: 32
+  min_area: 25        # px^2 - smaller blobs are noise
+  max_area: 2500      # px^2 - bigger blobs are shadows/debris/cue bleed
+  warmup_frames: 20   # background-only frames before the fly "appears"
+  # Near-frozen learning rate: a motionless fly (wall press, long pause) is
+  # NEVER absorbed into the background model, so the tracker never goes
+  # blind during a closed-loop trial (absorption caused decoder deadlocks).
+  # Sweep: auto ~10% loss, 0.002 ~0% (moving flies), 0.0005 ~0% (always).
+  # Requires stable lighting -> light-tight enclosure + constant LED panel.
+  learning_rate: 0.0005
+
+calibration:
+  # .npz produced by scripts/calibrate_arena.py (4-click homography).
+  # Empty -> identity mapping (synthetic source supplies exact corners).
+  file: ""
+  flip_x: false       # set true if camera is mirrored relative to screen axes
+  flip_y: false

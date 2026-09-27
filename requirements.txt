@@ -1,0 +1,7 @@
+# Phase 1 dependencies - deliberately minimal.
+# No PyTorch / scikit-learn in Phase 1: no learning model is trained yet.
+# RL libraries enter in Phase 4 (see docs/ROADMAP.md).
+numpy>=1.24
+opencv-python>=4.8
+matplotlib>=3.7
+PyYAML>=6.0

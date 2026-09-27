@@ -1,0 +1,80 @@
+{
+  "created_at": "2026-09-27T12:22:34",
+  "conditions": {
+    "random": {
+      "success_rate": 0.03333333333333333,
+      "median_time_to_target_s": 18.767,
+      "median_path_efficiency": 0.1892,
+      "mean_actions": 34.6,
+      "mean_action_changes": 27.8,
+      "mean_inter_action_s": 0.8711933333333334,
+      "mean_reward": 0.23730666666666667
+    },
+    "fixed": {
+      "success_rate": 1.0,
+      "median_time_to_target_s": 4.833500000000001,
+      "median_path_efficiency": 0.80585,
+      "mean_actions": 9.9,
+      "mean_action_changes": 5.8,
+      "mean_inter_action_s": 0.5333000000000001,
+      "mean_reward": 2.2397366666666665
+    },
+    "fly_random": {
+      "success_rate": 0.06666666666666667,
+      "median_time_to_target_s": 25.616500000000002,
+      "median_path_efficiency": 0.27015,
+      "mean_actions": 32.06666666666667,
+      "mean_action_changes": 18.2,
+      "mean_inter_action_s": 0.9239866666666666,
+      "mean_reward": -0.011126666666666684
+    },
+    "fly_cue": {
+      "success_rate": 0.7666666666666667,
+      "median_time_to_target_s": 12.167,
+      "median_path_efficiency": 0.3556,
+      "mean_actions": 20.533333333333335,
+      "mean_action_changes": 13.166666666666666,
+      "mean_inter_action_s": 0.9084900000000001,
+      "mean_reward": 1.961693333333333
+    },
+    "fly_cue_shuffled": {
+      "success_rate": 0.03333333333333333,
+      "median_time_to_target_s": 5.7,
+      "median_path_efficiency": 0.8048,
+      "mean_actions": 31.733333333333334,
+      "mean_action_changes": 20.2,
+      "mean_inter_action_s": 0.95487,
+      "mean_reward": 0.11476666666666668
+    }
+  },
+  "bootstrap_success_rate_differences": {
+    "fly_cue__vs__random": {
+      "diff": 0.7333333333333334,
+      "ci_low": 0.5666666666666667,
+      "ci_high": 0.9,
+      "p_le_0": 0.0
+    },
+    "fly_cue__vs__fly_random": {
+      "diff": 0.7000000000000001,
+      "ci_low": 0.5333333333333332,
+      "ci_high": 0.8666666666666667,
+      "p_le_0": 0.0
+    },
+    "fly_cue__vs__fly_cue_shuffled": {
+      "diff": 0.7333333333333334,
+      "ci_low": 0.5666666666666667,
+      "ci_high": 0.9,
+      "p_le_0": 0.0
+    },
+    "fixed__vs__random": {
+      "diff": 0.9666666666666667,
+      "ci_low": 0.9,
+      "ci_high": 1.0,
+      "p_le_0": 0.0
+    }
+  },
+  "gate_phase1": {
+    "description": "Apparatus validated if fly_cue - random AND fly_cue - fly_cue_shuffled CIs exclude 0",
+    "passed": true
+  }
+}

@@ -1,0 +1,19 @@
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.pytest_cache/
+*.egg-info/
+.venv/
+
+# Secrets - NEVER commit
+.secrets/
+*.token
+*.pat
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Note: runs/ IS committed deliberately (immutable experiment records).
+# Phase-1 original results in runs/ are part of the frozen baseline.

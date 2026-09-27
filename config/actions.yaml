@@ -1,0 +1,47 @@
+# ============================================================================
+# Fly behavior -> game action mapping  (THE configurable abstraction layer)
+# Change this file without touching any code.
+# ============================================================================
+
+# Tiny action vocabulary for Phase 1 (per spec: do not expose many buttons)
+action_vocabulary: [FORWARD, BACKWARD, LEFT, RIGHT, STOP]
+
+# --- Decoder scheme -----------------------------------------------------
+# zone_dwell       : fly must STAY in an arena zone for `dwell_frames`
+#                    -> that zone's action is emitted (robust, debounce-safe)
+# motion_direction : sustained walking heading -> directional action
+#                    (default: matches "fly moves left -> LEFT"; no transit
+#                    noise when the fly walks across zones toward a cue)
+# Both schemes emit STOP after a sustained PAUSED period.
+scheme: motion_direction
+
+zone_grid:
+  cols: 3
+  rows: 3
+
+# 3x3 zone -> action. Names: {top,middle,bottom}_{left,center,right}
+# (y=0 row is the TOP of the arena image; FORWARD means "up" on screen)
+zone_actions:
+  top_left: LEFT
+  top_center: FORWARD
+  top_right: RIGHT
+  middle_left: LEFT
+  middle_center: STOP
+  middle_right: RIGHT
+  bottom_left: LEFT
+  bottom_center: BACKWARD
+  bottom_right: RIGHT
+
+dwell_frames: 5          # frames the fly must remain in one zone
+pause_speed_mm_s: 8.0    # below this ground speed the fly counts as PAUSED
+pause_dwell_frames: 12   # PAUSED this long -> STOP action
+cooldown_frames: 20      # minimum frames (~0.7 s) between two emissions
+max_lost_frames: 25      # tracking-loss tolerance before decoder holds
+
+motion_scheme:           # only used when scheme == motion_direction
+  heading_dwell_frames: 10  # ~0.33 s of consistent heading before emitting
+  map:
+    up: FORWARD
+    down: BACKWARD
+    left: LEFT
+    right: RIGHT

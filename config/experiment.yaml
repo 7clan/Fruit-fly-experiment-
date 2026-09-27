@@ -1,0 +1,64 @@
+# ============================================================================
+# Experiment / game / reward / demo configuration
+# ============================================================================
+run:
+  fps: 30
+  out_dir: runs
+
+game:
+  width: 640
+  height: 480
+  player_radius: 10
+  player_speed: 80        # px/s (slower player = less overshoot while
+                          # the fly takes ~1-2 s to commit to a direction)
+  target_radius: 18
+  spawn_min_dist: 260     # px, start-to-target
+  spawn_max_dist: 420
+  timeout_s: 30.0
+  scenario: open_field    # open_field | obstacles
+  obstacles:              # [x, y, w, h] rectangles (used in 'obstacles' scenario)
+    - [280, 180, 80, 120]
+
+reward:
+  mode: both              # sparse | shaped | both
+  sparse_success: 1.0
+  shaped_per_px: 0.004    # reward per px of target-distance closed
+  time_penalty_per_s: 0.002
+  obstacle_penalty: 0.05
+
+trial:
+  log_stride: 3           # write every Nth frame row to the DB
+  save_frames: false      # dump JPEG frames (raw data, large)
+
+controllers:
+  random:
+    interval_s: [0.5, 1.2]   # uniform range between emissions
+    stop_probability: 0.10
+  fixed:
+    interval_s: 0.5          # greedy ceiling reference
+
+synthetic_fly:
+  # Burst-pause locomotion resembling free-walking Drosophila.
+  # cue_bias 0.85 models a fly with a STRONG visual preference for the
+  # stripe (as would be obtained by stimulus selection/training); the
+  # fly_random condition forces cue_bias to 0 (true random walk).
+  walk_duration_s: [0.8, 2.5]   # uniform per walking bout
+  pause_duration_s: [0.2, 1.0]
+  walk_speed_mm_s: [16.0, 34.0]
+  turn_rate_sigma: 1.2          # rad/s heading noise
+  cue_bias: 0.85                # 0.0 = ignores cue (random walk)
+                                 # 0.85 = strong taxis toward the cue stripe
+                                 # 1.0 = maximal taxis
+  start_mode: walk
+
+demo:
+  trials_per_condition: 30
+  conditions:
+    - random              # A. random controller (floor)
+    - fixed               # B. hand-coded greedy controller (ceiling)
+    - fly_random          # C. fly-controlled, cue presented, fly ignores it
+    - fly_cue             # D. fly-controlled, goal-directed cue, taxis fly
+    - fly_cue_shuffled    # E. same fly, cue position randomized
+                          #    (dissociates fly taxis from computer planning)
+  bootstrap_iterations: 10000
+  rolling_window: 10
