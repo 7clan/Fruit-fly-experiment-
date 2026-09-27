@@ -170,4 +170,23 @@ cited as evidence about real-fly behavior.
 
 ## 10. Amendments
 
-(none)
+### Amendment 1 (2026-09-27, during software validation, BEFORE any real-fly data)
+
+Two correctness fixes identified by the SA1–SA11 pipeline validation itself
+(the validation suite doing its job); neither changes any registered
+threshold value:
+
+1. **Heading statistics use MOVING frames only.** A heading (direction of
+   velocity) is mathematically undefined while the animal stands still; on
+   exact ground-truth input, paused frames produce a degenerate
+   `atan2(0,0)=0` heading that inflated the mean resultant length (R̄).
+   All direction/persistence metrics (mean angle, R̄, circular std, heading
+   histogram, heading autocorrelation) now use only frames with speed
+   ≥ 2.0 mm/s — the same convention already used by the stimulus-response
+   module (§5). Thresholds unchanged; SA7 now compares like-for-like.
+2. **Analysis trims to the subject's first appearance.** Recordings start
+   before the fly is introduced (the static background needs fly-free
+   lead-in frames). Frames before the first detection are reported as
+   `lead_in_s` and excluded from coverage/pause statistics — they are not
+   "lost tracking" and must not create a phantom leading pause. Thresholds
+   unchanged.

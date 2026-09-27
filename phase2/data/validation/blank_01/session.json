@@ -1,0 +1,20 @@
+{
+  "label": "blank_01",
+  "kind": "blank",
+  "fps": 30,
+  "width": 480,
+  "height": 360,
+  "duration_s": 20.0,
+  "calibration": {
+    "px_per_mm": 5.0
+  },
+  "arena": {
+    "type": "circle",
+    "center_px": [
+      240,
+      180
+    ],
+    "radius_px": 150
+  },
+  "purpose": "SA11 false-positive check - no fly present"
+}

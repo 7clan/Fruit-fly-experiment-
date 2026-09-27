@@ -1,0 +1,912 @@
+{
+  "purpose": "SOFTWARE VALIDATION ONLY - validates the measurement code against synthetic ground truth; NOT evidence about real flies",
+  "criteria": {
+    "SA11_blank_zero_detections": {
+      "n_detections": 0,
+      "pass": true
+    },
+    "SA1_coverage": {
+      "observed": {
+        "baseline_01": 1.0,
+        "baseline_02": 1.0,
+        "baseline_03": 1.0,
+        "stimulus_01": 1.0,
+        "stimulus_02": 1.0
+      },
+      "min": 1.0,
+      "pass": true
+    },
+    "SA2_position_error": {
+      "median_mm": 0.07964923100695828,
+      "p95_mm": 0.12088010589009186,
+      "pass": true
+    },
+    "SA3_speed": {
+      "tracked_vs_gt": {
+        "baseline_01": [
+          7.077788866737419,
+          7.027
+        ],
+        "baseline_02": [
+          6.677820665850511,
+          6.615
+        ],
+        "baseline_03": [
+          6.621303787247756,
+          6.555
+        ],
+        "stimulus_01": [
+          5.24770712486964,
+          5.186
+        ],
+        "stimulus_02": [
+          6.261662255893255,
+          6.192
+        ]
+      },
+      "pass": true
+    },
+    "SA4_pause_frequency": {
+      "tracked_vs_gt": {
+        "baseline_01": [
+          29.008,
+          29.008
+        ],
+        "baseline_02": [
+          29.508,
+          29.508
+        ],
+        "baseline_03": [
+          29.008,
+          29.008
+        ],
+        "stimulus_01": [
+          23.006,
+          23.006
+        ],
+        "stimulus_02": [
+          23.006,
+          23.006
+        ]
+      },
+      "pass": true
+    },
+    "SA5_bout_duration": {
+      "tracked_vs_gt": {
+        "baseline_01": [
+          1.067,
+          1.067
+        ],
+        "baseline_02": [
+          0.933,
+          0.933
+        ],
+        "baseline_03": [
+          1.067,
+          1.067
+        ],
+        "stimulus_01": [
+          0.967,
+          0.967
+        ],
+        "stimulus_02": [
+          1.033,
+          1.033
+        ]
+      },
+      "pass": true
+    },
+    "SA6_wall_following": {
+      "tracked_vs_gt": {
+        "baseline_01": [
+          0.3546,
+          0.3538
+        ],
+        "baseline_02": [
+          0.228,
+          0.2188
+        ],
+        "baseline_03": [
+          0.3796,
+          0.387
+        ],
+        "stimulus_01": [
+          0.5097,
+          0.5072
+        ],
+        "stimulus_02": [
+          0.3373,
+          0.3392
+        ]
+      },
+      "pass": true
+    },
+    "SA7_resultant_length": {
+      "tracked_vs_gt": {
+        "baseline_01": [
+          0.0259,
+          0.0236
+        ],
+        "baseline_02": [
+          0.0213,
+          0.0208
+        ],
+        "baseline_03": [
+          0.0081,
+          0.0081
+        ],
+        "stimulus_01": [
+          0.0575,
+          0.0575
+        ],
+        "stimulus_02": [
+          0.0667,
+          0.068
+        ]
+      },
+      "pass": true
+    },
+    "SA8_stimulus": {
+      "p_values": {
+        "baseline_01": null,
+        "baseline_02": null,
+        "baseline_03": null,
+        "stimulus_01": 0.014,
+        "stimulus_02": 0.005
+      },
+      "n_stimulus_detected": 2,
+      "n_baseline_false_positive": 0,
+      "pass": true
+    },
+    "SA9_vocabulary": {
+      "selected": "L_A",
+      "expected": "L_A",
+      "pass": true
+    },
+    "SA10_gate_machinery": {
+      "clean_gate_pass": true,
+      "negative_control_G1_failed_with_diagnosis": true,
+      "pass": true,
+      "clean_gate_summary": {
+        "G1_tracking_coverage": true,
+        "G2_tracking_accuracy": true,
+        "G3_state_occupancy": true,
+        "G4_decoder_reliability": true,
+        "G5_stimulus_response_secondary": false
+      }
+    }
+  },
+  "sessions": {
+    "baseline_01": {
+      "video": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_01/video.mp4",
+      "tracks_csv": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_01/tracks.csv",
+      "fps": 30.0,
+      "n_frames": 3600,
+      "n_found": 3540,
+      "coverage": 0.9833333333333333,
+      "coverage_conf05": 1.0,
+      "mean_confidence": 0.9967203389830508
+    },
+    "baseline_02": {
+      "video": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_02/video.mp4",
+      "tracks_csv": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_02/tracks.csv",
+      "fps": 30.0,
+      "n_frames": 3600,
+      "n_found": 3540,
+      "coverage": 0.9833333333333333,
+      "coverage_conf05": 1.0,
+      "mean_confidence": 0.9969262711864406
+    },
+    "baseline_03": {
+      "video": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_03/video.mp4",
+      "tracks_csv": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_03/tracks.csv",
+      "fps": 30.0,
+      "n_frames": 3600,
+      "n_found": 3540,
+      "coverage": 0.9833333333333333,
+      "coverage_conf05": 1.0,
+      "mean_confidence": 0.9969257062146892
+    },
+    "stimulus_01": {
+      "video": "/home/z/my-project/download/fly-agent/phase2/data/validation/stimulus_01/video.mp4",
+      "tracks_csv": "/home/z/my-project/download/fly-agent/phase2/data/validation/stimulus_01/tracks.csv",
+      "fps": 30.0,
+      "n_frames": 3600,
+      "n_found": 3540,
+      "coverage": 0.9833333333333333,
+      "coverage_conf05": 1.0,
+      "mean_confidence": 0.997580790960452
+    },
+    "stimulus_02": {
+      "video": "/home/z/my-project/download/fly-agent/phase2/data/validation/stimulus_02/video.mp4",
+      "tracks_csv": "/home/z/my-project/download/fly-agent/phase2/data/validation/stimulus_02/tracks.csv",
+      "fps": 30.0,
+      "n_frames": 3600,
+      "n_found": 3540,
+      "coverage": 0.9833333333333333,
+      "coverage_conf05": 1.0,
+      "mean_confidence": 0.997122033898305
+    },
+    "blank_01": {
+      "video": "/home/z/my-project/download/fly-agent/phase2/data/validation/blank_01/video.mp4",
+      "tracks_csv": "/home/z/my-project/download/fly-agent/phase2/data/validation/blank_01/tracks.csv",
+      "fps": 30.0,
+      "n_frames": 600,
+      "n_found": 0,
+      "coverage": 0.0,
+      "coverage_conf05": 0.0,
+      "mean_confidence": 0.0
+    }
+  },
+  "gate_on_synthetic": {
+    "G1": {
+      "requirement": "coverage(conf>=0.5) >= 0.9 in EVERY session",
+      "observed": {
+        "baseline_01": 1.0,
+        "baseline_02": 1.0,
+        "baseline_03": 1.0
+      },
+      "min_observed": 1.0,
+      "pass": true,
+      "diagnosis": null
+    },
+    "G2": {
+      "requirement": "median annotation error <= 2.0 mm over >= 150 frames",
+      "n_annotated": 150,
+      "median_error_mm": 0.07872732749314854,
+      "pass": true,
+      "diagnosis": null
+    },
+    "G3": {
+      "requirement": "every selected-vocabulary state occupied >= 0.05 in every session, within [0.5, 2.0] stability band",
+      "pass": true,
+      "diagnosis": null
+    },
+    "G4": {
+      "requirement": "LOSO nearest-centroid accuracy >= 0.8",
+      "pass": true,
+      "loso_accuracy": 0.8132183908045977,
+      "loso_chance": 0.23563218390804597,
+      "diagnosis": null
+    },
+    "vocabulary": {
+      "selected_level": "L_A",
+      "n_states": 5,
+      "states": [
+        "BACKWARD",
+        "FORWARD",
+        "LEFT",
+        "PAUSE",
+        "RIGHT"
+      ],
+      "construction": {
+        "dropped_cardinal_L_B": "LEFT",
+        "L_C_axis": "v"
+      },
+      "directional_control_possible": true,
+      "minimum_for_directional_control": "L_C"
+    }
+  },
+  "cross_session_summary": {
+    "n_sessions": 5,
+    "coverage_conf05": {
+      "mean": 1.0,
+      "min": 1.0,
+      "max": 1.0,
+      "n": 5
+    },
+    "speed_mean_mm_s": {
+      "mean": 6.377256540119717,
+      "min": 5.24770712486964,
+      "max": 7.077788866737419,
+      "n": 5
+    },
+    "pause_rate_per_min": {
+      "mean": 26.70741130663759,
+      "min": 23.006384271635376,
+      "max": 29.508188522314942,
+      "n": 5
+    },
+    "bout_median_duration_s": {
+      "mean": 1.0133300000000034,
+      "min": 0.9333000000000027,
+      "max": 1.0667000000000115,
+      "n": 5
+    },
+    "mean_resultant_length": {
+      "mean": 0.03591857426402417,
+      "min": 0.0081082765087226,
+      "max": 0.06671722570461025,
+      "n": 5
+    },
+    "wall_following_fraction": {
+      "mean": 0.3618329528843356,
+      "min": 0.22799343903772554,
+      "max": 0.5096551724137931,
+      "n": 5
+    },
+    "state_variability": {
+      "n_sessions": 5,
+      "states": [
+        "FORWARD",
+        "BACKWARD",
+        "LEFT",
+        "RIGHT",
+        "PAUSE"
+      ],
+      "occupancy_range": {
+        "FORWARD": {
+          "min": 0.15517241379310345,
+          "max": 0.29310344827586204,
+          "mean": 0.21379310344827585,
+          "std": 0.04476122408878333
+        },
+        "BACKWARD": {
+          "min": 0.13793103448275862,
+          "max": 0.25862068965517243,
+          "mean": 0.20172413793103453,
+          "std": 0.04925123054167483
+        },
+        "LEFT": {
+          "min": 0.14655172413793102,
+          "max": 0.22413793103448276,
+          "mean": 0.18448275862068966,
+          "std": 0.028119838672931198
+        },
+        "RIGHT": {
+          "min": 0.13793103448275862,
+          "max": 0.27586206896551724,
+          "mean": 0.19137931034482758,
+          "std": 0.04919083661271416
+        },
+        "PAUSE": {
+          "min": 0.1206896551724138,
+          "max": 0.3620689655172414,
+          "mean": 0.20862068965517241,
+          "std": 0.09970229168828247
+        }
+      },
+      "jsd_matrix": {
+        "baseline_01": {
+          "baseline_01": 0.0,
+          "baseline_02": 0.028617829715951087,
+          "baseline_03": 0.012439904014483999,
+          "stimulus_01": 0.057416453418496015,
+          "stimulus_02": 0.03767503923785245
+        },
+        "baseline_02": {
+          "baseline_01": 0.028617829715951087,
+          "baseline_02": 0.0,
+          "baseline_03": 0.007255523865484069,
+          "stimulus_01": 0.07718478313699897,
+          "stimulus_02": 0.0362930324083577
+        },
+        "baseline_03": {
+          "baseline_01": 0.012439904014483999,
+          "baseline_02": 0.007255523865484069,
+          "baseline_03": 0.0,
+          "stimulus_01": 0.06523985865053009,
+          "stimulus_02": 0.03128753732068998
+        },
+        "stimulus_01": {
+          "baseline_01": 0.057416453418496015,
+          "baseline_02": 0.07718478313699897,
+          "baseline_03": 0.06523985865053009,
+          "stimulus_01": 0.0,
+          "stimulus_02": 0.012790081960252313
+        },
+        "stimulus_02": {
+          "baseline_01": 0.03767503923785245,
+          "baseline_02": 0.0362930324083577,
+          "baseline_03": 0.03128753732068998,
+          "stimulus_01": 0.012790081960252313,
+          "stimulus_02": 0.0
+        }
+      },
+      "mean_pairwise_jsd": 0.03662000437290967,
+      "max_pairwise_jsd": 0.07718478313699897
+    }
+  },
+  "session_analyses": [
+    {
+      "session_dir": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_01",
+      "label": "baseline_01",
+      "kind": "baseline",
+      "fps": 30,
+      "duration_s": 119.9667,
+      "tracking": {
+        "n_frames": 3540,
+        "n_frames_total_incl_lead_in": 3600,
+        "lead_in_frames": 60,
+        "lead_in_s": 2.0,
+        "n_found": 3540,
+        "coverage": 1.0,
+        "coverage_conf05": 1.0,
+        "mean_confidence": 0.9967203389830508,
+        "frac_interpolated": 0.0
+      },
+      "movement": {
+        "speed_mean_mm_s": 7.077788866737419,
+        "speed_median_mm_s": 6.714918851351307,
+        "speed_p90_mm_s": 16.303668826402447,
+        "frac_frames_moving": 0.5356133408705483,
+        "moving_speed_mean_mm_s": 13.160639305653648
+      },
+      "bouts": {
+        "n_bouts": 57,
+        "rate_per_min": 28.507910945287314,
+        "median_duration_s": 1.0667000000000115,
+        "mean_duration_s": 1.0766070175438598,
+        "median_straightness": 0.9722687235683916
+      },
+      "pauses": {
+        "n_pauses": 58,
+        "rate_per_min": 29.008049733801126,
+        "median_duration_s": 0.9833500000000015
+      },
+      "direction": {
+        "mean_angle_deg": -46.14242900232473,
+        "mean_resultant_length": 0.02593805786659396,
+        "circular_std_deg": 154.848010290459,
+        "histogram_16": [
+          192,
+          54,
+          40,
+          182,
+          235,
+          8,
+          15,
+          235,
+          169,
+          98,
+          74,
+          179,
+          130,
+          43,
+          67,
+          174
+        ],
+        "n_moving_frames": 1895
+      },
+      "persistence": {
+        "mean_resultant_length": 0.02593805786659396,
+        "heading_autocorr_1s": 0.2475177565952143,
+        "median_bout_straightness": 0.9722687235683916
+      },
+      "wall": {
+        "median_wall_distance_mm": 7.10460525225313,
+        "frac_time_in_band": 0.6135593220338983,
+        "frac_moving_near_wall": 0.6105540897097625,
+        "frac_moving_wall_following": 0.3546174142480211,
+        "wall_contact_rate_per_min": 0.0
+      },
+      "stimulus": null,
+      "state_occupancy_L_A": {
+        "FORWARD": 0.19827586206896552,
+        "BACKWARD": 0.16379310344827586,
+        "LEFT": 0.22413793103448276,
+        "RIGHT": 0.27586206896551724,
+        "PAUSE": 0.13793103448275862
+      }
+    },
+    {
+      "session_dir": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_02",
+      "label": "baseline_02",
+      "kind": "baseline",
+      "fps": 30,
+      "duration_s": 119.9667,
+      "tracking": {
+        "n_frames": 3540,
+        "n_frames_total_incl_lead_in": 3600,
+        "lead_in_frames": 60,
+        "lead_in_s": 2.0,
+        "n_found": 3540,
+        "coverage": 1.0,
+        "coverage_conf05": 1.0,
+        "mean_confidence": 0.9969262711864406,
+        "frac_interpolated": 0.0
+      },
+      "movement": {
+        "speed_mean_mm_s": 6.677820665850511,
+        "speed_median_mm_s": 5.994457196957837,
+        "speed_p90_mm_s": 16.03661303625642,
+        "frac_frames_moving": 0.5169587337478802,
+        "moving_speed_mean_mm_s": 12.851275658401974
+      },
+      "bouts": {
+        "n_bouts": 58,
+        "rate_per_min": 29.008049733801126,
+        "median_duration_s": 0.9333000000000027,
+        "mean_duration_s": 1.0143620689655164,
+        "median_straightness": 0.9773739012321434
+      },
+      "pauses": {
+        "n_pauses": 59,
+        "rate_per_min": 29.508188522314942,
+        "median_duration_s": 0.9667000000000012
+      },
+      "direction": {
+        "mean_angle_deg": -22.52551012752773,
+        "mean_resultant_length": 0.021333332110831355,
+        "circular_std_deg": 158.93738820504922,
+        "histogram_16": [
+          166,
+          67,
+          67,
+          218,
+          218,
+          52,
+          48,
+          58,
+          177,
+          58,
+          74,
+          287,
+          197,
+          13,
+          3,
+          126
+        ],
+        "n_moving_frames": 1829
+      },
+      "persistence": {
+        "mean_resultant_length": 0.021333332110831355,
+        "heading_autocorr_1s": 0.27485136431991386,
+        "median_bout_straightness": 0.9773739012321434
+      },
+      "wall": {
+        "median_wall_distance_mm": 10.23752946113169,
+        "frac_time_in_band": 0.4887005649717514,
+        "frac_moving_near_wall": 0.47731000546746855,
+        "frac_moving_wall_following": 0.22799343903772554,
+        "wall_contact_rate_per_min": 0.0
+      },
+      "stimulus": null,
+      "state_occupancy_L_A": {
+        "FORWARD": 0.29310344827586204,
+        "BACKWARD": 0.25862068965517243,
+        "LEFT": 0.16379310344827586,
+        "RIGHT": 0.16379310344827586,
+        "PAUSE": 0.1206896551724138
+      }
+    },
+    {
+      "session_dir": "/home/z/my-project/download/fly-agent/phase2/data/validation/baseline_03",
+      "label": "baseline_03",
+      "kind": "baseline",
+      "fps": 30,
+      "duration_s": 119.9667,
+      "tracking": {
+        "n_frames": 3540,
+        "n_frames_total_incl_lead_in": 3600,
+        "lead_in_frames": 60,
+        "lead_in_s": 2.0,
+        "n_found": 3540,
+        "coverage": 1.0,
+        "coverage_conf05": 1.0,
+        "mean_confidence": 0.9969257062146892,
+        "frac_interpolated": 0.0
+      },
+      "movement": {
+        "speed_mean_mm_s": 6.621303787247756,
+        "speed_median_mm_s": 5.997385669260776,
+        "speed_p90_mm_s": 15.822427578113029,
+        "frac_frames_moving": 0.5211984171848502,
+        "moving_speed_mean_mm_s": 12.630849545834623
+      },
+      "bouts": {
+        "n_bouts": 57,
+        "rate_per_min": 28.507910945287314,
+        "median_duration_s": 1.066600000000001,
+        "mean_duration_s": 1.0467859649122813,
+        "median_straightness": 0.9693755261905421
+      },
+      "pauses": {
+        "n_pauses": 58,
+        "rate_per_min": 29.008049733801126,
+        "median_duration_s": 1.0166499999999985
+      },
+      "direction": {
+        "mean_angle_deg": -122.34192410324398,
+        "mean_resultant_length": 0.0081082765087226,
+        "circular_std_deg": 177.7992443124668,
+        "histogram_16": [
+          146,
+          36,
+          71,
+          118,
+          178,
+          102,
+          79,
+          134,
+          216,
+          26,
+          32,
+          120,
+          235,
+          69,
+          35,
+          247
+        ],
+        "n_moving_frames": 1844
+      },
+      "persistence": {
+        "mean_resultant_length": 0.0081082765087226,
+        "heading_autocorr_1s": 0.3351502510252576,
+        "median_bout_straightness": 0.9693755261905421
+      },
+      "wall": {
+        "median_wall_distance_mm": 8.71244495015926,
+        "frac_time_in_band": 0.6129943502824858,
+        "frac_moving_near_wall": 0.6176789587852495,
+        "frac_moving_wall_following": 0.3796095444685466,
+        "wall_contact_rate_per_min": 0.0
+      },
+      "stimulus": null,
+      "state_occupancy_L_A": {
+        "FORWARD": 0.21551724137931033,
+        "BACKWARD": 0.25862068965517243,
+        "LEFT": 0.1810344827586207,
+        "RIGHT": 0.21551724137931033,
+        "PAUSE": 0.12931034482758622
+      }
+    },
+    {
+      "session_dir": "/home/z/my-project/download/fly-agent/phase2/data/validation/stimulus_01",
+      "label": "stimulus_01",
+      "kind": "stimulus",
+      "fps": 30,
+      "duration_s": 119.9667,
+      "tracking": {
+        "n_frames": 3540,
+        "n_frames_total_incl_lead_in": 3600,
+        "lead_in_frames": 60,
+        "lead_in_s": 2.0,
+        "n_found": 3540,
+        "coverage": 1.0,
+        "coverage_conf05": 1.0,
+        "mean_confidence": 0.997580790960452,
+        "frac_interpolated": 0.0
+      },
+      "movement": {
+        "speed_mean_mm_s": 5.24770712486964,
+        "speed_median_mm_s": 0.1517834681282374,
+        "speed_p90_mm_s": 15.332579265086514,
+        "frac_frames_moving": 0.4098360655737705,
+        "moving_speed_mean_mm_s": 12.696051673067906
+      },
+      "bouts": {
+        "n_bouts": 49,
+        "rate_per_min": 24.506800637176816,
+        "median_duration_s": 0.966700000000003,
+        "mean_duration_s": 0.9428653061224485,
+        "median_straightness": 0.9794015731430449
+      },
+      "pauses": {
+        "n_pauses": 46,
+        "rate_per_min": 23.006384271635376,
+        "median_duration_s": 1.1500000000000021
+      },
+      "direction": {
+        "mean_angle_deg": -168.2917653031988,
+        "mean_resultant_length": 0.057495979129362676,
+        "circular_std_deg": 136.93667958115182,
+        "histogram_16": [
+          115,
+          87,
+          42,
+          91,
+          166,
+          47,
+          29,
+          120,
+          148,
+          11,
+          42,
+          137,
+          144,
+          30,
+          61,
+          180
+        ],
+        "n_moving_frames": 1450
+      },
+      "persistence": {
+        "mean_resultant_length": 0.057495979129362676,
+        "heading_autocorr_1s": 0.44174892548609923,
+        "median_bout_straightness": 0.9794015731430449
+      },
+      "wall": {
+        "median_wall_distance_mm": 4.584012728205892,
+        "frac_time_in_band": 0.846045197740113,
+        "frac_moving_near_wall": 0.7675862068965518,
+        "frac_moving_wall_following": 0.5096551724137931,
+        "wall_contact_rate_per_min": 0.0
+      },
+      "stimulus": {
+        "n_events": 8,
+        "events": [
+          {
+            "t_on": 8.0,
+            "t_off": 12.9667,
+            "side": "S"
+          },
+          {
+            "t_on": 24.0,
+            "t_off": 28.9667,
+            "side": "N"
+          },
+          {
+            "t_on": 39.0,
+            "t_off": 43.9667,
+            "side": "E"
+          },
+          {
+            "t_on": 55.0,
+            "t_off": 59.9667,
+            "side": "E"
+          },
+          {
+            "t_on": 70.0,
+            "t_off": 74.9667,
+            "side": "N"
+          },
+          {
+            "t_on": 86.0,
+            "t_off": 90.9667,
+            "side": "N"
+          },
+          {
+            "t_on": 101.0,
+            "t_off": 105.9667,
+            "side": "W"
+          },
+          {
+            "t_on": 114.0,
+            "t_off": 118.9667,
+            "side": "W"
+          }
+        ],
+        "mean_response": 0.9956541655398253,
+        "permutation_p": 0.014,
+        "responds": true
+      },
+      "state_occupancy_L_A": {
+        "FORWARD": 0.15517241379310345,
+        "BACKWARD": 0.13793103448275862,
+        "LEFT": 0.20689655172413793,
+        "RIGHT": 0.13793103448275862,
+        "PAUSE": 0.3620689655172414
+      }
+    },
+    {
+      "session_dir": "/home/z/my-project/download/fly-agent/phase2/data/validation/stimulus_02",
+      "label": "stimulus_02",
+      "kind": "stimulus",
+      "fps": 30,
+      "duration_s": 119.9667,
+      "tracking": {
+        "n_frames": 3540,
+        "n_frames_total_incl_lead_in": 3600,
+        "lead_in_frames": 60,
+        "lead_in_s": 2.0,
+        "n_found": 3540,
+        "coverage": 1.0,
+        "coverage_conf05": 1.0,
+        "mean_confidence": 0.997122033898305,
+        "frac_interpolated": 0.0
+      },
+      "movement": {
+        "speed_mean_mm_s": 6.261662255893255,
+        "speed_median_mm_s": 0.2098950524737595,
+        "speed_p90_mm_s": 17.391938276928713,
+        "frac_frames_moving": 0.45251554550593553,
+        "moving_speed_mean_mm_s": 13.740147433032432
+      },
+      "bouts": {
+        "n_bouts": 48,
+        "rate_per_min": 24.006661848663,
+        "median_duration_s": 1.0333499999999987,
+        "mean_duration_s": 1.0527854166666668,
+        "median_straightness": 0.9790595210663218
+      },
+      "pauses": {
+        "n_pauses": 46,
+        "rate_per_min": 23.006384271635376,
+        "median_duration_s": 1.133300000000002
+      },
+      "direction": {
+        "mean_angle_deg": 93.78932074492195,
+        "mean_resultant_length": 0.06671722570461025,
+        "circular_std_deg": 133.32303407094037,
+        "histogram_16": [
+          101,
+          17,
+          84,
+          173,
+          141,
+          7,
+          14,
+          138,
+          212,
+          20,
+          31,
+          172,
+          236,
+          54,
+          50,
+          151
+        ],
+        "n_moving_frames": 1601
+      },
+      "persistence": {
+        "mean_resultant_length": 0.06671722570461025,
+        "heading_autocorr_1s": 0.45875967010494223,
+        "median_bout_straightness": 0.9790595210663218
+      },
+      "wall": {
+        "median_wall_distance_mm": 5.342266509113218,
+        "frac_time_in_band": 0.6742937853107345,
+        "frac_moving_near_wall": 0.5808869456589631,
+        "frac_moving_wall_following": 0.3372891942535915,
+        "wall_contact_rate_per_min": 0.0
+      },
+      "stimulus": {
+        "n_events": 8,
+        "events": [
+          {
+            "t_on": 8.0,
+            "t_off": 12.9667,
+            "side": "N"
+          },
+          {
+            "t_on": 24.0,
+            "t_off": 28.9667,
+            "side": "S"
+          },
+          {
+            "t_on": 39.0,
+            "t_off": 43.9667,
+            "side": "W"
+          },
+          {
+            "t_on": 55.0,
+            "t_off": 59.9667,
+            "side": "N"
+          },
+          {
+            "t_on": 70.0,
+            "t_off": 74.9667,
+            "side": "S"
+          },
+          {
+            "t_on": 86.0,
+            "t_off": 90.9667,
+            "side": "E"
+          },
+          {
+            "t_on": 101.0,
+            "t_off": 105.9667,
+            "side": "E"
+          },
+          {
+            "t_on": 114.0,
+            "t_off": 118.9667,
+            "side": "E"
+          }
+        ],
+        "mean_response": 1.2225921253872885,
+        "permutation_p": 0.005,
+        "responds": true
+      },
+      "state_occupancy_L_A": {
+        "FORWARD": 0.20689655172413793,
+        "BACKWARD": 0.1896551724137931,
+        "LEFT": 0.14655172413793102,
+        "RIGHT": 0.16379310344827586,
+        "PAUSE": 0.29310344827586204
+      }
+    }
+  ],
+  "overall_pass": true
+}

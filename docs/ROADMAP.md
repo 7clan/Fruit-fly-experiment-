@@ -62,6 +62,14 @@ fly_cue_shuffled 3.3%; all key CIs p<0.0001.
 
 ## Phase 1 — Real-fly observation (no game)
 
+> **STATUS 2026-09-27:** this phase (plus the Phase-2 stimulus assay and the
+> new action-vocabulary determination) is being executed as user-facing
+> "Phase 2 — Real-Fly Behavioral Validation": apparatus built, pipeline
+> validated on synthetic ground truth (SA1–SA11 PASS), gate
+> PHASE2-GATE-1.0.0 pre-registered. Real-fly data NOT yet collected — see
+> `phase2/PHASE2_REPORT.md`. Gate thresholds supersede the ones sketched
+> below (they were refined at pre-registration, before any data).
+
 WHAT: record 5–10 videos (5 min each) of a real fly in the arena; run the
 tracker offline (`--source video`); manually annotate >= 200 sampled frames
 across videos; compute tracker error vs annotation.

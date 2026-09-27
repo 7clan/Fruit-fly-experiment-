@@ -1,0 +1,32 @@
+# ============================================================================
+# Phase-2 tracking / recording parameters (apparatus level).
+# NOTE: analysis constants (windows, thresholds, gate criteria) live in
+# gate.yaml — pre-registered — and must NOT be duplicated or changed here.
+# ============================================================================
+detector:
+  mode: static            # static = median of lead-in frames (fixed rig);
+                          # mog2 = running background (slow illumination drift)
+  bg_frames: 40           # frames used to build the static background
+                          # (the recording starts BEFORE the fly is introduced)
+  dark_threshold: 25      # gray levels darker than background = foreground
+  min_area_px: 12         # blob area filter (fly ~2.4x1.2 mm)
+  max_area_px: 400
+  max_jump_mm: 30         # per-frame jump plausibility (confidence + hard cap)
+  mog2_history: 300
+  mog2_varThreshold: 32
+  mog2_learning_rate: 0.0005
+
+roi_inflate_px: 8         # arena ROI mask inflation (margin markers excluded)
+
+stimulus_markers:         # margin marker readback (exact stimulus timing)
+  marker_w_px: 30
+  marker_h_px: 14
+  margin_px: 18
+  on_brightness_delta: 40
+  baseline_frames: 40
+
+assume_fps: 30            # fallback if the container reports no fps
+
+recording:
+  default_minutes: 10
+  fourcc_preference: [mp4v, XVID, MJPG]

@@ -1,0 +1,18 @@
+==========================================================================
+PHASE-2 SOFTWARE VALIDATION (synthetic ground truth — CODE ONLY,
+NOT evidence about real flies)
+==========================================================================
+[PASS] SA11_blank_zero_detections
+[PASS] SA1_coverage
+[PASS] SA2_position_error
+[PASS] SA3_speed
+[PASS] SA4_pause_frequency
+[PASS] SA5_bout_duration
+[PASS] SA6_wall_following
+[PASS] SA7_resultant_length
+[PASS] SA8_stimulus
+[PASS] SA9_vocabulary
+[PASS] SA10_gate_machinery
+--------------------------------------------------------------------------
+OVERALL: ALL SOFTWARE ACCEPTANCE CRITERIA PASSED
+==========================================================================

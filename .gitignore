@@ -15,5 +15,10 @@ __pycache__/
 .DS_Store
 Thumbs.db
 
+# Phase-2: raw videos are large; CSVs/JSONs stay committed for provenance
+phase2/data/**/*.mp4
+phase2/data/**/*.avi
+phase2/results/**/_windows_cache.json
+
 # Note: runs/ IS committed deliberately (immutable experiment records).
 # Phase-1 original results in runs/ are part of the frozen baseline.
