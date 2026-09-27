@@ -1,0 +1,93 @@
+# ============================================================================
+# PHASE2-GATE-1.0.0 — pre-registered gate thresholds (MACHINE-READABLE)
+# Registered 2026-09-27 BEFORE any Phase-2 code or real-fly data existed.
+# The git commit that first adds this file is the tamper-evident timestamp.
+# DO NOT edit after real-fly data collection begins; amendments require a new
+# gate ID and a documented rationale (see PHASE2_GATE_PREREGISTRATION.md).
+# ============================================================================
+gate_id: PHASE2-GATE-1.0.0
+preregistered: 2026-09-27
+
+data_requirements:
+  min_baseline_sessions: 3
+  min_stimulus_sessions: 3
+  min_session_minutes: 10
+  min_fps: 30
+  min_recording_days: 2
+  annotation_frames_min: 150
+
+criteria:
+  G1_tracking_coverage:
+    description: fraction of frames with detection at confidence >= threshold, per session
+    min_coverage: 0.90
+    confidence_threshold: 0.5
+    diagnosis: apparatus/tracking (lighting, focus, exposure lock, thresholds, ROI)
+  G2_tracking_accuracy:
+    description: median manual-annotation position error over >= 150 frames
+    median_error_max_mm: 2.0
+    diagnosis: calibration or detector center bias or annotation protocol
+  G3_state_occupancy:
+    description: every selected-vocabulary state occupied in every session
+    min_window_fraction_per_session: 0.05
+    stability_band: [0.5, 2.0]     # x across-session mean occupancy
+    diagnosis_occupancy: repertoire too narrow / elicitation failure (circadian, arena, stimulus design)
+    diagnosis_stability: behavioral variability across sessions (time-of-day, habituation, fly state)
+  G4_decoder_reliability:
+    description: leave-one-session-out nearest-centroid accuracy on window labels
+    loso_accuracy_min: 0.80
+    diagnosis: decoder design (window length, features); then ladder reduction
+
+vocabulary_ladder:
+  # Largest level whose states ALL satisfy G3+G4 is selected (deterministic).
+  levels:
+    - {id: L_A, n_states: 5, states: [FORWARD, BACKWARD, LEFT, RIGHT, PAUSE],
+       construction: full vocabulary}
+    - {id: L_B, n_states: 4, states: auto_drop_lowest_cardinal,
+       construction: L_A minus the cardinal with lowest across-session mean occupancy}
+    - {id: L_C, n_states: 3, states: auto_best_axis,
+       construction: higher-occupancy axis pair + PAUSE, assigned by dominant-axis sign}
+    - {id: L_D, n_states: 2, states: [MOVE, PAUSE],
+       construction: any movement vs pause}
+    - {id: L_E, n_states: 1, states: [MOVE],
+       construction: fly presence = continuous action}
+  minimum_for_directional_control: L_C
+
+secondary_G5_stimulus_response:
+  description: heading-toward-stimulus change, permutation test per stimulus session
+  response_window_s: [0.0, 3.0]
+  baseline_window_s: [-8.0, -1.0]
+  permutation_iterations: 1000
+  alpha: 0.05
+  sessions_responding_required: 2
+  gating: false   # informative for the Phase-3 cue channel; NOT required for PASS
+  diagnosis: stimulus modality/salience (test benign alternatives before concluding)
+
+analysis_constants:
+  window_s: 1.0
+  pause_speed_mm_s: 2.0
+  sector_bins: 4            # 90-degree bins centered on cardinals (arena frame)
+  median_filter_frames: 5
+  velocity_span_frames: 3   # central difference +-1 frame on smoothed positions
+  bout_on_speed_mm_s: 3.0
+  bout_off_speed_mm_s: 2.0
+  min_bout_s: 0.25
+  min_pause_s: 0.30
+  bout_gap_merge_s: 0.20
+  wall_band_mm: 10.0
+  wall_parallel_angle_deg: 45.0
+  permutation_seed: 20260927
+
+software_acceptance:        # CODE validation on synthetic GT videos (NOT fly evidence)
+  SA1_min_coverage: 0.98
+  SA2_median_err_max_mm: 1.0
+  SA2_p95_err_max_mm: 2.5
+  SA3_speed_rel_tol: 0.15
+  SA4_pause_freq_rel_tol: 0.20
+  SA5_bout_dur_rel_tol: 0.20
+  SA6_wall_follow_abs_tol: 0.10
+  SA7_resultant_len_abs_tol: 0.15
+  SA8_stimulus_sessions_detect_min: 2
+  SA8_baseline_no_detect_min: 2
+  SA9_expected_level: L_A
+  SA10_negative_control_drop_fraction: 0.20
+  SA11_blank_max_detections: 0
