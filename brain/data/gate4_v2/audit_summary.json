@@ -1,0 +1,65 @@
+{
+ "generated": "2026-09-28 20:22:07",
+ "wall_s": 2.1,
+ "n_dan_types": 24,
+ "n_mbon_types": 35,
+ "aso_numbering": {
+  "match": 17,
+  "mismatch": 3,
+  "inconclusive": 4
+ },
+ "valence_v2": {
+  "n_avoidance": 22,
+  "n_approach": 74
+ },
+ "n_v1_discrepancies": 23,
+ "v1_discrepancy_types": [
+  "MBON01",
+  "MBON03",
+  "MBON04",
+  "MBON05",
+  "MBON09",
+  "MBON12",
+  "MBON13",
+  "MBON15",
+  "MBON15-like",
+  "MBON16",
+  "MBON18",
+  "MBON19",
+  "MBON20",
+  "MBON22",
+  "MBON24",
+  "MBON25",
+  "MBON27",
+  "MBON28",
+  "MBON29",
+  "MBON31",
+  "MBON32",
+  "MBON33",
+  "MBON35"
+ ],
+ "reward_us_set": [
+  "PAM01",
+  "PAM02",
+  "PAM03",
+  "PAM04",
+  "PAM05",
+  "PAM06",
+  "PAM07",
+  "PAM08",
+  "PAM09",
+  "PAM10",
+  "PAM11"
+ ],
+ "glut_mbon_types": [
+  "MBON01",
+  "MBON03",
+  "MBON04",
+  "MBON05",
+  "MBON06",
+  "MBON07",
+  "MBON25",
+  "MBON30"
+ ],
+ "n_dn_reachable": 107
+}

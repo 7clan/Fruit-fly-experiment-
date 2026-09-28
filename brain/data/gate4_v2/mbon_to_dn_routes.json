@@ -1,0 +1,1453 @@
+{
+ "routes": [
+  {
+   "dn_root_id": 720575940620918789,
+   "dn_type": "DNa03",
+   "side": "left",
+   "synapses": 191,
+   "mbon_types": [
+    "MBON26",
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630085583,
+   "dn_type": "DNa03",
+   "side": "right",
+   "synapses": 115,
+   "mbon_types": [
+    "MBON26",
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940631282194,
+   "dn_type": "DNg104",
+   "side": "left",
+   "synapses": 108,
+   "mbon_types": [
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940616471052,
+   "dn_type": "DNg13",
+   "side": "left",
+   "synapses": 91,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940623503318,
+   "dn_type": "DNg104",
+   "side": "right",
+   "synapses": 86,
+   "mbon_types": [
+    "MBON26",
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940625718053,
+   "dn_type": "DNde003",
+   "side": "right",
+   "synapses": 64,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940606112940,
+   "dn_type": "DNg13",
+   "side": "right",
+   "synapses": 58,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940617952034,
+   "dn_type": "DNp68",
+   "side": "right",
+   "synapses": 45,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940625489160,
+   "dn_type": "DNge150",
+   "side": "center",
+   "synapses": 45,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940615378700,
+   "dn_type": "DNp68",
+   "side": "left",
+   "synapses": 41,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940644751652,
+   "dn_type": "DNg34",
+   "side": "right",
+   "synapses": 38,
+   "mbon_types": [
+    "MBON26",
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940623110123,
+   "dn_type": "DNde003",
+   "side": "left",
+   "synapses": 37,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940634459290,
+   "dn_type": "DNb08_a",
+   "side": "right",
+   "synapses": 34,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940621392086,
+   "dn_type": "DNde004",
+   "side": "left",
+   "synapses": 28,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940625513360,
+   "dn_type": "DNp52",
+   "side": "right",
+   "synapses": 26,
+   "mbon_types": [
+    "MBON21",
+    "MBON26",
+    "MBON27",
+    "MBON29",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940616026939,
+   "dn_type": "DNp50",
+   "side": "left",
+   "synapses": 25,
+   "mbon_types": [
+    "MBON26",
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940610236514,
+   "dn_type": "DNp50",
+   "side": "right",
+   "synapses": 24,
+   "mbon_types": [
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940627790991,
+   "dn_type": "DNge138",
+   "side": "center",
+   "synapses": 24,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940616167986,
+   "dn_type": "DNge151",
+   "side": "center",
+   "synapses": 21,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940628627867,
+   "dn_type": "DNbe003",
+   "side": "right",
+   "synapses": 20,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940607384242,
+   "dn_type": "DNge149",
+   "side": "center",
+   "synapses": 20,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940620543025,
+   "dn_type": "DNg34",
+   "side": "left",
+   "synapses": 18,
+   "mbon_types": [
+    "MBON26",
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630334658,
+   "dn_type": "DNb08_a",
+   "side": "left",
+   "synapses": 18,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940611108676,
+   "dn_type": "DNge138",
+   "side": "center",
+   "synapses": 17,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940616886301,
+   "dn_type": "DNp52",
+   "side": "left",
+   "synapses": 15,
+   "mbon_types": [
+    "MBON21",
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940617917396,
+   "dn_type": "DNbe003",
+   "side": "left",
+   "synapses": 15,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940621399174,
+   "dn_type": "DNge127",
+   "side": "left",
+   "synapses": 14,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940617904208,
+   "dn_type": "DNp62",
+   "side": "right",
+   "synapses": 11,
+   "mbon_types": [
+    "MBON21",
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630135084,
+   "dn_type": "DNge053",
+   "side": "right",
+   "synapses": 10,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940623582867,
+   "dn_type": "DNp46",
+   "side": "right",
+   "synapses": 10,
+   "mbon_types": [
+    "MBON05",
+    "MBON12",
+    "MBON22",
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach",
+    "avoidance"
+   ]
+  },
+  {
+   "dn_root_id": 720575940638204132,
+   "dn_type": "DNge053",
+   "side": "left",
+   "synapses": 9,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940635210603,
+   "dn_type": "DNpe052",
+   "side": "right",
+   "synapses": 9,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630610042,
+   "dn_type": "DNp32",
+   "side": "right",
+   "synapses": 9,
+   "mbon_types": [
+    "MBON15",
+    "MBON17",
+    "MBON17-like",
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940629064186,
+   "dn_type": "DNde004",
+   "side": "right",
+   "synapses": 9,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940624982823,
+   "dn_type": "DNbe006",
+   "side": "left",
+   "synapses": 9,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940650929273,
+   "dn_type": "DNp32",
+   "side": "left",
+   "synapses": 8,
+   "mbon_types": [
+    "MBON15",
+    "MBON17",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940624402173,
+   "dn_type": "DNpe053",
+   "side": "left",
+   "synapses": 8,
+   "mbon_types": [
+    "MBON15",
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940618398533,
+   "dn_type": "DNp54",
+   "side": "right",
+   "synapses": 8,
+   "mbon_types": [
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940613408552,
+   "dn_type": "DNa13_b",
+   "side": "left",
+   "synapses": 7,
+   "mbon_types": [
+    "MBON26",
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940604737708,
+   "dn_type": "DNa02",
+   "side": "right",
+   "synapses": 6,
+   "mbon_types": [
+    "MBON26",
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940637607646,
+   "dn_type": "DNa13_b",
+   "side": "right",
+   "synapses": 6,
+   "mbon_types": [
+    "MBON26",
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940624459907,
+   "dn_type": "DNde007",
+   "side": "right",
+   "synapses": 6,
+   "mbon_types": [
+    "MBON21"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630346860,
+   "dn_type": "DNp54",
+   "side": "left",
+   "synapses": 6,
+   "mbon_types": [
+    "MBON21",
+    "MBON33",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940628352850,
+   "dn_type": "DNb05",
+   "side": "left",
+   "synapses": 6,
+   "mbon_types": [
+    "MBON16"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940625502666,
+   "dn_type": "DNa13_a",
+   "side": "right",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON26",
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940635640312,
+   "dn_type": "DNp62",
+   "side": "left",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON05",
+    "MBON21",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach",
+    "avoidance"
+   ]
+  },
+  {
+   "dn_root_id": 720575940615043222,
+   "dn_type": "DNae007",
+   "side": "right",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630956345,
+   "dn_type": "DNg66",
+   "side": "center",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940622237466,
+   "dn_type": "DNge152",
+   "side": "center",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940624801771,
+   "dn_type": "DNpe040",
+   "side": "left",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940605702944,
+   "dn_type": "DNpe040",
+   "side": "right",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940621068464,
+   "dn_type": "DNb08_b",
+   "side": "right",
+   "synapses": 5,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940629327659,
+   "dn_type": "DNa02",
+   "side": "left",
+   "synapses": 4,
+   "mbon_types": [
+    "MBON26",
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940631082808,
+   "dn_type": "DNp50",
+   "side": "left",
+   "synapses": 4,
+   "mbon_types": [
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940639242303,
+   "dn_type": "DNpe053",
+   "side": "right",
+   "synapses": 4,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940608402524,
+   "dn_type": "DNbe006",
+   "side": "right",
+   "synapses": 4,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940608145026,
+   "dn_type": "DNpe027",
+   "side": "left",
+   "synapses": 4,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940640486488,
+   "dn_type": "DNge127",
+   "side": "right",
+   "synapses": 3,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940624986919,
+   "dn_type": "DNa06",
+   "side": "left",
+   "synapses": 3,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940632962786,
+   "dn_type": "DNa16",
+   "side": "left",
+   "synapses": 3,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940645258606,
+   "dn_type": "DNp59",
+   "side": "left",
+   "synapses": 3,
+   "mbon_types": [
+    "MBON21",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940640331472,
+   "dn_type": "DNp50",
+   "side": "right",
+   "synapses": 3,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940616604817,
+   "dn_type": "DNpe023",
+   "side": "left",
+   "synapses": 3,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940642549467,
+   "dn_type": "DNb08_b",
+   "side": "left",
+   "synapses": 3,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940623068841,
+   "dn_type": "DNde007",
+   "side": "left",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON05",
+    "MBON21"
+   ],
+   "mbon_valences": [
+    "approach",
+    "avoidance"
+   ]
+  },
+  {
+   "dn_root_id": 720575940629240263,
+   "dn_type": "DNge041",
+   "side": "right",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940633011256,
+   "dn_type": "DNpe023",
+   "side": "right",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON27",
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940632407826,
+   "dn_type": "DNg70",
+   "side": "left",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940619038493,
+   "dn_type": "DNpe042",
+   "side": "right",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940634560922,
+   "dn_type": "DNge073",
+   "side": "left",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940615899622,
+   "dn_type": "DNg03",
+   "side": "right",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940616286175,
+   "dn_type": "DNa13_a",
+   "side": "left",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940617448331,
+   "dn_type": "DNpe048",
+   "side": "right",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON19"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940629812346,
+   "dn_type": "DNde002",
+   "side": "left",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940609097429,
+   "dn_type": "DNae005",
+   "side": "left",
+   "synapses": 2,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940623385894,
+   "dn_type": "DNde005",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940622633716,
+   "dn_type": "DNge041",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940614403178,
+   "dn_type": "DNae005",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940621519130,
+   "dn_type": "DNa16",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON27"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940629413962,
+   "dn_type": "DNp27",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940636610671,
+   "dn_type": "DNp63",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940610173048,
+   "dn_type": "DNg28",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940631110095,
+   "dn_type": "DNg80",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940653053601,
+   "dn_type": "DNg03",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940635549620,
+   "dn_type": "DNp29",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630665210,
+   "dn_type": "DNg28",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940635355804,
+   "dn_type": "DNge135",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940622263066,
+   "dn_type": "DNge135",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940644758308,
+   "dn_type": "DNge046",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940623125628,
+   "dn_type": "DNpe020",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940647586948,
+   "dn_type": "DNge050",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940612557994,
+   "dn_type": "DNp39",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940613403890,
+   "dn_type": "DNp48",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940644666660,
+   "dn_type": "DNg27",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940621667693,
+   "dn_type": "DNg28",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940632524559,
+   "dn_type": "DNg70",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940615092019,
+   "dn_type": "DNpe042",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940623222712,
+   "dn_type": "DNg03",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON33"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940615607207,
+   "dn_type": "DNc01",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON19"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940644494752,
+   "dn_type": "DNbe007",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940616826380,
+   "dn_type": "DNb09",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940635838143,
+   "dn_type": "DNpe052",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON26"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940614581410,
+   "dn_type": "DNp59",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940611981029,
+   "dn_type": "DNg111",
+   "side": "right",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940614342038,
+   "dn_type": "DNge047",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940621246068,
+   "dn_type": "DNg101",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  },
+  {
+   "dn_root_id": 720575940630607738,
+   "dn_type": "DNae007",
+   "side": "left",
+   "synapses": 1,
+   "mbon_types": [
+    "MBON35"
+   ],
+   "mbon_valences": [
+    "approach"
+   ]
+  }
+ ],
+ "reachable_dn_approach_valence": [
+  720575940604737708,
+  720575940605702944,
+  720575940606112940,
+  720575940607384242,
+  720575940608145026,
+  720575940608402524,
+  720575940609097429,
+  720575940610173048,
+  720575940610236514,
+  720575940611108676,
+  720575940611981029,
+  720575940612557994,
+  720575940613403890,
+  720575940613408552,
+  720575940614342038,
+  720575940614403178,
+  720575940614581410,
+  720575940615043222,
+  720575940615092019,
+  720575940615378700,
+  720575940615607207,
+  720575940615899622,
+  720575940616026939,
+  720575940616167986,
+  720575940616286175,
+  720575940616471052,
+  720575940616604817,
+  720575940616826380,
+  720575940616886301,
+  720575940617448331,
+  720575940617904208,
+  720575940617917396,
+  720575940617952034,
+  720575940618398533,
+  720575940619038493,
+  720575940620543025,
+  720575940620918789,
+  720575940621068464,
+  720575940621246068,
+  720575940621392086,
+  720575940621399174,
+  720575940621519130,
+  720575940621667693,
+  720575940622237466,
+  720575940622263066,
+  720575940622633716,
+  720575940623068841,
+  720575940623110123,
+  720575940623125628,
+  720575940623222712,
+  720575940623385894,
+  720575940623503318,
+  720575940623582867,
+  720575940624402173,
+  720575940624459907,
+  720575940624801771,
+  720575940624982823,
+  720575940624986919,
+  720575940625489160,
+  720575940625502666,
+  720575940625513360,
+  720575940625718053,
+  720575940627790991,
+  720575940628352850,
+  720575940628627867,
+  720575940629064186,
+  720575940629240263,
+  720575940629327659,
+  720575940629413962,
+  720575940629812346,
+  720575940630085583,
+  720575940630135084,
+  720575940630334658,
+  720575940630346860,
+  720575940630607738,
+  720575940630610042,
+  720575940630665210,
+  720575940630956345,
+  720575940631082808,
+  720575940631110095,
+  720575940631282194,
+  720575940632407826,
+  720575940632524559,
+  720575940632962786,
+  720575940633011256,
+  720575940634459290,
+  720575940634560922,
+  720575940635210603,
+  720575940635355804,
+  720575940635549620,
+  720575940635640312,
+  720575940635838143,
+  720575940636610671,
+  720575940637607646,
+  720575940638204132,
+  720575940639242303,
+  720575940640331472,
+  720575940640486488,
+  720575940642549467,
+  720575940644494752,
+  720575940644666660,
+  720575940644751652,
+  720575940644758308,
+  720575940645258606,
+  720575940647586948,
+  720575940650929273,
+  720575940653053601
+ ],
+ "reachable_dn_avoidance_valence": [
+  720575940623068841,
+  720575940623582867,
+  720575940635640312
+ ]
+}

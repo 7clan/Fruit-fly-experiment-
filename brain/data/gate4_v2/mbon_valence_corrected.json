@@ -1,0 +1,312 @@
+{
+ "corrected_classes": {
+  "720575940624117245": "avoidance",
+  "720575940643309197": "avoidance",
+  "720575940617552340": "approach",
+  "720575940624185095": "approach",
+  "720575940624590316": "avoidance",
+  "720575940624694503": "avoidance",
+  "720575940620464321": "avoidance",
+  "720575940628734376": "avoidance",
+  "720575940621164720": "avoidance",
+  "720575940630496374": "avoidance",
+  "720575940638028607": "avoidance",
+  "720575940638163428": "avoidance",
+  "720575940617302365": "avoidance",
+  "720575940623381956": "avoidance",
+  "720575940628783363": "avoidance",
+  "720575940652390134": "avoidance",
+  "720575940610964946": "approach",
+  "720575940629422086": "approach",
+  "720575940629856515": "approach",
+  "720575940630864847": "approach",
+  "720575940610647416": "approach",
+  "720575940615221811": "approach",
+  "720575940629529722": "approach",
+  "720575940629585602": "approach",
+  "720575940632118343": "approach",
+  "720575940633209647": "approach",
+  "720575940639556467": "approach",
+  "720575940642142861": "approach",
+  "720575940647328900": "approach",
+  "720575940617749538": "approach",
+  "720575940623201833": "approach",
+  "720575940621828443": "approach",
+  "720575940623001480": "approach",
+  "720575940623905719": "approach",
+  "720575940630075703": "approach",
+  "720575940626315010": "approach",
+  "720575940645304430": "approach",
+  "720575940614026193": "approach",
+  "720575940632535756": "approach",
+  "720575940639697827": "approach",
+  "720575940643696288": "approach",
+  "720575940612455338": "approach",
+  "720575940622093436": "approach",
+  "720575940630767959": "approach",
+  "720575940635841143": "approach",
+  "720575940608304220": "approach",
+  "720575940612196850": "approach",
+  "720575940624696810": "approach",
+  "720575940628757547": "approach",
+  "720575940635082347": "approach",
+  "720575940623377802": "approach",
+  "720575940626744921": "approach",
+  "720575940617760257": "approach",
+  "720575940638774606": "approach",
+  "720575940634822751": "approach",
+  "720575940650386553": "approach",
+  "720575940622997453": "approach",
+  "720575940624539284": "approach",
+  "720575940623841463": "approach",
+  "720575940626109315": "approach",
+  "720575940626833021": "approach",
+  "720575940634482783": "approach",
+  "720575940611344078": "approach",
+  "720575940643863496": "approach",
+  "720575940620715224": "approach",
+  "720575940621777391": "approach",
+  "720575940616463477": "approach",
+  "720575940635063135": "approach",
+  "720575940606953858": "approach",
+  "720575940617567206": "approach",
+  "720575940623464316": "approach",
+  "720575940631177803": "approach",
+  "720575940616398303": "avoidance",
+  "720575940619810389": "avoidance",
+  "720575940623750325": "avoidance",
+  "720575940624489964": "avoidance",
+  "720575940624659943": "avoidance",
+  "720575940627144069": "avoidance",
+  "720575940607155890": "approach",
+  "720575940629981440": "approach",
+  "720575940618249797": "approach",
+  "720575940622979277": "approach",
+  "720575940614595218": "approach",
+  "720575940614892182": "approach",
+  "720575940614392999": "approach",
+  "720575940643700640": "approach",
+  "720575940618008859": "avoidance",
+  "720575940637934308": "avoidance",
+  "720575940636992368": "approach",
+  "720575940644615716": "approach",
+  "720575940609959637": "approach",
+  "720575940638526278": "approach",
+  "720575940623182847": "approach",
+  "720575940624280328": "approach",
+  "720575940632943277": "approach",
+  "720575940637902938": "approach"
+ },
+ "v1_discrepancies": [
+  {
+   "hemibrain_type": "MBON01",
+   "v2_valence": "avoidance",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "GLUT",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON03",
+   "v2_valence": "avoidance",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "GLUT",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON04",
+   "v2_valence": "avoidance",
+   "v1_valences": [
+    "approach"
+   ],
+   "nt": "GLUT",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON05",
+   "v2_valence": "avoidance",
+   "v1_valences": [
+    "approach"
+   ],
+   "nt": "GLUT",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON09",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "avoidance"
+   ],
+   "nt": "GABA",
+   "n_cells": 4
+  },
+  {
+   "hemibrain_type": "MBON12",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 4
+  },
+  {
+   "hemibrain_type": "MBON13",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "avoidance"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON15",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 4
+  },
+  {
+   "hemibrain_type": "MBON15-like",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 5
+  },
+  {
+   "hemibrain_type": "MBON16",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON18",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "avoidance"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON19",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "avoidance"
+   ],
+   "nt": "ACH",
+   "n_cells": 4
+  },
+  {
+   "hemibrain_type": "MBON20",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "GABA",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON22",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON24",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "avoidance"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON25",
+   "v2_valence": "avoidance",
+   "v1_valences": [
+    "approach"
+   ],
+   "nt": "GLUT",
+   "n_cells": 6
+  },
+  {
+   "hemibrain_type": "MBON27",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON28",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON29",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "avoidance"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON31",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "GABA",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON32",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "GABA",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON33",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  },
+  {
+   "hemibrain_type": "MBON35",
+   "v2_valence": "approach",
+   "v1_valences": [
+    "unclassified"
+   ],
+   "nt": "ACH",
+   "n_cells": 2
+  }
+ ],
+ "rule": "activation valence: GLUT -> avoidance (Aso 2014 eLife 04580 screen: 'all MBONs eliciting aversion were glutamatergic and all the MBONs eliciting attraction were either GABAergic or cholinergic'; Owald 2015: M4/M6 activation induces avoidance, their inhibition converts avoidance into attraction, reward DEPRESSES their KC input)",
+ "n_avoidance": 22,
+ "n_approach": 74
+}

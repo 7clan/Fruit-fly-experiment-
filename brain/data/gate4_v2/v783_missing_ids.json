@@ -1,0 +1,4321 @@
+{
+ "official_n": 139255,
+ "model_n": 138639,
+ "intersection_n": 138639,
+ "missing_n": 616,
+ "extra_in_model_n": 0,
+ "missing": [
+  {
+   "root_id": 720575940605634220,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606007280,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606503870,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606578790,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606630590,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940607808130,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940608903260,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609221900,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940610073940,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940610761300,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611550840,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611982690,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612755050,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940613823090,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614641000,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615855510,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616207170,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616388550,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618109460,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940618204390,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618600020,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940619904380,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940620232920,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620623320,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620647760,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620665680,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620722000,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621481450,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940621500070,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621526510,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621568490,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940621855920,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622413040,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622638430,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622640990,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622662170,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622703640,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623027550,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623823240,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623984520,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625125640,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625564860,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625912250,
+   "super_class": "sensory",
+   "sub_class": "grooming",
+   "type": "JO-F",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940626216720,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940626928740,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627660440,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627938200,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628131130,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628240210,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628346170,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628391240,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628728040,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628938570,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629569040,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629752080,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630408570,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630544250,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630767360,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630871260,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631043900,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631079900,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631100160,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631143020,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631186550,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631505260,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632189970,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633517260,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633705560,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940635013020,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636191480,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636307960,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636401400,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638004080,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638921700,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640287310,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640780160,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940645264260,
+   "super_class": "ascending",
+   "sub_class": "AN_GNG",
+   "type": "AN_GNG_124",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940647962500,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606928561,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609518091,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609622281,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609970371,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611810001,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940612294311,
+   "super_class": "ascending",
+   "sub_class": "AN_GNG",
+   "type": "AN_GNG_90",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940613196261,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613476581,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615121501,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940615234001,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616281311,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940617816661,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940618061661,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618065501,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618071481,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618238681,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618240401,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618423441,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618712091,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618712221,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620531761,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620797131,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620886181,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621193051,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621462511,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621944941,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621962081,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622064961,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622404991,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622654591,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622879521,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623337251,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623518051,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624001791,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624106131,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625044421,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625052101,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625823101,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625882701,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627652441,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627660121,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627665241,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627693181,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628035721,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628210831,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628335611,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940629377641,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629426161,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629634921,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629808911,
+   "super_class": "endocrine",
+   "sub_class": "lateral_NSC",
+   "type": "ITP",
+   "class": "pars_lateralis"
+  },
+  {
+   "root_id": 720575940629924091,
+   "super_class": "endocrine",
+   "sub_class": "lateral_NSC",
+   "type": "ITP",
+   "class": "pars_lateralis"
+  },
+  {
+   "root_id": 720575940632257091,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632460951,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940633176351,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940637390181,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R7",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940639657661,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940639787061,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940642527451,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940647021091,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940647077411,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606245822,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606292582,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606375772,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940606631102,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606679742,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940610973252,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612970202,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613270642,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613486762,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614890642,
+   "super_class": "sensory",
+   "sub_class": null,
+   "type": "ORN_VL2p",
+   "class": "olfactory"
+  },
+  {
+   "root_id": 720575940615167742,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616173122,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616346822,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616413382,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R7",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616591372,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616710412,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618437922,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940619643702,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940619877022,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620909332,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621667462,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622549342,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622814302,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622918012,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623710232,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625511572,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625603512,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625781692,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940626286432,
+   "super_class": "sensory",
+   "sub_class": "auditory",
+   "type": "JO-B",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940626322992,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940626770532,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627098942,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627267842,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627715102,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627941202,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628089402,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628522152,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628564712,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628955722,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629292842,
+   "super_class": "ascending",
+   "sub_class": "AN_GNG",
+   "type": "AN_GNG_204",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940630161152,
+   "super_class": "sensory",
+   "sub_class": "auditory",
+   "type": "JO-B",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940630657792,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630664062,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630712442,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630714562,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630727212,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630947292,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631048812,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631059932,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631149372,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631292892,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632357992,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632425002,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632687672,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632884792,
+   "super_class": "optic",
+   "sub_class": "lamina_wide_field",
+   "type": "Lawf1",
+   "class": "optic_lobe_intrinsic"
+  },
+  {
+   "root_id": 720575940633188492,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636208052,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638078832,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638556382,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638616922,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638820442,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940639884622,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940641249232,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940646253422,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940646392942,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940646459502,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940647404932,
+   "super_class": "sensory",
+   "sub_class": "grooming",
+   "type": "JO-F",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940648163972,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940653106422,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609220873,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609782283,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612839793,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612899763,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613466853,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613971683,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614792623,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615927263,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940617211253,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618863553,
+   "super_class": "descending",
+   "sub_class": null,
+   "type": "DNge061",
+   "class": null
+  },
+  {
+   "root_id": 720575940620236593,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620320193,
+   "super_class": "sensory",
+   "sub_class": "wind_gravity",
+   "type": "JO-EV",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940620476363,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620562773,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620629553,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620797643,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620886693,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621090213,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621489243,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622270273,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622545023,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622811903,
+   "super_class": "sensory",
+   "sub_class": null,
+   "type": "JO-mz",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940623111593,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623239133,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623325993,
+   "super_class": "sensory",
+   "sub_class": "wind_gravity",
+   "type": "JO-E",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940623495693,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623940963,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R7",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625067243,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625237923,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940626668443,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940627309913,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627671433,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627853693,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628036233,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628102013,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628308613,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629285873,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629411883,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629438193,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629636713,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629714793,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631301883,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631515643,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631590393,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631647173,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632436803,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632704303,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633773523,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940634643993,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636893303,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638872553,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940639049193,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640196413,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940650447993,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940655596193,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940607773314,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609307854,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940610183154,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940610715204,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940610759764,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940610948164,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611532664,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612735194,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613055194,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613138674,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613466134,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613474474,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613684274,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940615322514,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618530594,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618548244,
+   "super_class": "descending",
+   "sub_class": null,
+   "type": "DNge061",
+   "class": null
+  },
+  {
+   "root_id": 720575940618864724,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940619065664,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940619193264,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940620487504,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620488784,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620753744,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621884854,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621978534,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622029494,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622433524,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623347414,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623694104,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623825544,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625579704,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940626585744,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627212644,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627462914,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627941714,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628255034,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628492264,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628732744,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628789064,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628893514,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628938314,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630351554,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630581564,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630581754,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630660034,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630746924,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632352104,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632358504,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632382994,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632674444,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633241764,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940634857884,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940634947484,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636169464,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940637514414,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638523994,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640193614,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640525144,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940641271504,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940641277904,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940641599184,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940648383364,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940648702084,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606930865,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940608078345,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609972675,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940610004675,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611510765,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940612137895,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940612947635,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614194925,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614197485,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614567855,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614839215,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614957115,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940615957215,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940617499765,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R7",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618062365,
+   "super_class": "sensory",
+   "sub_class": null,
+   "type": "",
+   "class": "unknown_sensory"
+  },
+  {
+   "root_id": 720575940618092965,
+   "super_class": "ascending",
+   "sub_class": "AN_GNG",
+   "type": "AN_GNG_124",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940618150105,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618464925,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618728475,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618916125,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620568405,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620666315,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621349285,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621458625,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621544175,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621949675,
+   "super_class": "ascending",
+   "sub_class": "AN_GNG",
+   "type": "AN_GNG_124",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940623151565,
+   "super_class": "sensory",
+   "sub_class": "grooming",
+   "type": "JO-F",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940623335715,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624048275,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624139305,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625113015,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625643495,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625733095,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625929765,
+   "super_class": "sensory",
+   "sub_class": "grooming",
+   "type": "JO-F",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940625998895,
+   "super_class": "optic",
+   "sub_class": "L1-5",
+   "type": "",
+   "class": null
+  },
+  {
+   "root_id": 720575940626896145,
+   "super_class": "central",
+   "sub_class": null,
+   "type": "",
+   "class": null
+  },
+  {
+   "root_id": 720575940627149415,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940627618905,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629070155,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940629182825,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629499395,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629888515,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630060135,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630098075,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R7",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630846125,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940630944215,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630982495,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631750095,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631769845,
+   "super_class": "sensory",
+   "sub_class": "grooming",
+   "type": "JO-F",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940632083275,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632314955,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632581945,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940635440235,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940635609975,
+   "super_class": "sensory",
+   "sub_class": null,
+   "type": "",
+   "class": "olfactory"
+  },
+  {
+   "root_id": 720575940636021855,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638577215,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640297075,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940642539995,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940642891405,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940643034765,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940645837335,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606180896,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606292326,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606872816,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940608619356,
+   "super_class": "optic",
+   "sub_class": "lamina_monopolar",
+   "type": "L5",
+   "class": "optic_lobe_intrinsic"
+  },
+  {
+   "root_id": 720575940608989276,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611539666,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611801976,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612326606,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612354196,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612888026,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612943066,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613465366,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613582996,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614309736,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615642786,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615650666,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615708066,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616172866,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616450626,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618600276,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618768806,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940619423216,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940620238296,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620545616,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621338246,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621443206,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621605286,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622132656,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622303216,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622406896,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622643806,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622798836,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623342716,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623400216,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623721496,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623867016,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624438566,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627087106,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627138306,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628387656,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628388936,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628648936,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630333566,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630485626,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631095296,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631184246,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631286636,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631959826,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632346666,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633220516,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633592996,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633816986,
+   "super_class": "sensory",
+   "sub_class": "descending",
+   "type": "DNx02",
+   "class": "unknown_sensory"
+  },
+  {
+   "root_id": 720575940634246626,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636156596,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636168116,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640480856,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609748437,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609782027,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611937967,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940614200557,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614634927,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614849967,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614951377,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615905247,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940617768587,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940617920827,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618140987,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618718977,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618725147,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618849537,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940619434587,
+   "super_class": "descending",
+   "sub_class": null,
+   "type": "DNge153",
+   "class": null
+  },
+  {
+   "root_id": 720575940620556117,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620562517,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620885157,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620944037,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621157887,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940621323247,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621482667,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621514667,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621962337,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622339967,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622611917,
+   "super_class": "central",
+   "sub_class": null,
+   "type": "",
+   "class": null
+  },
+  {
+   "root_id": 720575940622799137,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623337507,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623522147,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623770637,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624046227,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624103827,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624501747,
+   "super_class": "sensory",
+   "sub_class": "wind_gravity",
+   "type": "JO-EVM",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940624870217,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625039557,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625416167,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625717747,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625916207,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628054397,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628307077,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629854507,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630239327,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631230167,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631388887,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631592017,
+   "super_class": "endocrine",
+   "sub_class": "lateral_NSC",
+   "type": "ITP",
+   "class": "pars_lateralis"
+  },
+  {
+   "root_id": 720575940631926287,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631958287,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633561887,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940635168407,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940635677887,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940637470627,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940638712127,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638713407,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940639166197,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940640017597,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640372277,
+   "super_class": "central",
+   "sub_class": null,
+   "type": "CB1015",
+   "class": null
+  },
+  {
+   "root_id": 720575940642532827,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940645941027,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940646803747,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940661099137,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940606022128,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940608224178,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609016668,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940610821188,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612706778,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940612910578,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615103998,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615556498,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940616042508,
+   "super_class": "sensory",
+   "sub_class": "auditory",
+   "type": "JO-B",
+   "class": "mechanosensory"
+  },
+  {
+   "root_id": 720575940616206658,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940617649238,
+   "super_class": "optic",
+   "sub_class": null,
+   "type": "",
+   "class": "optic_lobes"
+  },
+  {
+   "root_id": 720575940618531618,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940619381108,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940619984798,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621144198,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621294218,
+   "super_class": "descending",
+   "sub_class": null,
+   "type": "DNge061",
+   "class": null
+  },
+  {
+   "root_id": 720575940621466048,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622056368,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622064048,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622208688,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622550878,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622799898,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940622939998,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623005308,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623242108,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623668248,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623866248,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624141508,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624338058,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625132948,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625583118,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625621518,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625721118,
+   "super_class": "endocrine",
+   "sub_class": "lateral_NSC",
+   "type": "ITP",
+   "class": "pars_lateralis"
+  },
+  {
+   "root_id": 720575940627638558,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627855768,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628877308,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629834768,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630408898,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630423418,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630787388,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630869548,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940630942428,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632266258,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632280338,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940632425258,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633512908,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940635516058,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940636176888,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940637782958,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940639201508,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940639655238,
+   "super_class": "optic",
+   "sub_class": "lamina_wide_field",
+   "type": "Lawf1",
+   "class": "optic_lobe_intrinsic"
+  },
+  {
+   "root_id": 720575940644276128,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940645991278,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940607860169,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609485579,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609703179,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R7",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940609778289,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940610188669,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940611477229,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940612688789,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613468389,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613587609,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940613878459,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940614199789,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614218989,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R8",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940614736699,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940614928849,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615196839,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940615951839,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940617513589,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618090129,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618115289,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618223419,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618422929,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618663069,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940618743709,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940620785869,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940620881829,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621103269,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621463699,
+   "super_class": "ascending",
+   "sub_class": null,
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940621687489,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621817409,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940621914209,
+   "super_class": "optic",
+   "sub_class": "L1-5",
+   "type": "L1-3",
+   "class": null
+  },
+  {
+   "root_id": 720575940623003169,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623343139,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623518819,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940623758669,
+   "super_class": "central",
+   "sub_class": null,
+   "type": "",
+   "class": null
+  },
+  {
+   "root_id": 720575940623892579,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624735229,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940624956139,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625037509,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625052869,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625635119,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940625652879,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940625956429,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940626702159,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940627852669,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940627873299,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628442389,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940628758319,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629063409,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629615209,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629716779,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940629870379,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940631845839,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940633457709,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940637125239,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638684649,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638711359,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638759999,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940638909429,
+   "super_class": "sensory_ascending",
+   "sub_class": "SA_DMT_DMetaN",
+   "type": "",
+   "class": "AN"
+  },
+  {
+   "root_id": 720575940639783989,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940640197949,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940643079309,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  },
+  {
+   "root_id": 720575940647229219,
+   "super_class": "sensory",
+   "sub_class": "photo_receptor",
+   "type": "R1-6",
+   "class": "visual"
+  }
+ ]
+}

@@ -1,0 +1,3418 @@
+{
+ "dan_types": {
+  "PAM08": {
+   "hemibrain_type": "PAM08",
+   "ids": [
+    720575940604479590,
+    720575940605113376,
+    720575940605280201,
+    720575940608071435,
+    720575940610569028,
+    720575940611918578,
+    720575940612623474,
+    720575940612857878,
+    720575940614991221,
+    720575940616986769,
+    720575940617242841,
+    720575940617553809,
+    720575940617903643,
+    720575940619251416,
+    720575940619299054,
+    720575940619823536,
+    720575940619844261,
+    720575940621085622,
+    720575940621216982,
+    720575940621617286,
+    720575940622107869,
+    720575940622338269,
+    720575940622384227,
+    720575940622387981,
+    720575940623398524,
+    720575940625338249,
+    720575940625568186,
+    720575940625898633,
+    720575940627644584,
+    720575940628836412,
+    720575940629190615,
+    720575940629379415,
+    720575940629564286,
+    720575940630076887,
+    720575940630500293,
+    720575940630684943,
+    720575940630892631,
+    720575940631184439,
+    720575940633573783,
+    720575940634475119,
+    720575940642603464,
+    720575940642733216,
+    720575940642744264,
+    720575940644747828,
+    720575940646564916,
+    720575940646582836
+   ],
+   "sides": {
+    "left": 24,
+    "right": 22
+   },
+   "n_cells": 46,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON05",
+     "synapses": 914,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON29",
+     "synapses": 205,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON21",
+     "synapses": 183,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON04",
+     "synapses": 182,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON27",
+     "synapses": 80,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON26",
+     "synapses": 80,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "gamma4",
+    "cells_per_hemi": "n/a",
+    "name": "PAM-gamma4"
+   }
+  },
+  "PAM13": {
+   "hemibrain_type": "PAM13",
+   "ids": [
+    720575940604728800,
+    720575940606598089,
+    720575940615816498,
+    720575940620938150,
+    720575940621945855,
+    720575940622944403,
+    720575940631274794,
+    720575940631844492,
+    720575940633541857,
+    720575940636461710,
+    720575940639077283,
+    720575940642592416
+   ],
+   "sides": {
+    "left": 6,
+    "right": 6
+   },
+   "n_cells": 12,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON09",
+     "synapses": 155,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON10",
+     "synapses": 60,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON05",
+     "synapses": 20,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON15",
+     "synapses": 2,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON01",
+     "synapses": 2,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON22",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta'1 ap",
+    "cells_per_hemi": "13-14",
+    "name": "PAM-beta'1ap"
+   }
+  },
+  "PAM12": {
+   "hemibrain_type": "PAM12",
+   "ids": [
+    720575940604861356,
+    720575940608168028,
+    720575940610181496,
+    720575940611789810,
+    720575940614677810,
+    720575940616643924,
+    720575940618775943,
+    720575940620352646,
+    720575940621072816,
+    720575940621166256,
+    720575940624687850,
+    720575940625128067,
+    720575940625343550,
+    720575940627390507,
+    720575940630397527,
+    720575940630536441,
+    720575940631222841,
+    720575940631577901,
+    720575940633163711,
+    720575940634640023,
+    720575940640770957,
+    720575940645158179,
+    720575940649675897
+   ],
+   "sides": {
+    "right": 12,
+    "left": 11
+   },
+   "n_cells": 23,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON09",
+     "synapses": 486,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON05",
+     "synapses": 73,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON33",
+     "synapses": 46,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON27",
+     "synapses": 17,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON30",
+     "synapses": 7,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON35",
+     "synapses": 5,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "gamma3",
+    "cells_per_hemi": "9-23",
+    "name": "PAM-gamma3 (MB-M2)"
+   }
+  },
+  "PAM01": {
+   "hemibrain_type": "PAM01",
+   "ids": [
+    720575940605221065,
+    720575940606909826,
+    720575940613529770,
+    720575940613647007,
+    720575940615607975,
+    720575940617145561,
+    720575940618744118,
+    720575940619785492,
+    720575940621245124,
+    720575940621462512,
+    720575940622495092,
+    720575940623442173,
+    720575940625352456,
+    720575940625525265,
+    720575940625683716,
+    720575940626555800,
+    720575940628615683,
+    720575940628687207,
+    720575940629188507,
+    720575940630498811,
+    720575940630650063,
+    720575940630691159,
+    720575940630722956,
+    720575940631095087,
+    720575940631443304,
+    720575940631688808,
+    720575940633142498,
+    720575940633145996,
+    720575940633733401,
+    720575940633832628,
+    720575940634655851,
+    720575940636309093,
+    720575940637390302,
+    720575940637391582,
+    720575940639566406,
+    720575940639684696,
+    720575940641062901,
+    720575940645932579,
+    720575940649649785,
+    720575940654661281
+   ],
+   "sides": {
+    "right": 20,
+    "left": 20
+   },
+   "n_cells": 40,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON01",
+     "synapses": 305,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON27",
+     "synapses": 91,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON29",
+     "synapses": 42,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON21",
+     "synapses": 35,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON24",
+     "synapses": 10,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON05",
+     "synapses": 7,
+     "mbon_nt": "GLUT"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "gamma5",
+    "cells_per_hemi": "8-21",
+    "name": "PAM-gamma5 (aSP13, MB-M1?)"
+   }
+  },
+  "PAM11": {
+   "hemibrain_type": "PAM11",
+   "ids": [
+    720575940605891040,
+    720575940606196098,
+    720575940608186498,
+    720575940612920999,
+    720575940613426838,
+    720575940614293485,
+    720575940616882757,
+    720575940619101062,
+    720575940621136519,
+    720575940621825630,
+    720575940622701808,
+    720575940626506472,
+    720575940630868271,
+    720575940634953079,
+    720575940639358579,
+    720575940653360289
+   ],
+   "sides": {
+    "left": 8,
+    "right": 8
+   },
+   "n_cells": 16,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON07",
+     "synapses": 1498,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON06",
+     "synapses": 63,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON11",
+     "synapses": 22,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON24",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON14",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "alpha1",
+    "cells_per_hemi": ">6",
+    "name": "PAM-alpha1"
+   }
+  },
+  "PAM05": {
+   "hemibrain_type": "PAM05",
+   "ids": [
+    720575940607066123,
+    720575940608166748,
+    720575940615682246,
+    720575940617466395,
+    720575940619244248,
+    720575940619506993,
+    720575940619917248,
+    720575940620260800,
+    720575940620922790,
+    720575940621504794,
+    720575940621900321,
+    720575940623456915,
+    720575940626135122,
+    720575940628933419,
+    720575940630446329,
+    720575940630777631,
+    720575940631730349,
+    720575940632344290,
+    720575940637114334,
+    720575940638940469,
+    720575940643790536,
+    720575940646288419
+   ],
+   "sides": {
+    "left": 11,
+    "right": 11
+   },
+   "n_cells": 22,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON26",
+     "synapses": 554,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON04",
+     "synapses": 419,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON03",
+     "synapses": 382,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON10",
+     "synapses": 35,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON27",
+     "synapses": 15,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON05",
+     "synapses": 12,
+     "mbon_nt": "GLUT"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta'2p",
+    "cells_per_hemi": "14-17",
+    "name": "PAM-beta'2p"
+   }
+  },
+  "PAM06": {
+   "hemibrain_type": "PAM06",
+   "ids": [
+    720575940607287561,
+    720575940607511900,
+    720575940607794443,
+    720575940608429835,
+    720575940608442633,
+    720575940616312949,
+    720575940616682838,
+    720575940618910075,
+    720575940620488513,
+    720575940620585710,
+    720575940621082996,
+    720575940621397253,
+    720575940622996941,
+    720575940624317419,
+    720575940624658215,
+    720575940625931266,
+    720575940626455326,
+    720575940627954375,
+    720575940628549379,
+    720575940630166267,
+    720575940630318951,
+    720575940630828485,
+    720575940631117586,
+    720575940632872365,
+    720575940633515490,
+    720575940633816857,
+    720575940634551959,
+    720575940636355685,
+    720575940637439465,
+    720575940648330105,
+    720575940660053121
+   ],
+   "sides": {
+    "left": 16,
+    "right": 15
+   },
+   "n_cells": 31,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON03",
+     "synapses": 1324,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON04",
+     "synapses": 359,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON26",
+     "synapses": 40,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON01",
+     "synapses": 20,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON02",
+     "synapses": 7,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON06",
+     "synapses": 3,
+     "mbon_nt": "GLUT"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta'2m",
+    "cells_per_hemi": "12-15",
+    "name": "PAM-beta'2m"
+   }
+  },
+  "PAM04": {
+   "hemibrain_type": "PAM04",
+   "ids": [
+    720575940609414468,
+    720575940610523746,
+    720575940610934114,
+    720575940612802479,
+    720575940613155490,
+    720575940613338152,
+    720575940614759029,
+    720575940619322328,
+    720575940620379233,
+    720575940621284446,
+    720575940621434145,
+    720575940622100774,
+    720575940623201023,
+    720575940624742414,
+    720575940624859725,
+    720575940625185613,
+    720575940625615248,
+    720575940626071482,
+    720575940626420045,
+    720575940627103877,
+    720575940627542415,
+    720575940628526735,
+    720575940629235047,
+    720575940629579836,
+    720575940631017258,
+    720575940631198776,
+    720575940631636035,
+    720575940631843724,
+    720575940633688476,
+    720575940635356316,
+    720575940637928164,
+    720575940640747864
+   ],
+   "sides": {
+    "left": 17,
+    "right": 15
+   },
+   "n_cells": 32,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON02",
+     "synapses": 399,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON24",
+     "synapses": 241,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON06",
+     "synapses": 10,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON11",
+     "synapses": 7,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON01",
+     "synapses": 1,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON10",
+     "synapses": 1,
+     "mbon_nt": "GABA"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta2",
+    "cells_per_hemi": "8-19",
+    "name": "PAM-beta2 (MB-M8 subset)"
+   }
+  },
+  "PAM07": {
+   "hemibrain_type": "PAM07",
+   "ids": [
+    720575940610430254,
+    720575940612755618,
+    720575940619402576,
+    720575940620341931,
+    720575940624545940,
+    720575940624629223,
+    720575940627110931,
+    720575940627194501,
+    720575940627680516,
+    720575940628094663,
+    720575940630465398,
+    720575940631576903,
+    720575940638548021,
+    720575940643543200,
+    720575940643950190,
+    720575940647165828,
+    720575940649658745,
+    720575940658674049
+   ],
+   "sides": {
+    "right": 10,
+    "left": 8
+   },
+   "n_cells": 18,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON05",
+     "synapses": 428,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON21",
+     "synapses": 112,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON27",
+     "synapses": 22,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON11",
+     "synapses": 8,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON30",
+     "synapses": 5,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON32",
+     "synapses": 4,
+     "mbon_nt": "GABA"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "gamma4<gamma1gamma2",
+    "cells_per_hemi": "13-17",
+    "name": "PAM-gamma4<gamma1gamma2"
+   }
+  },
+  "PAM10": {
+   "hemibrain_type": "PAM10",
+   "ids": [
+    720575940611129698,
+    720575940620423533,
+    720575940620576238,
+    720575940623792055,
+    720575940624661031,
+    720575940626878460,
+    720575940629960192,
+    720575940633406745,
+    720575940638163940,
+    720575940639075150,
+    720575940643311501,
+    720575940644146724,
+    720575940650745977
+   ],
+   "sides": {
+    "right": 7,
+    "left": 6
+   },
+   "n_cells": 13,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON06",
+     "synapses": 1054,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON07",
+     "synapses": 27,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON11",
+     "synapses": 16,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON02",
+     "synapses": 4,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON23",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta1",
+    "cells_per_hemi": "4-6",
+    "name": "PAM-beta1"
+   }
+  },
+  "PAM09": {
+   "hemibrain_type": "PAM09",
+   "ids": [
+    720575940612586981,
+    720575940614629799,
+    720575940617701633,
+    720575940618842929,
+    720575940619893419,
+    720575940621861637,
+    720575940624442564,
+    720575940628427369,
+    720575940628996455,
+    720575940637672425,
+    720575940660271745
+   ],
+   "sides": {
+    "left": 6,
+    "right": 5
+   },
+   "n_cells": 11,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON06",
+     "synapses": 186,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON07",
+     "synapses": 27,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON24",
+     "synapses": 22,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON02",
+     "synapses": 6,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON11",
+     "synapses": 3,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON22",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta1(ped)",
+    "cells_per_hemi": "1-3",
+    "name": "PAM-beta1ped"
+   }
+  },
+  "PAM14": {
+   "hemibrain_type": "PAM14",
+   "ids": [
+    720575940612643954,
+    720575940619301185,
+    720575940619824244,
+    720575940620424813,
+    720575940620681837,
+    720575940620812865,
+    720575940621811803,
+    720575940624406986,
+    720575940626158364,
+    720575940626300444,
+    720575940627532104,
+    720575940627741799,
+    720575940630996684,
+    720575940631005046,
+    720575940638048070,
+    720575940643542688
+   ],
+   "sides": {
+    "right": 8,
+    "left": 8
+   },
+   "n_cells": 16,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON09",
+     "synapses": 210,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON10",
+     "synapses": 17,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON06",
+     "synapses": 10,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON07",
+     "synapses": 4,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON03",
+     "synapses": 3,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON12",
+     "synapses": 3,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta'1 m",
+    "cells_per_hemi": "n/a",
+    "name": "PAM-beta'1m"
+   }
+  },
+  "PAM02": {
+   "hemibrain_type": "PAM02",
+   "ids": [
+    720575940613732271,
+    720575940620497217,
+    720575940622950605,
+    720575940623979593,
+    720575940628609127,
+    720575940628708139,
+    720575940629774891,
+    720575940630998287,
+    720575940631118610,
+    720575940632541523,
+    720575940635779959,
+    720575940636659886,
+    720575940640048768
+   ],
+   "sides": {
+    "right": 7,
+    "left": 6
+   },
+   "n_cells": 13,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON03",
+     "synapses": 57,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON01",
+     "synapses": 47,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON02",
+     "synapses": 6,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON26",
+     "synapses": 4,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON21",
+     "synapses": 4,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON09",
+     "synapses": 2,
+     "mbon_nt": "GABA"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta'2a",
+    "cells_per_hemi": "6-9",
+    "name": "PAM-beta'2a"
+   }
+  },
+  "PAM03": {
+   "hemibrain_type": "PAM03",
+   "ids": [
+    720575940620390822,
+    720575940621165488,
+    720575940622410189,
+    720575940622879891,
+    720575940627565820,
+    720575940628743362,
+    720575940634652523,
+    720575940635789431,
+    720575940637109214,
+    720575940641509595
+   ],
+   "sides": {
+    "right": 6,
+    "left": 4
+   },
+   "n_cells": 10,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON24",
+     "synapses": 11,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON03",
+     "synapses": 11,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON02",
+     "synapses": 9,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON04",
+     "synapses": 3,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON26",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON22",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "beta2+beta'2a",
+    "cells_per_hemi": ">3",
+    "name": "PAM-beta2beta'2a (MB-M3)"
+   }
+  },
+  "CB2730": {
+   "hemibrain_type": "CB2730",
+   "ids": [
+    720575940623696647,
+    720575940630794703,
+    720575940630816207
+   ],
+   "sides": {
+    "left": 2,
+    "right": 1
+   },
+   "n_cells": 3,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON26",
+     "synapses": 46,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON04",
+     "synapses": 20,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON03",
+     "synapses": 18,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON05",
+     "synapses": 15,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON21",
+     "synapses": 8,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON01",
+     "synapses": 7,
+     "mbon_nt": "GLUT"
+    }
+   ],
+   "aso_2014": null
+  },
+  "PAM15": {
+   "hemibrain_type": "PAM15",
+   "ids": [
+    720575940642631387
+   ],
+   "sides": {
+    "left": 1
+   },
+   "n_cells": 1,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON26",
+     "synapses": 7,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON03",
+     "synapses": 4,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON04",
+     "synapses": 2,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON21",
+     "synapses": 2,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON09",
+     "synapses": 2,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON27",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": null
+  },
+  "PPL106": {
+   "hemibrain_type": "PPL106",
+   "ids": [
+    720575940609180611,
+    720575940618943389
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON14",
+     "synapses": 465,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON06",
+     "synapses": 17,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON11",
+     "synapses": 3,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON18",
+     "synapses": 2,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON29",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "alpha3",
+    "cells_per_hemi": "1",
+    "name": "PPL1-alpha3"
+   }
+  },
+  "PPL108": {
+   "hemibrain_type": "PPL108",
+   "ids": [
+    720575940615750562,
+    720575940635838655
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON35",
+     "synapses": 19,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON33",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON21",
+     "synapses": 1,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON05",
+     "synapses": 1,
+     "mbon_nt": "GLUT"
+    }
+   ],
+   "aso_2014": null
+  },
+  "PPL107": {
+   "hemibrain_type": "PPL107",
+   "ids": [
+    720575940615953202,
+    720575940619245016
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON04",
+     "synapses": 122,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON26",
+     "synapses": 24,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON10",
+     "synapses": 16,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON28",
+     "synapses": 7,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON35",
+     "synapses": 5,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON33",
+     "synapses": 5,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": null
+  },
+  "PPL101": {
+   "hemibrain_type": "PPL101",
+   "ids": [
+    720575940617691170,
+    720575940621040737
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON11",
+     "synapses": 894,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON30",
+     "synapses": 35,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON25",
+     "synapses": 32,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON35",
+     "synapses": 22,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON20",
+     "synapses": 14,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON32",
+     "synapses": 14,
+     "mbon_nt": "GABA"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "gamma1(pedc)",
+    "cells_per_hemi": "1-2",
+    "name": "PPL1-gamma1pedc (MB-MP1; shock US)"
+   }
+  },
+  "PPL105": {
+   "hemibrain_type": "PPL105",
+   "ids": [
+    720575940623082665,
+    720575940647147908
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON13",
+     "synapses": 286,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON18",
+     "synapses": 133,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON23",
+     "synapses": 55,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON19",
+     "synapses": 26,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON15-like",
+     "synapses": 18,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON12",
+     "synapses": 11,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "alpha'2alpha2",
+    "cells_per_hemi": "1",
+    "name": "PPL1-alpha'2alpha2 (MB-V1)"
+   }
+  },
+  "PPL102": {
+   "hemibrain_type": "PPL102",
+   "ids": [
+    720575940624206728,
+    720575940631745367
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON11",
+     "synapses": 51,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON35",
+     "synapses": 20,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON30",
+     "synapses": 8,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON25",
+     "synapses": 7,
+     "mbon_nt": "GLUT"
+    },
+    {
+     "mbon_type": "MBON20",
+     "synapses": 7,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON33",
+     "synapses": 6,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "gamma1",
+    "cells_per_hemi": "1",
+    "name": "PPL1-gamma1"
+   }
+  },
+  "PPL104": {
+   "hemibrain_type": "PPL104",
+   "ids": [
+    720575940627549205,
+    720575940632107335
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON16",
+     "synapses": 141,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON28",
+     "synapses": 73,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON17",
+     "synapses": 49,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON17-like",
+     "synapses": 12,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON15-like",
+     "synapses": 6,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON04",
+     "synapses": 2,
+     "mbon_nt": "GLUT"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "alpha'3",
+    "cells_per_hemi": "1",
+    "name": "PPL1-alpha'3"
+   }
+  },
+  "PPL103": {
+   "hemibrain_type": "PPL103",
+   "ids": [
+    720575940627594568,
+    720575940631758393
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "n_cells": 2,
+   "top_mbon_partners": [
+    {
+     "mbon_type": "MBON12",
+     "synapses": 449,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON32",
+     "synapses": 264,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON35",
+     "synapses": 228,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON31",
+     "synapses": 221,
+     "mbon_nt": "GABA"
+    },
+    {
+     "mbon_type": "MBON33",
+     "synapses": 87,
+     "mbon_nt": "ACH"
+    },
+    {
+     "mbon_type": "MBON15-like",
+     "synapses": 68,
+     "mbon_nt": "ACH"
+    }
+   ],
+   "aso_2014": {
+    "compartment": "gamma2alpha'1",
+    "cells_per_hemi": "1",
+    "name": "PPL1-gamma2alpha'1 (MB-MV1)"
+   }
+  }
+ },
+ "mbon_types": {
+  "MBON01": {
+   "hemibrain_type": "MBON01",
+   "n_cells": 2,
+   "ids": [
+    720575940624117245,
+    720575940643309197
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.825,
+   "kc_input_fraction": {
+    "gamma": 0.849,
+    "alpha'/beta'": 0.15,
+    "alpha/beta": 0.001
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM01",
+     "synapses": 305
+    },
+    {
+     "dan_type": "PAM02",
+     "synapses": 47
+    },
+    {
+     "dan_type": "PAM06",
+     "synapses": 20
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 11
+    },
+    {
+     "dan_type": "?",
+     "synapses": 7
+    }
+   ]
+  },
+  "MBON02": {
+   "hemibrain_type": "MBON02",
+   "n_cells": 2,
+   "ids": [
+    720575940617552340,
+    720575940624185095
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "GABA",
+   "nt_frac": 0.5,
+   "nt_mean_score": 0.56,
+   "kc_input_fraction": {
+    "alpha/beta": 0.931,
+    "alpha'/beta'": 0.069
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM04",
+     "synapses": 399
+    },
+    {
+     "dan_type": "PAM03",
+     "synapses": 9
+    },
+    {
+     "dan_type": "PAM06",
+     "synapses": 7
+    },
+    {
+     "dan_type": "PAM09",
+     "synapses": 6
+    },
+    {
+     "dan_type": "PAM02",
+     "synapses": 6
+    }
+   ]
+  },
+  "MBON03": {
+   "hemibrain_type": "MBON03",
+   "n_cells": 2,
+   "ids": [
+    720575940624590316,
+    720575940624694503
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 0.5,
+   "nt_mean_score": 0.4,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.999,
+    "gamma": 0.001,
+    "alpha/beta": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM06",
+     "synapses": 1324
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 382
+    },
+    {
+     "dan_type": "PAM02",
+     "synapses": 57
+    },
+    {
+     "dan_type": "?",
+     "synapses": 18
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 16
+    }
+   ]
+  },
+  "MBON04": {
+   "hemibrain_type": "MBON04",
+   "n_cells": 2,
+   "ids": [
+    720575940620464321,
+    720575940628734376
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.595,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.719,
+    "gamma": 0.28,
+    "alpha/beta": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM05",
+     "synapses": 419
+    },
+    {
+     "dan_type": "PAM06",
+     "synapses": 359
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 182
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 122
+    },
+    {
+     "dan_type": "?",
+     "synapses": 20
+    }
+   ]
+  },
+  "MBON05": {
+   "hemibrain_type": "MBON05",
+   "n_cells": 2,
+   "ids": [
+    720575940621164720,
+    720575940630496374
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 0.5,
+   "nt_mean_score": 0.28,
+   "kc_input_fraction": {
+    "gamma": 0.988,
+    "alpha'/beta'": 0.012
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM08",
+     "synapses": 914
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 428
+    },
+    {
+     "dan_type": "PAM12",
+     "synapses": 73
+    },
+    {
+     "dan_type": "PAM13",
+     "synapses": 20
+    },
+    {
+     "dan_type": "?",
+     "synapses": 15
+    }
+   ]
+  },
+  "MBON06": {
+   "hemibrain_type": "MBON06",
+   "n_cells": 2,
+   "ids": [
+    720575940638028607,
+    720575940638163428
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.47,
+   "kc_input_fraction": {
+    "alpha/beta": 0.994,
+    "alpha'/beta'": 0.005,
+    "gamma": 0.001
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM10",
+     "synapses": 1054
+    },
+    {
+     "dan_type": "PAM09",
+     "synapses": 186
+    },
+    {
+     "dan_type": "PAM11",
+     "synapses": 63
+    },
+    {
+     "dan_type": "PPL106",
+     "synapses": 17
+    },
+    {
+     "dan_type": "PAM04",
+     "synapses": 10
+    }
+   ]
+  },
+  "MBON07": {
+   "hemibrain_type": "MBON07",
+   "n_cells": 4,
+   "ids": [
+    720575940617302365,
+    720575940623381956,
+    720575940628783363,
+    720575940652390134
+   ],
+   "sides": {
+    "left": 2,
+    "right": 2
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.478,
+   "kc_input_fraction": {
+    "alpha/beta": 0.988,
+    "gamma": 0.006,
+    "alpha'/beta'": 0.006
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM11",
+     "synapses": 1498
+    },
+    {
+     "dan_type": "PAM10",
+     "synapses": 27
+    },
+    {
+     "dan_type": "PAM09",
+     "synapses": 27
+    },
+    {
+     "dan_type": "PAM14",
+     "synapses": 4
+    },
+    {
+     "dan_type": "PPL105",
+     "synapses": 4
+    }
+   ]
+  },
+  "MBON09": {
+   "hemibrain_type": "MBON09",
+   "n_cells": 4,
+   "ids": [
+    720575940610964946,
+    720575940629422086,
+    720575940629856515,
+    720575940630864847
+   ],
+   "sides": {
+    "right": 2,
+    "left": 2
+   },
+   "nt_predicted": "GABA",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.735,
+   "kc_input_fraction": {
+    "gamma": 0.681,
+    "alpha'/beta'": 0.319,
+    "alpha/beta": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM12",
+     "synapses": 486
+    },
+    {
+     "dan_type": "PAM14",
+     "synapses": 210
+    },
+    {
+     "dan_type": "PAM13",
+     "synapses": 155
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 27
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 5
+    }
+   ]
+  },
+  "MBON10": {
+   "hemibrain_type": "MBON10",
+   "n_cells": 9,
+   "ids": [
+    720575940610647416,
+    720575940615221811,
+    720575940629529722,
+    720575940629585602,
+    720575940632118343,
+    720575940633209647,
+    720575940639556467,
+    720575940642142861,
+    720575940647328900
+   ],
+   "sides": {
+    "right": 5,
+    "left": 4
+   },
+   "nt_predicted": "GABA",
+   "nt_frac": 0.556,
+   "nt_mean_score": 0.59,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.956,
+    "gamma": 0.044
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM13",
+     "synapses": 60
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 35
+    },
+    {
+     "dan_type": "PAM14",
+     "synapses": 17
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 16
+    },
+    {
+     "dan_type": "PAM06",
+     "synapses": 2
+    }
+   ]
+  },
+  "MBON11": {
+   "hemibrain_type": "MBON11",
+   "n_cells": 2,
+   "ids": [
+    720575940617749538,
+    720575940623201833
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "GABA",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.77,
+   "kc_input_fraction": {
+    "gamma": 0.672,
+    "alpha/beta": 0.323,
+    "alpha'/beta'": 0.005
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL101",
+     "synapses": 894
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 51
+    },
+    {
+     "dan_type": "PAM11",
+     "synapses": 22
+    },
+    {
+     "dan_type": "PAM10",
+     "synapses": 16
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 8
+    }
+   ]
+  },
+  "MBON12": {
+   "hemibrain_type": "MBON12",
+   "n_cells": 4,
+   "ids": [
+    720575940621828443,
+    720575940623001480,
+    720575940623905719,
+    720575940630075703
+   ],
+   "sides": {
+    "left": 2,
+    "right": 2
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.882,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.581,
+    "gamma": 0.419
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 449
+    },
+    {
+     "dan_type": "PPL105",
+     "synapses": 11
+    },
+    {
+     "dan_type": "PPL101",
+     "synapses": 8
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 3
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 3
+    }
+   ]
+  },
+  "MBON13": {
+   "hemibrain_type": "MBON13",
+   "n_cells": 2,
+   "ids": [
+    720575940626315010,
+    720575940645304430
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.885,
+   "kc_input_fraction": {
+    "alpha'/beta'": 1.0,
+    "gamma": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL105",
+     "synapses": 286
+    },
+    {
+     "dan_type": "PPL103",
+     "synapses": 5
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PPL104",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON14": {
+   "hemibrain_type": "MBON14",
+   "n_cells": 4,
+   "ids": [
+    720575940614026193,
+    720575940632535756,
+    720575940639697827,
+    720575940643696288
+   ],
+   "sides": {
+    "right": 2,
+    "left": 2
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.82,
+   "kc_input_fraction": {
+    "alpha/beta": 0.998,
+    "alpha'/beta'": 0.002
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL106",
+     "synapses": 465
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PPL101",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PAM11",
+     "synapses": 1
+    },
+    {
+     "dan_type": "PPL104",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON15": {
+   "hemibrain_type": "MBON15",
+   "n_cells": 4,
+   "ids": [
+    720575940612455338,
+    720575940622093436,
+    720575940630767959,
+    720575940635841143
+   ],
+   "sides": {
+    "right": 2,
+    "left": 2
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.815,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.998,
+    "alpha/beta": 0.002
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 31
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 4
+    },
+    {
+     "dan_type": "PPL105",
+     "synapses": 3
+    },
+    {
+     "dan_type": "PAM13",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PAM12",
+     "synapses": 2
+    }
+   ]
+  },
+  "MBON15-like": {
+   "hemibrain_type": "MBON15-like",
+   "n_cells": 5,
+   "ids": [
+    720575940608304220,
+    720575940612196850,
+    720575940624696810,
+    720575940628757547,
+    720575940635082347
+   ],
+   "sides": {
+    "left": 3,
+    "right": 2
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.92,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.998,
+    "gamma": 0.002,
+    "alpha/beta": 0.001
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 68
+    },
+    {
+     "dan_type": "PPL105",
+     "synapses": 18
+    },
+    {
+     "dan_type": "PPL104",
+     "synapses": 6
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 4
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON16": {
+   "hemibrain_type": "MBON16",
+   "n_cells": 2,
+   "ids": [
+    720575940623377802,
+    720575940626744921
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.905,
+   "kc_input_fraction": {
+    "alpha'/beta'": 1.0,
+    "gamma": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL104",
+     "synapses": 141
+    }
+   ]
+  },
+  "MBON17": {
+   "hemibrain_type": "MBON17",
+   "n_cells": 2,
+   "ids": [
+    720575940617760257,
+    720575940638774606
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.92,
+   "kc_input_fraction": {
+    "alpha'/beta'": 1.0,
+    "gamma": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL104",
+     "synapses": 49
+    }
+   ]
+  },
+  "MBON17-like": {
+   "hemibrain_type": "MBON17-like",
+   "n_cells": 2,
+   "ids": [
+    720575940634822751,
+    720575940650386553
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.935,
+   "kc_input_fraction": {
+    "alpha'/beta'": 1.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL104",
+     "synapses": 12
+    },
+    {
+     "dan_type": "PPL105",
+     "synapses": 4
+    },
+    {
+     "dan_type": "PAM13",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON18": {
+   "hemibrain_type": "MBON18",
+   "n_cells": 2,
+   "ids": [
+    720575940622997453,
+    720575940624539284
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.91,
+   "kc_input_fraction": {
+    "alpha/beta": 0.991,
+    "alpha'/beta'": 0.009
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL105",
+     "synapses": 133
+    },
+    {
+     "dan_type": "PPL106",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PPL104",
+     "synapses": 2
+    }
+   ]
+  },
+  "MBON19": {
+   "hemibrain_type": "MBON19",
+   "n_cells": 4,
+   "ids": [
+    720575940623841463,
+    720575940626109315,
+    720575940626833021,
+    720575940634482783
+   ],
+   "sides": {
+    "left": 2,
+    "right": 2
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.935,
+   "kc_input_fraction": {
+    "alpha/beta": 0.705,
+    "alpha'/beta'": 0.295
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL105",
+     "synapses": 26
+    },
+    {
+     "dan_type": "PPL104",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON20": {
+   "hemibrain_type": "MBON20",
+   "n_cells": 2,
+   "ids": [
+    720575940611344078,
+    720575940643863496
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "GABA",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.9,
+   "kc_input_fraction": {
+    "gamma": 0.999,
+    "alpha'/beta'": 0.001
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL101",
+     "synapses": 14
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 7
+    },
+    {
+     "dan_type": "PPL103",
+     "synapses": 4
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 3
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 2
+    }
+   ]
+  },
+  "MBON21": {
+   "hemibrain_type": "MBON21",
+   "n_cells": 2,
+   "ids": [
+    720575940620715224,
+    720575940621777391
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.755,
+   "kc_input_fraction": {
+    "gamma": 1.0,
+    "alpha'/beta'": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM08",
+     "synapses": 183
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 112
+    },
+    {
+     "dan_type": "PAM01",
+     "synapses": 35
+    },
+    {
+     "dan_type": "?",
+     "synapses": 8
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 4
+    }
+   ]
+  },
+  "MBON22": {
+   "hemibrain_type": "MBON22",
+   "n_cells": 2,
+   "ids": [
+    720575940616463477,
+    720575940635063135
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.85,
+   "kc_input_fraction": {
+    "alpha/beta": 0.527,
+    "gamma": 0.472,
+    "alpha'/beta'": 0.001
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM08",
+     "synapses": 11
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 5
+    },
+    {
+     "dan_type": "?",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PAM13",
+     "synapses": 1
+    },
+    {
+     "dan_type": "PAM09",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON23": {
+   "hemibrain_type": "MBON23",
+   "n_cells": 2,
+   "ids": [
+    720575940606953858,
+    720575940617567206
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.915,
+   "kc_input_fraction": {
+    "alpha/beta": 0.994,
+    "alpha'/beta'": 0.006,
+    "gamma": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL105",
+     "synapses": 55
+    },
+    {
+     "dan_type": "PAM10",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON24": {
+   "hemibrain_type": "MBON24",
+   "n_cells": 2,
+   "ids": [
+    720575940623464316,
+    720575940631177803
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.68,
+   "kc_input_fraction": {
+    "alpha/beta": 0.968,
+    "gamma": 0.031,
+    "alpha'/beta'": 0.001
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM04",
+     "synapses": 241
+    },
+    {
+     "dan_type": "PAM09",
+     "synapses": 22
+    },
+    {
+     "dan_type": "PAM03",
+     "synapses": 11
+    },
+    {
+     "dan_type": "PAM01",
+     "synapses": 10
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 2
+    }
+   ]
+  },
+  "MBON25": {
+   "hemibrain_type": "MBON25",
+   "n_cells": 6,
+   "ids": [
+    720575940616398303,
+    720575940619810389,
+    720575940623750325,
+    720575940624489964,
+    720575940624659943,
+    720575940627144069
+   ],
+   "sides": {
+    "left": 3,
+    "right": 3
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.562,
+   "kc_input_fraction": {
+    "gamma": 0.993,
+    "alpha'/beta'": 0.007
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL101",
+     "synapses": 32
+    },
+    {
+     "dan_type": "PPL103",
+     "synapses": 11
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 7
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON26": {
+   "hemibrain_type": "MBON26",
+   "n_cells": 2,
+   "ids": [
+    720575940607155890,
+    720575940629981440
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.895,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.941,
+    "gamma": 0.059
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM05",
+     "synapses": 554
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 80
+    },
+    {
+     "dan_type": "?",
+     "synapses": 46
+    },
+    {
+     "dan_type": "PAM06",
+     "synapses": 40
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 24
+    }
+   ]
+  },
+  "MBON27": {
+   "hemibrain_type": "MBON27",
+   "n_cells": 2,
+   "ids": [
+    720575940618249797,
+    720575940622979277
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.905,
+   "kc_input_fraction": {
+    "gamma": 0.963,
+    "alpha'/beta'": 0.037
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM01",
+     "synapses": 91
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 80
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 22
+    },
+    {
+     "dan_type": "PAM12",
+     "synapses": 17
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 15
+    }
+   ]
+  },
+  "MBON28": {
+   "hemibrain_type": "MBON28",
+   "n_cells": 2,
+   "ids": [
+    720575940614595218,
+    720575940614892182
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.905,
+   "kc_input_fraction": {
+    "alpha'/beta'": 1.0,
+    "gamma": 0.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL104",
+     "synapses": 73
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 7
+    }
+   ]
+  },
+  "MBON29": {
+   "hemibrain_type": "MBON29",
+   "n_cells": 2,
+   "ids": [
+    720575940614392999,
+    720575940643700640
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.79,
+   "kc_input_fraction": {
+    "gamma": 1.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PAM08",
+     "synapses": 205
+    },
+    {
+     "dan_type": "PAM01",
+     "synapses": 42
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PPL106",
+     "synapses": 1
+    },
+    {
+     "dan_type": "PAM05",
+     "synapses": 1
+    }
+   ]
+  },
+  "MBON30": {
+   "hemibrain_type": "MBON30",
+   "n_cells": 2,
+   "ids": [
+    720575940618008859,
+    720575940637934308
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "GLUT",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.605,
+   "kc_input_fraction": {
+    "gamma": 0.999,
+    "alpha'/beta'": 0.001
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 47
+    },
+    {
+     "dan_type": "PPL101",
+     "synapses": 35
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 11
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 8
+    },
+    {
+     "dan_type": "PAM12",
+     "synapses": 7
+    }
+   ]
+  },
+  "MBON31": {
+   "hemibrain_type": "MBON31",
+   "n_cells": 2,
+   "ids": [
+    720575940636992368,
+    720575940644615716
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "GABA",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.62,
+   "kc_input_fraction": {
+    "alpha'/beta'": 0.994,
+    "gamma": 0.006
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 221
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 3
+    },
+    {
+     "dan_type": "PPL105",
+     "synapses": 3
+    },
+    {
+     "dan_type": "PAM02",
+     "synapses": 2
+    },
+    {
+     "dan_type": "PAM14",
+     "synapses": 2
+    }
+   ]
+  },
+  "MBON32": {
+   "hemibrain_type": "MBON32",
+   "n_cells": 2,
+   "ids": [
+    720575940609959637,
+    720575940638526278
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "GABA",
+   "nt_frac": 0.5,
+   "nt_mean_score": 0.365,
+   "kc_input_fraction": {
+    "gamma": 0.884,
+    "alpha'/beta'": 0.116
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 264
+    },
+    {
+     "dan_type": "PPL101",
+     "synapses": 14
+    },
+    {
+     "dan_type": "PAM12",
+     "synapses": 5
+    },
+    {
+     "dan_type": "PAM07",
+     "synapses": 4
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 2
+    }
+   ]
+  },
+  "MBON33": {
+   "hemibrain_type": "MBON33",
+   "n_cells": 2,
+   "ids": [
+    720575940623182847,
+    720575940624280328
+   ],
+   "sides": {
+    "left": 1,
+    "right": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.85,
+   "kc_input_fraction": {
+    "gamma": 1.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 87
+    },
+    {
+     "dan_type": "PAM12",
+     "synapses": 46
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 26
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 6
+    },
+    {
+     "dan_type": "PPL107",
+     "synapses": 5
+    }
+   ]
+  },
+  "MBON35": {
+   "hemibrain_type": "MBON35",
+   "n_cells": 2,
+   "ids": [
+    720575940632943277,
+    720575940637902938
+   ],
+   "sides": {
+    "right": 1,
+    "left": 1
+   },
+   "nt_predicted": "ACH",
+   "nt_frac": 1.0,
+   "nt_mean_score": 0.895,
+   "kc_input_fraction": {
+    "gamma": 1.0
+   },
+   "top_dan_partners": [
+    {
+     "dan_type": "PPL103",
+     "synapses": 228
+    },
+    {
+     "dan_type": "PPL101",
+     "synapses": 22
+    },
+    {
+     "dan_type": "PPL102",
+     "synapses": 20
+    },
+    {
+     "dan_type": "PPL108",
+     "synapses": 19
+    },
+    {
+     "dan_type": "PAM08",
+     "synapses": 7
+    }
+   ]
+  }
+ },
+ "aso_numbering_checks": [
+  {
+   "dan_type": "CB2730",
+   "check": "no Aso anchor",
+   "verdict": "N/A"
+  },
+  {
+   "dan_type": "PAM01",
+   "aso_compartment": "gamma5",
+   "predicted_lobe": "gamma",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.887,
+    "alpha'/beta'": 0.112,
+    "alpha/beta": 0.001
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM02",
+   "aso_compartment": "beta'2a",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "alpha'/beta'",
+   "lobe_weights": {
+    "alpha'/beta'": 0.586,
+    "gamma": 0.363,
+    "alpha/beta": 0.051
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM03",
+   "aso_compartment": "beta2+beta'2a",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "alpha/beta",
+   "lobe_weights": {
+    "alpha/beta": 0.614,
+    "gamma": 0.011,
+    "alpha'/beta'": 0.375
+   },
+   "verdict": "MISMATCH"
+  },
+  {
+   "dan_type": "PAM04",
+   "aso_compartment": "beta2",
+   "predicted_lobe": "alpha/beta",
+   "connectome_lobe": "alpha/beta",
+   "lobe_weights": {
+    "alpha/beta": 0.946,
+    "alpha'/beta'": 0.043,
+    "gamma": 0.012
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM05",
+   "aso_compartment": "beta'2p",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "alpha'/beta'",
+   "lobe_weights": {
+    "alpha'/beta'": 0.889,
+    "gamma": 0.111,
+    "alpha/beta": 0.0
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM06",
+   "aso_compartment": "beta'2m",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "alpha'/beta'",
+   "lobe_weights": {
+    "alpha'/beta'": 0.939,
+    "gamma": 0.06,
+    "alpha/beta": 0.0
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM07",
+   "aso_compartment": "gamma4<gamma1gamma2",
+   "predicted_lobe": "gamma",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.989,
+    "alpha'/beta'": 0.011
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM08",
+   "aso_compartment": "gamma4",
+   "predicted_lobe": "gamma",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.992,
+    "alpha'/beta'": 0.008
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM09",
+   "aso_compartment": "beta1(ped)",
+   "predicted_lobe": "alpha/beta",
+   "connectome_lobe": "alpha/beta",
+   "lobe_weights": {
+    "alpha/beta": 0.991,
+    "alpha'/beta'": 0.005,
+    "gamma": 0.004
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM10",
+   "aso_compartment": "beta1",
+   "predicted_lobe": "alpha/beta",
+   "connectome_lobe": "alpha/beta",
+   "lobe_weights": {
+    "alpha/beta": 0.984,
+    "alpha'/beta'": 0.005,
+    "gamma": 0.011
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM11",
+   "aso_compartment": "alpha1",
+   "predicted_lobe": "alpha/beta",
+   "connectome_lobe": "alpha/beta",
+   "lobe_weights": {
+    "alpha/beta": 0.979,
+    "gamma": 0.015,
+    "alpha'/beta'": 0.006
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM12",
+   "aso_compartment": "gamma3",
+   "predicted_lobe": "gamma",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.742,
+    "alpha'/beta'": 0.258,
+    "alpha/beta": 0.0
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PAM13",
+   "aso_compartment": "beta'1 ap",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.544,
+    "alpha'/beta'": 0.456,
+    "alpha/beta": 0.0
+   },
+   "verdict": "MISMATCH"
+  },
+  {
+   "dan_type": "PAM14",
+   "aso_compartment": "beta'1 m",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.607,
+    "alpha'/beta'": 0.351,
+    "alpha/beta": 0.042
+   },
+   "verdict": "MISMATCH"
+  },
+  {
+   "dan_type": "PAM15",
+   "check": "no Aso anchor",
+   "verdict": "N/A"
+  },
+  {
+   "dan_type": "PPL101",
+   "aso_compartment": "gamma1(pedc)",
+   "predicted_lobe": "gamma",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.695,
+    "alpha/beta": 0.3,
+    "alpha'/beta'": 0.005
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PPL102",
+   "aso_compartment": "gamma1",
+   "predicted_lobe": "gamma",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "gamma": 0.788,
+    "alpha/beta": 0.209,
+    "alpha'/beta'": 0.003
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PPL103",
+   "aso_compartment": "gamma2alpha'1",
+   "predicted_lobe": "gamma",
+   "connectome_lobe": "gamma",
+   "lobe_weights": {
+    "alpha'/beta'": 0.31,
+    "gamma": 0.69
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PPL104",
+   "aso_compartment": "alpha'3",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "alpha'/beta'",
+   "lobe_weights": {
+    "alpha'/beta'": 1.0,
+    "gamma": 0.0
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PPL105",
+   "aso_compartment": "alpha'2alpha2",
+   "predicted_lobe": "alpha'/beta'",
+   "connectome_lobe": "alpha'/beta'",
+   "lobe_weights": {
+    "alpha'/beta'": 0.607,
+    "gamma": 0.0,
+    "alpha/beta": 0.393
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PPL106",
+   "aso_compartment": "alpha3",
+   "predicted_lobe": "alpha/beta",
+   "connectome_lobe": "alpha/beta",
+   "lobe_weights": {
+    "alpha/beta": 0.994,
+    "alpha'/beta'": 0.002,
+    "gamma": 0.004
+   },
+   "verdict": "MATCH"
+  },
+  {
+   "dan_type": "PPL107",
+   "check": "no Aso anchor",
+   "verdict": "N/A"
+  },
+  {
+   "dan_type": "PPL108",
+   "check": "no Aso anchor",
+   "verdict": "N/A"
+  }
+ ],
+ "reward_us_candidates": [
+  {
+   "dan_type": "PAM01",
+   "compartment": "gamma5",
+   "ids": [
+    720575940605221065,
+    720575940606909826,
+    720575940613529770,
+    720575940613647007,
+    720575940615607975,
+    720575940617145561,
+    720575940618744118,
+    720575940619785492,
+    720575940621245124,
+    720575940621462512,
+    720575940622495092,
+    720575940623442173,
+    720575940625352456,
+    720575940625525265,
+    720575940625683716,
+    720575940626555800,
+    720575940628615683,
+    720575940628687207,
+    720575940629188507,
+    720575940630498811,
+    720575940630650063,
+    720575940630691159,
+    720575940630722956,
+    720575940631095087,
+    720575940631443304,
+    720575940631688808,
+    720575940633142498,
+    720575940633145996,
+    720575940633733401,
+    720575940633832628,
+    720575940634655851,
+    720575940636309093,
+    720575940637390302,
+    720575940637391582,
+    720575940639566406,
+    720575940639684696,
+    720575940641062901,
+    720575940645932579,
+    720575940649649785,
+    720575940654661281
+   ],
+   "n": 40,
+   "glut_mbon_reach_synapses": 312
+  },
+  {
+   "dan_type": "PAM02",
+   "compartment": "beta'2a",
+   "ids": [
+    720575940613732271,
+    720575940620497217,
+    720575940622950605,
+    720575940623979593,
+    720575940628609127,
+    720575940628708139,
+    720575940629774891,
+    720575940630998287,
+    720575940631118610,
+    720575940632541523,
+    720575940635779959,
+    720575940636659886,
+    720575940640048768
+   ],
+   "n": 13,
+   "glut_mbon_reach_synapses": 104
+  },
+  {
+   "dan_type": "PAM03",
+   "compartment": "beta2+beta'2a",
+   "ids": [
+    720575940620390822,
+    720575940621165488,
+    720575940622410189,
+    720575940622879891,
+    720575940627565820,
+    720575940628743362,
+    720575940634652523,
+    720575940635789431,
+    720575940637109214,
+    720575940641509595
+   ],
+   "n": 10,
+   "glut_mbon_reach_synapses": 14
+  },
+  {
+   "dan_type": "PAM04",
+   "compartment": "beta2",
+   "ids": [
+    720575940609414468,
+    720575940610523746,
+    720575940610934114,
+    720575940612802479,
+    720575940613155490,
+    720575940613338152,
+    720575940614759029,
+    720575940619322328,
+    720575940620379233,
+    720575940621284446,
+    720575940621434145,
+    720575940622100774,
+    720575940623201023,
+    720575940624742414,
+    720575940624859725,
+    720575940625185613,
+    720575940625615248,
+    720575940626071482,
+    720575940626420045,
+    720575940627103877,
+    720575940627542415,
+    720575940628526735,
+    720575940629235047,
+    720575940629579836,
+    720575940631017258,
+    720575940631198776,
+    720575940631636035,
+    720575940631843724,
+    720575940633688476,
+    720575940635356316,
+    720575940637928164,
+    720575940640747864
+   ],
+   "n": 32,
+   "glut_mbon_reach_synapses": 11
+  },
+  {
+   "dan_type": "PAM05",
+   "compartment": "beta'2p",
+   "ids": [
+    720575940607066123,
+    720575940608166748,
+    720575940615682246,
+    720575940617466395,
+    720575940619244248,
+    720575940619506993,
+    720575940619917248,
+    720575940620260800,
+    720575940620922790,
+    720575940621504794,
+    720575940621900321,
+    720575940623456915,
+    720575940626135122,
+    720575940628933419,
+    720575940630446329,
+    720575940630777631,
+    720575940631730349,
+    720575940632344290,
+    720575940637114334,
+    720575940638940469,
+    720575940643790536,
+    720575940646288419
+   ],
+   "n": 22,
+   "glut_mbon_reach_synapses": 813
+  },
+  {
+   "dan_type": "PAM06",
+   "compartment": "beta'2m",
+   "ids": [
+    720575940607287561,
+    720575940607511900,
+    720575940607794443,
+    720575940608429835,
+    720575940608442633,
+    720575940616312949,
+    720575940616682838,
+    720575940618910075,
+    720575940620488513,
+    720575940620585710,
+    720575940621082996,
+    720575940621397253,
+    720575940622996941,
+    720575940624317419,
+    720575940624658215,
+    720575940625931266,
+    720575940626455326,
+    720575940627954375,
+    720575940628549379,
+    720575940630166267,
+    720575940630318951,
+    720575940630828485,
+    720575940631117586,
+    720575940632872365,
+    720575940633515490,
+    720575940633816857,
+    720575940634551959,
+    720575940636355685,
+    720575940637439465,
+    720575940648330105,
+    720575940660053121
+   ],
+   "n": 31,
+   "glut_mbon_reach_synapses": 1706
+  },
+  {
+   "dan_type": "PAM07",
+   "compartment": "gamma4<gamma1gamma2",
+   "ids": [
+    720575940610430254,
+    720575940612755618,
+    720575940619402576,
+    720575940620341931,
+    720575940624545940,
+    720575940624629223,
+    720575940627110931,
+    720575940627194501,
+    720575940627680516,
+    720575940628094663,
+    720575940630465398,
+    720575940631576903,
+    720575940638548021,
+    720575940643543200,
+    720575940643950190,
+    720575940647165828,
+    720575940649658745,
+    720575940658674049
+   ],
+   "n": 18,
+   "glut_mbon_reach_synapses": 433
+  },
+  {
+   "dan_type": "PAM08",
+   "compartment": "gamma4",
+   "ids": [
+    720575940604479590,
+    720575940605113376,
+    720575940605280201,
+    720575940608071435,
+    720575940610569028,
+    720575940611918578,
+    720575940612623474,
+    720575940612857878,
+    720575940614991221,
+    720575940616986769,
+    720575940617242841,
+    720575940617553809,
+    720575940617903643,
+    720575940619251416,
+    720575940619299054,
+    720575940619823536,
+    720575940619844261,
+    720575940621085622,
+    720575940621216982,
+    720575940621617286,
+    720575940622107869,
+    720575940622338269,
+    720575940622384227,
+    720575940622387981,
+    720575940623398524,
+    720575940625338249,
+    720575940625568186,
+    720575940625898633,
+    720575940627644584,
+    720575940628836412,
+    720575940629190615,
+    720575940629379415,
+    720575940629564286,
+    720575940630076887,
+    720575940630500293,
+    720575940630684943,
+    720575940630892631,
+    720575940631184439,
+    720575940633573783,
+    720575940634475119,
+    720575940642603464,
+    720575940642733216,
+    720575940642744264,
+    720575940644747828,
+    720575940646564916,
+    720575940646582836
+   ],
+   "n": 46,
+   "glut_mbon_reach_synapses": 1096
+  },
+  {
+   "dan_type": "PAM09",
+   "compartment": "beta1(ped)",
+   "ids": [
+    720575940612586981,
+    720575940614629799,
+    720575940617701633,
+    720575940618842929,
+    720575940619893419,
+    720575940621861637,
+    720575940624442564,
+    720575940628427369,
+    720575940628996455,
+    720575940637672425,
+    720575940660271745
+   ],
+   "n": 11,
+   "glut_mbon_reach_synapses": 213
+  },
+  {
+   "dan_type": "PAM10",
+   "compartment": "beta1",
+   "ids": [
+    720575940611129698,
+    720575940620423533,
+    720575940620576238,
+    720575940623792055,
+    720575940624661031,
+    720575940626878460,
+    720575940629960192,
+    720575940633406745,
+    720575940638163940,
+    720575940639075150,
+    720575940643311501,
+    720575940644146724,
+    720575940650745977
+   ],
+   "n": 13,
+   "glut_mbon_reach_synapses": 1081
+  },
+  {
+   "dan_type": "PAM11",
+   "compartment": "alpha1",
+   "ids": [
+    720575940605891040,
+    720575940606196098,
+    720575940608186498,
+    720575940612920999,
+    720575940613426838,
+    720575940614293485,
+    720575940616882757,
+    720575940619101062,
+    720575940621136519,
+    720575940621825630,
+    720575940622701808,
+    720575940626506472,
+    720575940630868271,
+    720575940634953079,
+    720575940639358579,
+    720575940653360289
+   ],
+   "n": 16,
+   "glut_mbon_reach_synapses": 1561
+  }
+ ],
+ "reward_us_set": [
+  "PAM01",
+  "PAM02",
+  "PAM03",
+  "PAM04",
+  "PAM05",
+  "PAM06",
+  "PAM07",
+  "PAM08",
+  "PAM09",
+  "PAM10",
+  "PAM11"
+ ],
+ "glut_mbon_types": [
+  "MBON01",
+  "MBON03",
+  "MBON04",
+  "MBON05",
+  "MBON06",
+  "MBON07",
+  "MBON25",
+  "MBON30"
+ ]
+}
