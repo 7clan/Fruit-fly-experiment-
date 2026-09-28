@@ -1,0 +1,34 @@
+{
+ "label": "B_R1",
+ "condition": "E_rl",
+ "reward_side": "right",
+ "note": "conventional epsilon-greedy Q-learner; explicitly NON-biological comparison (no brain)",
+ "phase_acquisition": {
+  "p_rewarded_b": 0.75,
+  "p_left_b": 0.25
+ },
+ "phase_baseline": {
+  "p_rewarded_b": 0.167,
+  "p_left_b": 0.833
+ },
+ "phase_context": {
+  "p_rewarded_b": 0.0,
+  "p_left_b": 1.0
+ },
+ "phase_distractor": {
+  "p_rewarded_b": 0.333,
+  "p_left_b": 0.667
+ },
+ "phase_extinction": {
+  "p_rewarded_b": 1.0,
+  "p_left_b": 0.0
+ },
+ "phase_retention": {
+  "p_rewarded_b": 1.0,
+  "p_left_b": 0.0
+ },
+ "phase_reversal": {
+  "p_rewarded_b": 0.0,
+  "p_left_b": 1.0
+ }
+}
