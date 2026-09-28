@@ -1,0 +1,1108 @@
+{
+  "sides": {
+    "KC": {
+      "n": 5177,
+      "left": 2580,
+      "right": 2597,
+      "unknown": 0
+    },
+    "MBON": {
+      "n": 96,
+      "left": 48,
+      "right": 48,
+      "unknown": 0
+    },
+    "PAM": {
+      "n": 307,
+      "left": 154,
+      "right": 153,
+      "unknown": 0
+    },
+    "PPL1": {
+      "n": 16,
+      "left": 8,
+      "right": 8,
+      "unknown": 0
+    },
+    "APL": {
+      "n": 2,
+      "left": 1,
+      "right": 1,
+      "unknown": 0
+    },
+    "DPM": {
+      "n": 2,
+      "left": 1,
+      "right": 1,
+      "unknown": 0
+    },
+    "GRN_SUGAR": {
+      "n": 20,
+      "left": 20,
+      "right": 0,
+      "unknown": 0
+    },
+    "LC9": {
+      "n": 179,
+      "left": 87,
+      "right": 92,
+      "unknown": 0
+    },
+    "LPLC2": {
+      "n": 210,
+      "left": 108,
+      "right": 102,
+      "unknown": 0
+    },
+    "LC4": {
+      "n": 104,
+      "left": 54,
+      "right": 50,
+      "unknown": 0
+    },
+    "LC16": {
+      "n": 152,
+      "left": 78,
+      "right": 74,
+      "unknown": 0
+    },
+    "BPN": {
+      "n": 33,
+      "left": 14,
+      "right": 19,
+      "unknown": 0
+    },
+    "RRN": {
+      "n": 2,
+      "left": 1,
+      "right": 1,
+      "unknown": 0
+    },
+    "MDN": {
+      "n": 4,
+      "left": 2,
+      "right": 2,
+      "unknown": 0
+    },
+    "DNp09_P9": {
+      "n": 2,
+      "left": 1,
+      "right": 1,
+      "unknown": 0
+    },
+    "DNp01_GF": {
+      "n": 2,
+      "left": 1,
+      "right": 1,
+      "unknown": 0
+    },
+    "FG_CB0890": {
+      "n": 2,
+      "left": 1,
+      "right": 1,
+      "unknown": 0
+    },
+    "BB_DNg60": {
+      "n": 2,
+      "left": 1,
+      "right": 1,
+      "unknown": 0
+    },
+    "DN_ALL": {
+      "n": 1305,
+      "left": 647,
+      "right": 650,
+      "unknown": 8
+    }
+  },
+  "mbon_types": {
+    "720575940606953858": {
+      "cell_type": "",
+      "hemibrain_type": "MBON23",
+      "side": "right"
+    },
+    "720575940607155890": {
+      "cell_type": "",
+      "hemibrain_type": "MBON26",
+      "side": "right"
+    },
+    "720575940608304220": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15-like",
+      "side": "right"
+    },
+    "720575940609959637": {
+      "cell_type": "",
+      "hemibrain_type": "MBON32",
+      "side": "left"
+    },
+    "720575940610647416": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "right"
+    },
+    "720575940610964946": {
+      "cell_type": "",
+      "hemibrain_type": "MBON09",
+      "side": "right"
+    },
+    "720575940611344078": {
+      "cell_type": "",
+      "hemibrain_type": "MBON20",
+      "side": "right"
+    },
+    "720575940612196850": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15-like",
+      "side": "right"
+    },
+    "720575940612455338": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15",
+      "side": "right"
+    },
+    "720575940614026193": {
+      "cell_type": "",
+      "hemibrain_type": "MBON14",
+      "side": "right"
+    },
+    "720575940614392999": {
+      "cell_type": "",
+      "hemibrain_type": "MBON29",
+      "side": "left"
+    },
+    "720575940614595218": {
+      "cell_type": "",
+      "hemibrain_type": "MBON28",
+      "side": "left"
+    },
+    "720575940614892182": {
+      "cell_type": "",
+      "hemibrain_type": "MBON28",
+      "side": "right"
+    },
+    "720575940615221811": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "right"
+    },
+    "720575940616398303": {
+      "cell_type": "",
+      "hemibrain_type": "MBON25,MBON34",
+      "side": "left"
+    },
+    "720575940616463477": {
+      "cell_type": "",
+      "hemibrain_type": "MBON22",
+      "side": "left"
+    },
+    "720575940617302365": {
+      "cell_type": "",
+      "hemibrain_type": "MBON07",
+      "side": "left"
+    },
+    "720575940617552340": {
+      "cell_type": "",
+      "hemibrain_type": "MBON02",
+      "side": "right"
+    },
+    "720575940617567206": {
+      "cell_type": "",
+      "hemibrain_type": "MBON23",
+      "side": "left"
+    },
+    "720575940617749538": {
+      "cell_type": "",
+      "hemibrain_type": "MBON11",
+      "side": "right"
+    },
+    "720575940617760257": {
+      "cell_type": "",
+      "hemibrain_type": "MBON17",
+      "side": "right"
+    },
+    "720575940618008859": {
+      "cell_type": "",
+      "hemibrain_type": "MBON30",
+      "side": "left"
+    },
+    "720575940618249797": {
+      "cell_type": "",
+      "hemibrain_type": "MBON27",
+      "side": "right"
+    },
+    "720575940619810389": {
+      "cell_type": "",
+      "hemibrain_type": "MBON25,MBON34",
+      "side": "right"
+    },
+    "720575940620464321": {
+      "cell_type": "",
+      "hemibrain_type": "MBON04",
+      "side": "left"
+    },
+    "720575940620715224": {
+      "cell_type": "",
+      "hemibrain_type": "MBON21",
+      "side": "left"
+    },
+    "720575940621164720": {
+      "cell_type": "",
+      "hemibrain_type": "MBON05",
+      "side": "left"
+    },
+    "720575940621777391": {
+      "cell_type": "",
+      "hemibrain_type": "MBON21",
+      "side": "right"
+    },
+    "720575940621828443": {
+      "cell_type": "",
+      "hemibrain_type": "MBON12",
+      "side": "left"
+    },
+    "720575940622093436": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15",
+      "side": "right"
+    },
+    "720575940622979277": {
+      "cell_type": "",
+      "hemibrain_type": "MBON27",
+      "side": "left"
+    },
+    "720575940622997453": {
+      "cell_type": "",
+      "hemibrain_type": "MBON18",
+      "side": "right"
+    },
+    "720575940623001480": {
+      "cell_type": "",
+      "hemibrain_type": "MBON12",
+      "side": "right"
+    },
+    "720575940623182847": {
+      "cell_type": "",
+      "hemibrain_type": "MBON33",
+      "side": "left"
+    },
+    "720575940623201833": {
+      "cell_type": "",
+      "hemibrain_type": "MBON11",
+      "side": "left"
+    },
+    "720575940623377802": {
+      "cell_type": "",
+      "hemibrain_type": "MBON16",
+      "side": "left"
+    },
+    "720575940623381956": {
+      "cell_type": "",
+      "hemibrain_type": "MBON07",
+      "side": "right"
+    },
+    "720575940623464316": {
+      "cell_type": "",
+      "hemibrain_type": "MBON24",
+      "side": "right"
+    },
+    "720575940623750325": {
+      "cell_type": "",
+      "hemibrain_type": "MBON25,MBON34",
+      "side": "left"
+    },
+    "720575940623841463": {
+      "cell_type": "",
+      "hemibrain_type": "MBON19",
+      "side": "left"
+    },
+    "720575940623905719": {
+      "cell_type": "",
+      "hemibrain_type": "MBON12",
+      "side": "right"
+    },
+    "720575940624117245": {
+      "cell_type": "",
+      "hemibrain_type": "MBON01",
+      "side": "right"
+    },
+    "720575940624185095": {
+      "cell_type": "",
+      "hemibrain_type": "MBON02",
+      "side": "left"
+    },
+    "720575940624280328": {
+      "cell_type": "",
+      "hemibrain_type": "MBON33",
+      "side": "right"
+    },
+    "720575940624489964": {
+      "cell_type": "",
+      "hemibrain_type": "MBON25,MBON34",
+      "side": "right"
+    },
+    "720575940624539284": {
+      "cell_type": "",
+      "hemibrain_type": "MBON18",
+      "side": "left"
+    },
+    "720575940624590316": {
+      "cell_type": "",
+      "hemibrain_type": "MBON03",
+      "side": "right"
+    },
+    "720575940624659943": {
+      "cell_type": "",
+      "hemibrain_type": "MBON25,MBON34",
+      "side": "left"
+    },
+    "720575940624694503": {
+      "cell_type": "",
+      "hemibrain_type": "MBON03",
+      "side": "left"
+    },
+    "720575940624696810": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15-like",
+      "side": "left"
+    },
+    "720575940626109315": {
+      "cell_type": "",
+      "hemibrain_type": "MBON19",
+      "side": "right"
+    },
+    "720575940626315010": {
+      "cell_type": "",
+      "hemibrain_type": "MBON13",
+      "side": "right"
+    },
+    "720575940626744921": {
+      "cell_type": "",
+      "hemibrain_type": "MBON16",
+      "side": "right"
+    },
+    "720575940626833021": {
+      "cell_type": "",
+      "hemibrain_type": "MBON19",
+      "side": "left"
+    },
+    "720575940627144069": {
+      "cell_type": "",
+      "hemibrain_type": "MBON25,MBON34",
+      "side": "right"
+    },
+    "720575940628734376": {
+      "cell_type": "",
+      "hemibrain_type": "MBON04",
+      "side": "right"
+    },
+    "720575940628757547": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15-like",
+      "side": "left"
+    },
+    "720575940628783363": {
+      "cell_type": "",
+      "hemibrain_type": "MBON07",
+      "side": "right"
+    },
+    "720575940629422086": {
+      "cell_type": "",
+      "hemibrain_type": "MBON09",
+      "side": "left"
+    },
+    "720575940629529722": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "left"
+    },
+    "720575940629585602": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "right"
+    },
+    "720575940629856515": {
+      "cell_type": "",
+      "hemibrain_type": "MBON09",
+      "side": "left"
+    },
+    "720575940629981440": {
+      "cell_type": "",
+      "hemibrain_type": "MBON26",
+      "side": "left"
+    },
+    "720575940630075703": {
+      "cell_type": "",
+      "hemibrain_type": "MBON12",
+      "side": "left"
+    },
+    "720575940630496374": {
+      "cell_type": "",
+      "hemibrain_type": "MBON05",
+      "side": "right"
+    },
+    "720575940630767959": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15",
+      "side": "left"
+    },
+    "720575940630864847": {
+      "cell_type": "",
+      "hemibrain_type": "MBON09",
+      "side": "right"
+    },
+    "720575940631177803": {
+      "cell_type": "",
+      "hemibrain_type": "MBON24",
+      "side": "left"
+    },
+    "720575940632118343": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "left"
+    },
+    "720575940632535756": {
+      "cell_type": "",
+      "hemibrain_type": "MBON14",
+      "side": "left"
+    },
+    "720575940632943277": {
+      "cell_type": "",
+      "hemibrain_type": "MBON35",
+      "side": "right"
+    },
+    "720575940633209647": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "left"
+    },
+    "720575940634482783": {
+      "cell_type": "",
+      "hemibrain_type": "MBON19",
+      "side": "right"
+    },
+    "720575940634822751": {
+      "cell_type": "",
+      "hemibrain_type": "MBON17-like",
+      "side": "right"
+    },
+    "720575940635063135": {
+      "cell_type": "",
+      "hemibrain_type": "MBON22",
+      "side": "right"
+    },
+    "720575940635082347": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15-like",
+      "side": "left"
+    },
+    "720575940635841143": {
+      "cell_type": "",
+      "hemibrain_type": "MBON15",
+      "side": "left"
+    },
+    "720575940636992368": {
+      "cell_type": "",
+      "hemibrain_type": "MBON31",
+      "side": "right"
+    },
+    "720575940637902938": {
+      "cell_type": "",
+      "hemibrain_type": "MBON35",
+      "side": "left"
+    },
+    "720575940637934308": {
+      "cell_type": "",
+      "hemibrain_type": "MBON30",
+      "side": "right"
+    },
+    "720575940638028607": {
+      "cell_type": "",
+      "hemibrain_type": "MBON06",
+      "side": "right"
+    },
+    "720575940638163428": {
+      "cell_type": "",
+      "hemibrain_type": "MBON06",
+      "side": "left"
+    },
+    "720575940638526278": {
+      "cell_type": "",
+      "hemibrain_type": "MBON32",
+      "side": "right"
+    },
+    "720575940638774606": {
+      "cell_type": "",
+      "hemibrain_type": "MBON17",
+      "side": "left"
+    },
+    "720575940639556467": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "right"
+    },
+    "720575940639697827": {
+      "cell_type": "",
+      "hemibrain_type": "MBON14",
+      "side": "right"
+    },
+    "720575940642142861": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "left"
+    },
+    "720575940643309197": {
+      "cell_type": "",
+      "hemibrain_type": "MBON01",
+      "side": "left"
+    },
+    "720575940643696288": {
+      "cell_type": "",
+      "hemibrain_type": "MBON14",
+      "side": "left"
+    },
+    "720575940643700640": {
+      "cell_type": "",
+      "hemibrain_type": "MBON29",
+      "side": "right"
+    },
+    "720575940643863496": {
+      "cell_type": "",
+      "hemibrain_type": "MBON20",
+      "side": "left"
+    },
+    "720575940644615716": {
+      "cell_type": "",
+      "hemibrain_type": "MBON31",
+      "side": "left"
+    },
+    "720575940645304430": {
+      "cell_type": "",
+      "hemibrain_type": "MBON13",
+      "side": "left"
+    },
+    "720575940647328900": {
+      "cell_type": "",
+      "hemibrain_type": "MBON10",
+      "side": "right"
+    },
+    "720575940650386553": {
+      "cell_type": "",
+      "hemibrain_type": "MBON17-like",
+      "side": "left"
+    },
+    "720575940652390134": {
+      "cell_type": "",
+      "hemibrain_type": "MBON07",
+      "side": "left"
+    }
+  },
+  "mbon_to_dn_hops": {
+    "h0": 0,
+    "h1": 160,
+    "h2": 971,
+    "h3": 170,
+    "unreached<=3": 0
+  },
+  "mbon_to_dn_direct": {
+    "720575940607155890": {
+      "cell_type": "",
+      "n_dn_targets": 15
+    },
+    "720575940609959637": {
+      "cell_type": "",
+      "n_dn_targets": 28
+    },
+    "720575940610964946": {
+      "cell_type": "",
+      "n_dn_targets": 3
+    },
+    "720575940611344078": {
+      "cell_type": "",
+      "n_dn_targets": 23
+    },
+    "720575940614392999": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940616398303": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940617749538": {
+      "cell_type": "",
+      "n_dn_targets": 3
+    },
+    "720575940617760257": {
+      "cell_type": "",
+      "n_dn_targets": 2
+    },
+    "720575940618008859": {
+      "cell_type": "",
+      "n_dn_targets": 2
+    },
+    "720575940618249797": {
+      "cell_type": "",
+      "n_dn_targets": 13
+    },
+    "720575940619810389": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940620715224": {
+      "cell_type": "",
+      "n_dn_targets": 6
+    },
+    "720575940621164720": {
+      "cell_type": "",
+      "n_dn_targets": 3
+    },
+    "720575940621777391": {
+      "cell_type": "",
+      "n_dn_targets": 5
+    },
+    "720575940622093436": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940622979277": {
+      "cell_type": "",
+      "n_dn_targets": 15
+    },
+    "720575940623001480": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940623182847": {
+      "cell_type": "",
+      "n_dn_targets": 27
+    },
+    "720575940623201833": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940623377802": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940623381956": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940623905719": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940624280328": {
+      "cell_type": "",
+      "n_dn_targets": 33
+    },
+    "720575940624489964": {
+      "cell_type": "",
+      "n_dn_targets": 2
+    },
+    "720575940624659943": {
+      "cell_type": "",
+      "n_dn_targets": 2
+    },
+    "720575940626833021": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940627144069": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940628783363": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940629422086": {
+      "cell_type": "",
+      "n_dn_targets": 3
+    },
+    "720575940629856515": {
+      "cell_type": "",
+      "n_dn_targets": 4
+    },
+    "720575940629981440": {
+      "cell_type": "",
+      "n_dn_targets": 16
+    },
+    "720575940630864847": {
+      "cell_type": "",
+      "n_dn_targets": 2
+    },
+    "720575940632943277": {
+      "cell_type": "",
+      "n_dn_targets": 19
+    },
+    "720575940634482783": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940634822751": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940635063135": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940635841143": {
+      "cell_type": "",
+      "n_dn_targets": 2
+    },
+    "720575940636992368": {
+      "cell_type": "",
+      "n_dn_targets": 21
+    },
+    "720575940637902938": {
+      "cell_type": "",
+      "n_dn_targets": 23
+    },
+    "720575940637934308": {
+      "cell_type": "",
+      "n_dn_targets": 3
+    },
+    "720575940638163428": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940638526278": {
+      "cell_type": "",
+      "n_dn_targets": 18
+    },
+    "720575940643309197": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940643700640": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940643863496": {
+      "cell_type": "",
+      "n_dn_targets": 28
+    },
+    "720575940644615716": {
+      "cell_type": "",
+      "n_dn_targets": 20
+    },
+    "720575940650386553": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    },
+    "720575940652390134": {
+      "cell_type": "",
+      "n_dn_targets": 1
+    }
+  },
+  "mbon_to_motor": {
+    "BPN": {
+      "n": 33,
+      "h0": 0,
+      "h1": 2,
+      "h2": 31,
+      "h3": 0,
+      "unreached": 0
+    },
+    "RRN": {
+      "n": 2,
+      "h0": 0,
+      "h1": 0,
+      "h2": 2,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MDN": {
+      "n": 4,
+      "h0": 0,
+      "h1": 4,
+      "h2": 0,
+      "h3": 0,
+      "unreached": 0
+    },
+    "DNp09_P9": {
+      "n": 2,
+      "h0": 0,
+      "h1": 0,
+      "h2": 2,
+      "h3": 0,
+      "unreached": 0
+    },
+    "DNp01_GF": {
+      "n": 2,
+      "h0": 0,
+      "h1": 0,
+      "h2": 2,
+      "h3": 0,
+      "unreached": 0
+    },
+    "FG_CB0890": {
+      "n": 2,
+      "h0": 0,
+      "h1": 0,
+      "h2": 2,
+      "h3": 0,
+      "unreached": 0
+    },
+    "BB_DNg60": {
+      "n": 2,
+      "h0": 0,
+      "h1": 0,
+      "h2": 2,
+      "h3": 0,
+      "unreached": 0
+    }
+  },
+  "sugar_to_dan": {
+    "PAM": {
+      "n": 307,
+      "h0": 0,
+      "h1": 0,
+      "h2": 45,
+      "h3": 262,
+      "unreached": 0
+    },
+    "PPL1": {
+      "n": 16,
+      "h0": 0,
+      "h1": 0,
+      "h2": 5,
+      "h3": 11,
+      "unreached": 0
+    },
+    "MBON": {
+      "n": 96,
+      "h0": 0,
+      "h1": 0,
+      "h2": 32,
+      "h3": 64,
+      "unreached": 0
+    },
+    "KC": {
+      "n": 5177,
+      "h0": 0,
+      "h1": 0,
+      "h2": 395,
+      "h3": 4782,
+      "unreached": 0
+    }
+  },
+  "lc9_side_to_motor": {
+    "left": {
+      "n_src": 87,
+      "motor": {
+        "DNp09_P9": {
+          "h1": 1,
+          "h2": 1,
+          "h3": 0
+        },
+        "MDN": {
+          "h1": 0,
+          "h2": 4,
+          "h3": 0
+        },
+        "BPN": {
+          "h1": 0,
+          "h2": 23,
+          "h3": 10
+        },
+        "RRN": {
+          "h1": 0,
+          "h2": 2,
+          "h3": 0
+        },
+        "DN_ALL": {
+          "h1": 18,
+          "h2": 803,
+          "h3": 480
+        }
+      }
+    },
+    "right": {
+      "n_src": 92,
+      "motor": {
+        "DNp09_P9": {
+          "h1": 1,
+          "h2": 1,
+          "h3": 0
+        },
+        "MDN": {
+          "h1": 0,
+          "h2": 4,
+          "h3": 0
+        },
+        "BPN": {
+          "h1": 0,
+          "h2": 25,
+          "h3": 8
+        },
+        "RRN": {
+          "h1": 0,
+          "h2": 2,
+          "h3": 0
+        },
+        "DN_ALL": {
+          "h1": 20,
+          "h2": 779,
+          "h3": 501
+        }
+      }
+    }
+  },
+  "lc9_to_kc": {
+    "left": {
+      "n_kc": 5177,
+      "h1": 0,
+      "h2": 134,
+      "h3": 5043,
+      "h4": 0,
+      "unreached": 0
+    },
+    "right": {
+      "n_kc": 5177,
+      "h1": 0,
+      "h2": 42,
+      "h3": 5133,
+      "h4": 2,
+      "unreached": 0
+    }
+  },
+  "mbon_side_to_motor_side": {
+    "MBON_left->DNp09_P9_left": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_left->DNp09_P9_right": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_left->MDN_left": {
+      "n": 2,
+      "h1": 2,
+      "h2": 0,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_left->MDN_right": {
+      "n": 2,
+      "h1": 2,
+      "h2": 0,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_left->BPN_left": {
+      "n": 14,
+      "h1": 0,
+      "h2": 14,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_left->BPN_right": {
+      "n": 19,
+      "h1": 1,
+      "h2": 18,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_left->RRN_left": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_left->RRN_right": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->DNp09_P9_left": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->DNp09_P9_right": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->MDN_left": {
+      "n": 2,
+      "h1": 2,
+      "h2": 0,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->MDN_right": {
+      "n": 2,
+      "h1": 1,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->BPN_left": {
+      "n": 14,
+      "h1": 1,
+      "h2": 13,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->BPN_right": {
+      "n": 19,
+      "h1": 0,
+      "h2": 19,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->RRN_left": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    },
+    "MBON_right->RRN_right": {
+      "n": 1,
+      "h1": 0,
+      "h2": 1,
+      "h3": 0,
+      "unreached": 0
+    }
+  },
+  "lc9_to_kc_direct_synapses": 0,
+  "PAM_to_mb": {
+    "kc_h1": 5121,
+    "kc_h2": 56,
+    "kc_h3": 0,
+    "kc_unreached": 0,
+    "mbon_h1": 68,
+    "mbon_h2": 28,
+    "mbon_h3": 0,
+    "mbon_unreached": 0
+  },
+  "PPL1_to_mb": {
+    "kc_h1": 4752,
+    "kc_h2": 425,
+    "kc_h3": 0,
+    "kc_unreached": 0,
+    "mbon_h1": 85,
+    "mbon_h2": 11,
+    "mbon_h3": 0,
+    "mbon_unreached": 0
+  }
+}

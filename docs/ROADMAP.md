@@ -51,9 +51,9 @@ brain runs locally and produces reproducible neural activity — **PASSED
 | D8 | Artificial 2D environment + sensory encoder onto Gate-2 populations (LC9-L/R target channels, LPLC2/LC4 looming); open-loop probes with full logging; pre-registered calibration ladder | Lateralized P9 recruitment (left 20 Hz / right 72 Hz, contra 0), looming->GF 90–118 Hz, silent baseline, sensory→DN latency ≤ 50 ms chunk; rung 1 frozen BEFORE closed loop | **DONE (2026-09-28)** — `brain/results/d8_encoder/`, sign-inversion regression caught by unit tests pre-run |
 | D9 | Motor decoder: explicit rules (thresholds, P9 differential + hysteresis, min duration, STOP failsafe, conflict logging) over side-split DN readouts | Decoder reads ONLY DN spike counts (API-contract test); demo + unit tests pass; conflicts logged not hidden | **DONE (2026-09-28)** — `brain/scripts/d9_decoder.py` |
 | D10 | Closed-loop target approach + looming escape; 5 conditions x 5 scenarios x 3 reps pre-registered; no hidden shortcut; bit-exact replays; basic dashboard | Intact 9/9 target successes + 3/3 escapes; shuffled-sensory 0/9; shuffled-motor 0/9; random 0/9 (all bootstrap CI [1.00, 1.00]); replays bit-identical incl. C++ standalone | **DONE (2026-09-28) — GATE 3: PASS** — `D7_D10_FIRST_CONTROL_REPORT.md`, `brain/results/d10_closed_loop/` |
-| D11 | Reward-modulated learning (Stage B readout first; Stage C MB plasticity where defensible) | Learning improves task metric vs control C (fixed connectome); engineered additions labeled | pending |
-| D12 | Internal-state visualization (real variables only, MASTER_SPEC §9) | Dashboard shows live actual variables; no invented decorative activity | pending |
-| D13 | Memory + multi-step artificial tasks | Multi-step success above chance-chaining baseline | pending |
+| D11 | Reward-modulated learning (MB/dopamine plasticity on the Gate-3 runtime; pairing+test paradigm) | Learning improves task metric vs control C (fixed connectome); engineered additions labeled | **DONE - behavioural criterion FAIL (v1), honest report** |
+| D12 | Internal-state visualization (real variables only, MASTER_SPEC §9) | Dashboard shows live actual variables; no invented decorative activity | DONE |
+| D13 | Memory + multi-step artificial tasks (delayed reinforcement + cue-memory conditions A/B) | Multi-step success above chance-chaining baseline | DONE (results in report; behavioural change still Gate-4-blocked) |
 
 ## Stage III — Windows application + passive game perception (D14–D17)
 

@@ -1,0 +1,43 @@
+{
+ "tier": "BIOLOGICAL (connectivity only, no simulation)",
+ "generated": "2026-09-28 14:14:33",
+ "kc_n": 5177,
+ "mbon_n": 96,
+ "pam_n": 307,
+ "pam_n_in_v783": 307,
+ "ppl1_n": 16,
+ "ppl1_n_in_v783": 16,
+ "dn_n": 1301,
+ "dn_missing_from_v783": [
+  720575940618548244,
+  720575940618863553,
+  720575940619434587,
+  720575940621294218
+ ],
+ "kc_to_mbon": {
+  "n_connections": 62261,
+  "n_synapses": 256719.0,
+  "ipsilateral_conns": 48228,
+  "contralateral_conns": 14033,
+  "note": "synapse multiplicity = 'Excitatory x Connectivity' value"
+ },
+ "mbon_to_dn_direct": {
+  "n_connections": 361,
+  "n_mbon_types_with_dn_targets": 48,
+  "by_valence_class": {
+   "approach": 60,
+   "avoidance": 25,
+   "unclassified": 276
+  }
+ },
+ "checks_against_interrupted_session": {
+  "sides_kc_n": true,
+  "sides_mbon_n": true,
+  "sides_pam_n": true,
+  "sides_ppl1_n": true,
+  "mbon_types_n": true,
+  "mbon_to_dn_direct_types": true
+ },
+ "all_checks_pass": true,
+ "wall_s": 1.5
+}

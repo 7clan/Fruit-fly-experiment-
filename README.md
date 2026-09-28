@@ -48,6 +48,19 @@ control path.**
 >   reference at 25/50/100/200 ms; episodes replay bit-exactly (also in
 >   the 3x-faster C++ standalone route). Full record:
 >   `D7_D10_FIRST_CONTROL_REPORT.md` + `brain/results/d10_closed_loop/`
+> - **D11–D13 (2026-09-28): reward-modulated learning implemented and
+>   honestly evaluated — GATE 4 NOT PASSED (v1).** The
+>   mushroom-body/dopamine plasticity pathway is implemented on top of
+>   the Gate-3 runtime (KC→MBON dopamine-gated depression at the
+>   connectome's own 62,261 synapses; reward enters ONLY as PAM
+>   stimulation; behaviour is read ONLY from DN/MBON spikes). The
+>   machinery measurably works (weights + MBON rates change
+>   reward-specifically), BUT the pre-registered behavioural criteria
+>   FAILED: the frozen brain's innate wiring lean dominated every test
+>   choice (B − A = 0.000 [0,0]; extinction flat; reversal 0%).
+>   No post-hoc tuning was applied; the mechanistic diagnosis and the
+>   pre-registered v2 follow-up are in `D11_D13_LEARNING_REPORT.md`.
+>   No Roblox connection was made (blocked before Gate 4).
 >   (+ per-episode dashboard videos). Next: D11 (Drosophila-inspired
 >   reward-modulated learning). Still no Roblox / CV integration.
 > - **Windows target:** the finished application is `DigitalFlyLab.exe`

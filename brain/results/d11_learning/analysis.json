@@ -1,0 +1,32 @@
+{
+ "generated": "2026-09-28 17:14:27",
+ "contrasts": {
+  "B_acq_last9_P_paired": 1.0,
+  "B_vs_A_last9_diff": {
+   "observed": 0.0,
+   "ci95": [
+    0.0,
+    0.0
+   ],
+   "significant": false
+  },
+  "B_vs_C_last9_diff": {
+   "observed": 0.111,
+   "ci95": [
+    0.0,
+    0.333
+   ],
+   "significant": false
+  },
+  "B_vs_D_last9_diff": {
+   "observed": 0.111,
+   "ci95": [
+    0.0,
+    0.333
+   ],
+   "significant": false
+  },
+  "B_extinction_P_right": 1.0,
+  "B_reversal_P_left": 0.0
+ }
+}

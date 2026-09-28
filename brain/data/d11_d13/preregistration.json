@@ -1,0 +1,148 @@
+{
+ "version": 2,
+ "written_at": "2026-09-28 15:59:52",
+ "brain": "canonical Shiu LIF model on FlyWire v783 (unmodified); chunked interactive runtime (d7_runtime) + LearningBrain (d11_learning)",
+ "design": {
+  "paradigm": "forced-pairing blocks + free-choice tests (Aso-2014 style); pilots showed the bilateral regime is a decision boundary (balanced -> STOP timeouts; any imbalance -> one-sided basin), so instrumental left/right learning from exploratory commits is not viable in the frozen brain - pairing decouples learning from exploration",
+  "pairing_trial": "single target (presented side), innate approach; US = 1.0 s PAM @150 Hz at commit toward the presented side",
+  "test_trial": "two identical targets, NO US, choice = first +/-40 deg heading commit (2.5 s cap)",
+  "plan": {
+   "acquisition": "6 blocks x (4 pair RIGHT + 3 test)",
+   "extinction": "12 test-only trials (no US anywhere)",
+   "reversal": "6 blocks x (4 pair LEFT + 3 test)"
+  }
+ },
+ "interface": {
+  "visual": "Gate-3 channels at the bilaterally calibrated rates (target_left=134.0 Hz, target_right=150.0 Hz from bilateral_calibration.json - exactly the configuration the validating pilot3 ran under; the loader in run_session reads the calibration file, and the A control measures the resulting innate test-choice baseline)",
+  "cs": "per-side KC ensembles (200/side, seed 20260928), fixation-gated foveal tuning R*clamp(1-|b|/90); kc_cs_left PRE-COMMIT rate 102.3 Hz from the bilateral valence calibration (kc_cs_right 75 Hz reference) - the LC9->KC path is dynamically silent (probes P2/P3), and LC9 drive does not touch MBONs, so this calibration transfers to the strong visual regime",
+  "us": "direct PAM stimulation (ENGINEERED optogenetic-style entry; probe P1: sugar->PAM dynamically silent; D4-D6 3.3 tier-3a)"
+ },
+ "plasticity": {
+  "site": "canonical KC->MBON synapses (62,261; connectome's own)",
+  "rule": "reward(PAM gate >=10 Hz) depresses KC->avoidance-MBON; punishment(PPL1 gate >=10 Hz) depresses KC->approach-MBON (Aso 2014 / Owald 2015 sign rule)",
+  "eta": 0.3,
+  "scale_min": 0.05,
+  "tau_elig_s": 2.0,
+  "elig_power": 2.0,
+  "elig_power_note": "induction nonlinearity (e/max)^power, power=2 from pilot cross-contamination evidence",
+  "tau_relax_trials": 50.0,
+  "update_timing": "relax(1 trial) then update, at trial end"
+ },
+ "decoder": {
+  "base": "Gate-3 D9 MotorDecoder params verbatim",
+  "addition": "valence bias beta*[(appr_L-avoid_L)-(appr_R-avoid_R)] added to the P9 turn differential (D4-D6 3.3 tier-3c; probe P4 evidence: MBON->DN wiring does not reach walk command populations)",
+  "beta": 1.5,
+  "beta_note": "readout gain frozen from pilot calibration"
+ },
+ "sessions": {
+  "B": {
+   "condition": "B_plastic",
+   "plan": [
+    {
+     "name": "acquisition",
+     "kind": "blocks",
+     "blocks": 6,
+     "pair_per_block": 4,
+     "test_per_block": 3,
+     "pair_side": "right",
+     "us_on": true
+    },
+    {
+     "name": "extinction",
+     "kind": "test_only",
+     "n": 12
+    },
+    {
+     "name": "reversal",
+     "kind": "blocks",
+     "blocks": 6,
+     "pair_per_block": 4,
+     "test_per_block": 3,
+     "pair_side": "left",
+     "us_on": true
+    }
+   ],
+   "master_seed": 20260929,
+   "note": "pair RIGHT (against the innate LEFT test preference) = the strong acquisition test; extinction; reversal to LEFT"
+  },
+  "A": {
+   "condition": "A_no_plastic",
+   "plan": [
+    {
+     "name": "acquisition",
+     "kind": "blocks",
+     "blocks": 6,
+     "pair_per_block": 4,
+     "test_per_block": 3,
+     "pair_side": "right",
+     "us_on": true
+    }
+   ],
+   "master_seed": 20261001,
+   "note": "frozen Gate-3 weights, US still delivered"
+  },
+  "C": {
+   "condition": "C_shuffled_da",
+   "plan": [
+    {
+     "name": "acquisition",
+     "kind": "blocks",
+     "blocks": 6,
+     "pair_per_block": 4,
+     "test_per_block": 3,
+     "pair_side": "right",
+     "us_on": true
+    }
+   ],
+   "master_seed": 20261002,
+   "note": "dopamine gates lagged one trial (broken pairing)"
+  },
+  "D": {
+   "condition": "D_shuffled_kcmbon",
+   "plan": [
+    {
+     "name": "acquisition",
+     "kind": "blocks",
+     "blocks": 6,
+     "pair_per_block": 4,
+     "test_per_block": 3,
+     "pair_side": "right",
+     "us_on": true
+    }
+   ],
+   "master_seed": 20261003,
+   "note": "plasticity through a seeded permuted eligibility->KC mapping"
+  },
+  "E_rl": {
+   "condition": "E_rl_baseline",
+   "master_seed": 20261001,
+   "note": "non-biological Q-learner on the same schedule"
+  },
+  "seed_rule": "trial seed = master_seed + trial_index"
+ },
+ "metrics": [
+  "test-trial choice sequence",
+  "P(paired side | decided test trials) per phase + halves",
+  "pairing approach rate",
+  "valence bias (Hz)",
+  "MBON appr/avoid per side",
+  "PAM/PPL1 rates (US window)",
+  "KC eligibility asymmetry",
+  "KC->MBON weight stats",
+  "US count",
+  "wall/RAM/latency"
+ ],
+ "gate4_criteria": {
+  "G4_1": "B acquisition: P(paired side | decided) second half > first half AND exceeds the matched A control (bootstrap 95% CI on the difference excludes 0)",
+  "G4_2": "A (no plasticity) shows NO acquisition trend",
+  "G4_3": "C (shuffled DA) fails to acquire or is severely degraded",
+  "G4_4": "D (shuffled KC/MBON) fails to acquire or is severely degraded",
+  "G4_5": "extinction: test preference declines toward baseline when the US is withheld",
+  "G4_6": "reversal: test preference flips to the other side within the reversal phase",
+  "honesty": "if any criterion fails, report FAIL; no post-hoc parameter changes after the matrix starts"
+ },
+ "pilot_note": null,
+ "errata": [
+  "written during session B (no behavioral change): the v2 text said 'nominal 150 Hz both sides'; the operative visual rates are the calibrated 134/150 loaded from bilateral_calibration.json, as in the validating pilot. The running matrix is unaffected; this erratum corrects the documentation only."
+ ]
+}

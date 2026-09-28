@@ -1,0 +1,35 @@
+{
+ "condition": "D_shuffled_kcmbon",
+ "n_trials": 42,
+ "phase_acquisition": {
+  "n": 42,
+  "n_test": 18,
+  "n_pair": 24,
+  "pair_side": "right",
+  "p_test_left": 0.083,
+  "p_test_right": 0.917,
+  "p_test_timeout": 0.333,
+  "pairing_approach_rate": 1.0,
+  "n_us": 24,
+  "mean_pam_us_hz": 120.4,
+  "p_paired_side_test_first_half": 1.0,
+  "p_paired_side_test_second_half": 0.875
+ },
+ "session_wall_s": 807.1,
+ "peak_rss_mb": 3031.6,
+ "cpu_user_s": 806.1,
+ "n_kc_mbon_synapses": 62261,
+ "final_weight_stats": {
+  "n_synapses": 62261,
+  "mean_scale": 0.873022,
+  "frac_below_canonical": 0.672925,
+  "approach_class_mean": 0.811204,
+  "avoidance_class_mean": 0.811412,
+  "min_scale": 0.400787
+ },
+ "tier_labels": {
+  "substrate": "BIOLOGICAL KC->MBON/PAM/PPL1/MBON (canonical connectome)",
+  "rule": "MODELED dopamine-gated depression + eligibility + decay",
+  "task": "ENGINEERED choice arena + CS/US entries + MBON valence bias readout (learning_interface.json v2 + d11_probes)"
+ }
+}

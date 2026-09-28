@@ -1,0 +1,99 @@
+{
+ "generated": "2026-09-28 15:14:58",
+ "seed": 11,
+ "purpose": "restore no-initial-preference for the D11 choice task (pilot evidence: innate left-turn + innate CS-valence asymmetry); gains applied IDENTICALLY to all conditions",
+ "phase1_p9_balance": [
+  {
+   "target_left_hz": 150.0,
+   "p9_left": 6.67,
+   "p9_right": 1.33,
+   "p9_diff": 5.33
+  },
+  {
+   "target_left_hz": 110.0,
+   "p9_left": 0.33,
+   "p9_right": 8.33,
+   "p9_diff": -8.0
+  },
+  {
+   "target_left_hz": 80.0,
+   "p9_left": 0.0,
+   "p9_right": 34.67,
+   "p9_diff": -34.67
+  },
+  {
+   "target_left_hz": 55.0,
+   "p9_left": 0.0,
+   "p9_right": 53.33,
+   "p9_diff": -53.33
+  },
+  {
+   "target_left_hz": 35.0,
+   "p9_left": 0.0,
+   "p9_right": 51.0,
+   "p9_diff": -51.0
+  },
+  {
+   "target_left_hz": 20.0,
+   "p9_left": 0.0,
+   "p9_right": 52.67,
+   "p9_diff": -52.67
+  }
+ ],
+ "target_left_hz_calibrated": 134.0,
+ "phase2_cs_valence_balance": [
+  {
+   "kc_cs_left_hz": 75.0,
+   "valence_diff": 9.47,
+   "appr_l": 128.31,
+   "avoid_l": 201.47,
+   "appr_r": 142.84,
+   "avoid_r": 225.47
+  },
+  {
+   "kc_cs_left_hz": 100.0,
+   "valence_diff": 0.77,
+   "appr_l": 90.22,
+   "avoid_l": 142.72,
+   "appr_r": 98.65,
+   "avoid_r": 151.92
+  },
+  {
+   "kc_cs_left_hz": 125.0,
+   "valence_diff": -7.72,
+   "appr_l": 36.8,
+   "avoid_l": 64.5,
+   "appr_r": 36.93,
+   "avoid_r": 56.92
+  },
+  {
+   "kc_cs_left_hz": 150.0,
+   "valence_diff": -9.17,
+   "appr_l": 39.81,
+   "avoid_l": 72.31,
+   "appr_r": 39.79,
+   "avoid_r": 63.11
+  },
+  {
+   "kc_cs_left_hz": 175.0,
+   "valence_diff": -10.65,
+   "appr_l": 43.26,
+   "avoid_l": 79.44,
+   "appr_r": 43.16,
+   "avoid_r": 68.69
+  }
+ ],
+ "kc_cs_left_hz_calibrated": 102.3,
+ "verification_at_solution": {
+  "p9_left": 5.0,
+  "p9_right": 4.25,
+  "p9_diff": 0.75,
+  "valence_diff": -0.08,
+  "appr_l": 83.0,
+  "avoid_l": 131.44,
+  "appr_r": 89.54,
+  "avoid_r": 137.9
+ },
+ "note": "ENGINEERED interface calibration (pre-registered before the matrix); the A_no_plastic control verifies neutrality.  The calibrated rates are PRE-COMMIT interface rates (targets at +/-50 deg); the runtime encoders scale the full tuning curves by the same ratios.",
+ "wall_s": 806.0
+}

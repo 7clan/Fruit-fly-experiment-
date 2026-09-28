@@ -1,0 +1,1 @@
+{"condition": "A_no_plastic", "phases": [{"name": "acq", "n": 12, "us_on": true, "reward_side": "right"}], "master_seed": 20261001, "out_dir": "brain/results/d11_learning/calib_A_148", "beta": 1.5, "eta": 0.3, "tau_relax_trials": 50.0, "elig_power": 2.0, "target_left_hz_override": 148.0, "save_chunks": false, "label": "calib_A_148"}
