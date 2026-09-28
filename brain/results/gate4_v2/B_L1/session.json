@@ -1,0 +1,98 @@
+{
+ "label": "B_L1",
+ "condition": "B_plastic",
+ "reward_side": "left",
+ "n_trials": 94,
+ "phase_acquisition": {
+  "n": 28,
+  "n_pref": 8,
+  "p_left_b": 0.625,
+  "p_rewarded_b": 0.625,
+  "mean_V": 14.157,
+  "mean_C": 4.614,
+  "p_left_c": 1.0,
+  "n_pair": 16,
+  "us_delivered": 0,
+  "mean_pam_us_hz": 147.6,
+  "routea_n": 4,
+  "routea_p_left": 0.0
+ },
+ "phase_baseline": {
+  "n": 6,
+  "n_pref": 6,
+  "p_left_b": 0.5,
+  "p_rewarded_b": 0.5,
+  "mean_V": -0.126,
+  "mean_C": 2.412,
+  "p_left_c": 1.0
+ },
+ "phase_context": {
+  "n": 6,
+  "n_pref": 6,
+  "p_left_b": 0.667,
+  "p_rewarded_b": 0.667,
+  "mean_V": 16.776,
+  "mean_C": 3.886,
+  "p_left_c": 1.0
+ },
+ "phase_distractor": {
+  "n": 3,
+  "n_pref": 3,
+  "p_left_b": 1.0,
+  "p_rewarded_b": 1.0,
+  "mean_V": 21.843,
+  "mean_C": 5.314,
+  "p_left_c": 1.0
+ },
+ "phase_extinction": {
+  "n": 12,
+  "n_pref": 12,
+  "p_left_b": 0.333,
+  "p_rewarded_b": 0.333,
+  "mean_V": -0.11,
+  "mean_C": 2.28,
+  "p_left_c": 1.0
+ },
+ "phase_retention": {
+  "n": 11,
+  "n_pref": 3,
+  "p_left_b": 0.667,
+  "p_rewarded_b": 0.667,
+  "mean_V": 14.356,
+  "mean_C": 4.681,
+  "p_left_c": 1.0
+ },
+ "phase_reversal": {
+  "n": 28,
+  "n_pref": 8,
+  "p_left_b": 0.875,
+  "p_rewarded_b": 0.875,
+  "mean_V": 15.404,
+  "mean_C": 3.986,
+  "p_left_c": 1.0,
+  "n_pair": 16,
+  "us_delivered": 0,
+  "mean_pam_us_hz": 151.5,
+  "routea_n": 4,
+  "routea_p_left": 0.25
+ },
+ "session_wall_s": 2067.1,
+ "peak_rss_mb": 3018.3,
+ "cpu_user_s": 2065.4,
+ "bio_s_total": 196.4,
+ "mean_pref_wall_s": 24.9,
+ "final_weight_stats": {
+  "n_synapses": 62261,
+  "mean_scale": 0.919596,
+  "frac_below_canonical": 0.666501,
+  "approach_class_mean": 0.924582,
+  "avoidance_class_mean": 0.905513,
+  "min_scale": 0.291897
+ },
+ "frozen_params": {
+  "n_cs": 100,
+  "rate_l": 35.0,
+  "rate_r": 75.0
+ },
+ "plan": "GATE4_V2_PREREG.md section 7"
+}
