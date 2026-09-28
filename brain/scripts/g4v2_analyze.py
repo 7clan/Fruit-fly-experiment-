@@ -352,3 +352,103 @@ def analyze():
 
 if __name__ == "__main__":
     analyze()
+
+
+# --------------------------------------------------------------------------
+# report rendering (data sections for GATE4_V2_REPORT.md)
+# --------------------------------------------------------------------------
+def render_report():
+    """Render the analysis into report-ready markdown sections."""
+    v = json.loads((OUT / "verdicts.json").read_text())
+    fz = json.loads((G4 / "FROZEN_PARAMS.json").read_text())
+    L = []
+    a = L.append
+    a("## Verdicts (pre-registered criteria, fail-closed)\n")
+    a(f"- **G4A — NEURAL ASSOCIATIVE LEARNING: "
+      f"{v['G4A_verdict']}**")
+    a(f"- **G4B — BEHAVIOURAL EXPRESSION: {v['G4B_verdict']}**")
+    a(f"- **OVERALL GATE 4 (v2): {v['OVERALL_GATE4']}**\n")
+    a("## G4A evidence\n")
+    a1 = v["A1_eligibility"]
+    a(f"- A1 eligibility lateralization: mean fraction of pairing trials "
+      f"with paired-side eligibility > 2x unpaired = "
+      f"**{a1['mean_fraction']}** (gate >= 0.90: "
+      f"{'PASS' if a1['gate'] else 'FAIL'}); per session "
+      f"{a1['per_session']}")
+    a2 = v["A2_weights"]
+    a(f"- A2 cue-specific synaptic change (paired- vs unpaired-context "
+      f"KC->GLUT-MBON scales): pooled "
+      f"{a2['pooled']['observed'] if a2['pooled'] else None} "
+      f"CI95 {a2['pooled']['ci95'] if a2['pooled'] else None} "
+      f"({'PASS' if a2['gate'] else 'FAIL'})")
+    a3 = v["A3_mbon_response_descriptive"]
+    a(f"- A3 (descriptive) avoidance-class MBON response to the paired "
+      f"CS, baseline -> acquisition: "
+      + "; ".join(f"{k}: {d['baseline']}->{d['acquisition']} "
+                  f"({d['change']:+})" for k, d in a3.items()))
+    a4 = v["A4_valence_signal"]
+    a(f"- A4 learned valence signal (toward-rewarded, Hz): pooled "
+      f"{a4['pooled']['observed']} CI95 {a4['pooled']['ci95']} "
+      f"({'PASS' if a4['gate'] else 'FAIL'}); per session "
+      f"{a4['per_session']}\n")
+    a("## G4B evidence\n")
+    b1 = v["B1_preference_shift"]
+    a(f"- B1 route-B preference shift toward the rewarded side (pooled "
+      f"6 sessions): {b1['pooled']['observed']} "
+      f"CI95 {b1['pooled']['ci95']}; per session {b1['per_session']}")
+    b2 = v["B2_both_directions"]
+    a(f"- B2 both directions: RIGHT-rewarded mean "
+      f"{b2['right_rewarded']['mean']} {b2['right_rewarded']['per']}; "
+      f"LEFT-rewarded mean {b2['left_rewarded']['mean']} "
+      f"{b2['left_rewarded']['per']}")
+    a(f"- B3 controls (pooled shifts, CI must overlap 0):")
+    for l, d in v["B3_controls"].items():
+        a(f"  - {l}: {d['pooled']['observed']} CI95 "
+          f"{d['pooled']['ci95']}"
+          + (f" (vs B: {d.get('vs_B_diff')})" if 'vs_B_diff' in d else ""))
+    a("")
+    a("## Descriptive battery (B sessions)\n")
+    a("| session | extinction first3 -> last3 (rewarded side) | reversal "
+      "P(new side) | context x0.8 / x1.2 | distractor | route-A p(left) |")
+    a("|---|---|---|---|---|---|")
+    for l, d in v["descriptive_battery"].items():
+        a(f"| {l} | {d['extinction']['first3']} -> "
+          f"{d['extinction']['last3']} | {d['reversal']['p_new_side']} | "
+          f"{d['context']['p_rewarded_x08']} / "
+          f"{d['context']['p_rewarded_x12']} | "
+          f"{d['distractor']['p_rewarded']} | "
+          f"{d['route_a']['p_left']} ({d['route_a']['n_decided']}/"
+          f"{d['route_a']['n']}) |")
+    a("")
+    rl = v.get("E_rl_descriptive", {})
+    for l, d in rl.items():
+        a(f"- E_rl {l} (NON-biological Q-learner): baseline "
+          f"{d['phase_baseline']['p_rewarded_b']} -> acquisition "
+          f"{d['phase_acquisition']['p_rewarded_b']}")
+    a("\n## Performance (Section N)\n")
+    a("| session | wall s | bio s | peak RSS MB | CPU s | mean pref "
+      "wall s | trials |")
+    a("|---|---|---|---|---|---|---|")
+    for l, p in v["performance"].items():
+        if p.get("session_wall_s") is None:
+            continue
+        a(f"| {l} | {p['session_wall_s']} | {p['bio_s_total']} | "
+          f"{p['peak_rss_mb']} | {p['cpu_user_s']} | "
+          f"{p['mean_pref_wall_s']} | {p['n_trials']} |")
+    a("")
+    a(f"Frozen calibration: n_cs={fz['n_cs_per_side']}/side, "
+      f"kc_cs_right={fz['cs_rate_right_hz']} Hz, "
+      f"kc_cs_left={fz['cs_rate_left_hz']} Hz "
+      f"(boundary P(left)={fz['boundary']['p_left']}), "
+      f"US={fz['us_set']} @ {fz['us_rate_hz']} Hz.")
+    (OUT / "report_sections.md").write_text("\n".join(L) + "\n")
+    print(f"[analyze] report sections -> {OUT/'report_sections.md'}")
+    return "\n".join(L)
+
+
+if __name__ == "__main__":
+    import sys as _sys
+    if len(_sys.argv) > 1 and _sys.argv[1] == "report":
+        render_report()
+    else:
+        analyze()
