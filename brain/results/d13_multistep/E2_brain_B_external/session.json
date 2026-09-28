@@ -1,0 +1,12 @@
+{
+ "condition": "brain_B_external",
+ "n_trials": 16,
+ "cue_detection_rate": 0.312,
+ "p_choice_decided": 0.562,
+ "cue_following_rate": 0.667,
+ "reward_rate": 0.0,
+ "reach_rate": 0.0,
+ "note": "condition B's cue-following uses an EXTERNAL episodic memory module (ENGINEERED harness bias); it is NOT fly brain memory",
+ "session_wall_s": 1223.6,
+ "peak_rss_mb": 3012.7
+}

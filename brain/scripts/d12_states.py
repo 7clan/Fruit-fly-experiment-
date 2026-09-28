@@ -178,6 +178,8 @@ def compute_states(trials, chunks=None):
 
     states = []
     for i, t in enumerate(trials):
+        t = dict(t)          # D13 records use test_label/kind, not phase
+        t.setdefault("phase", t.get("test_label") or t.get("kind") or "?")
         v = t.get("mbon_valence_end") or {}
         appr_l, appr_r = v.get("appr_l"), v.get("appr_r")
         avoid_l, avoid_r = v.get("avoid_l"), v.get("avoid_r")

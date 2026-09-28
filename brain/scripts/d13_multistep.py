@@ -300,7 +300,6 @@ def run_e1(master_seed=20261101, out_dir=RESULTS / "E1_delayed"):
             rates = _chunk_rates(encoder, cs_encoder, vis)
             if state == "us" and countdown > 0:
                 rates["pam"] = US_RATE_HZ
-                countdown -= 1
             r = lb.step_learn(rates, chunk_ms=CHUNK_MS)
             elig.on_chunk(DT, kc_spikes=r["_kc_counts"])
             counts = dict(r.get("pop_counts", {}))
@@ -311,24 +310,31 @@ def run_e1(master_seed=20261101, out_dir=RESULTS / "E1_delayed"):
                 pam_spikes += (counts.get("PAM_left", 0)
                                + counts.get("PAM_right", 0))
                 us_s += DT
-            if state == "run" and arena.choice == pair_side:
-                state = "delay"
-                countdown = delay_chunks
-            elif state == "delay" and countdown == 0 and us_on:
-                state = "us"
-                countdown = us_chunks
-            elif state == "delay" and countdown == 0 and not us_on:
-                break
-            elif state == "us" and countdown == 0:
-                us_done = True
-                state = "post"
-                countdown = int(POST_S * 1000 / CHUNK_MS)
-            elif state == "post" and countdown == 0:
-                break
-            if state == "run" and arena.t > CHOICE_MAX_S + 1.0:
-                break
-            if countdown > 0 and state in ("delay", "post"):
-                countdown -= 1 if state == "post" else 0
+            # ---- explicit state machine (one decrement per chunk) ----
+            if state == "run":
+                if arena.choice == pair_side:
+                    state = "delay"
+                    countdown = delay_chunks
+                elif arena.t > CHOICE_MAX_S + 1.0:
+                    break
+            elif state == "delay":
+                countdown -= 1
+                if countdown <= 0:
+                    if us_on:
+                        state = "us"
+                        countdown = us_chunks
+                    else:
+                        break
+            elif state == "us":
+                countdown -= 1
+                if countdown <= 0:
+                    us_done = True
+                    state = "post"
+                    countdown = int(POST_S * 1000 / CHUNK_MS)
+            elif state == "post":
+                countdown -= 1
+                if countdown <= 0:
+                    break
         pam_hz = pam_spikes / (PAM_N * us_s) if us_s > 0 else 0.0
         up_log = _update_plasticity(pl, elig, pam_hz, 0.0, "B_plastic")
         rec = dict(trial=trial_idx, kind=f"pair_{pair_side}",
@@ -525,6 +531,9 @@ def run_e2(condition="brain_A", master_seed=20261201, n_blocks=8,
             arena.set_stage("choice")
             arena.choice = None                 # re-arm commit for choice
             arena.choice_t = None
+            arena.heading0 = arena.heading      # re-reference the commit
+            # detector to the post-cue heading (otherwise the cue-turn
+            # instantly re-fires the commit)
             choice = None
             while arena.t < CUE_MAX_S + CHOICE_MAX_S:
                 vis = arena.visual_state()

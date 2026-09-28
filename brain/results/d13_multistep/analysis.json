@@ -1,0 +1,33 @@
+{
+ "E1": {
+  "acquisition": 1.0,
+  "delayed_recall": 1.0,
+  "context_change": 1.0,
+  "distractor": 1.0,
+  "extinction": 1.0
+ },
+ "E2_brain_A": {
+  "condition": "brain_A",
+  "n_trials": 16,
+  "cue_detection_rate": 0.312,
+  "p_choice_decided": 0.562,
+  "cue_following_rate": 0.111,
+  "reward_rate": 0.0,
+  "reach_rate": 0.0,
+  "note": "brain-only: within-trial cue memory must be carried by the brain's own state (eligibility trace; no persistent activity exists in the canonical model)",
+  "session_wall_s": 1253.8,
+  "peak_rss_mb": 3030.1
+ },
+ "E2_brain_B_external": {
+  "condition": "brain_B_external",
+  "n_trials": 16,
+  "cue_detection_rate": 0.312,
+  "p_choice_decided": 0.562,
+  "cue_following_rate": 0.667,
+  "reward_rate": 0.0,
+  "reach_rate": 0.0,
+  "note": "condition B's cue-following uses an EXTERNAL episodic memory module (ENGINEERED harness bias); it is NOT fly brain memory",
+  "session_wall_s": 1223.6,
+  "peak_rss_mb": 3012.7
+ }
+}

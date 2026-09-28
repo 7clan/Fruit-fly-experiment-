@@ -1,0 +1,36 @@
+{
+ "condition": "E1_delayed_reinforcement_battery",
+ "n_trials": 76,
+ "block_acquisition": {
+  "n": 18,
+  "p_right": 1.0,
+  "p_left": 0.0
+ },
+ "block_delayed_recall": {
+  "n": 6,
+  "p_right": 1.0,
+  "p_left": 0.0
+ },
+ "block_context_change": {
+  "n": 6,
+  "p_right": 1.0,
+  "p_left": 0.0
+ },
+ "block_distractor": {
+  "n": 6,
+  "p_right": 1.0,
+  "p_left": 0.0
+ },
+ "block_extinction": {
+  "n": 8,
+  "p_right": 1.0,
+  "p_left": 0.0
+ },
+ "pairing": {
+  "n": 24,
+  "approach_rate": 1.0,
+  "n_us": 24
+ },
+ "session_wall_s": 1687.4,
+ "peak_rss_mb": 3029.8
+}

@@ -178,9 +178,36 @@ Condition **B (brain + EXTERNAL episodic memory)**: the harness logs the
 cue and injects a labelled ±12 Hz bias during CHOICE — **engineering,
 never credited to the fly brain** (mandate).
 
-E1/E2 results (see `brain/results/d13_multistep/analysis.json`):
+**E1 — delayed reinforcement does not rescue expression (honest).**
+Pairing with the US delayed 1.5 s ran perfectly (24/24 approach, 24/24
+US delivered), and the full retention battery ran — but every block
+(acquisition, delayed recall after 8 fillers, context change ±40°,
+0.5-s centre distractor, extinction) read **P(right) = 1.000** — the
+innate wiring lean is invariant to context change and distraction, and
+the learned component remains behaviourally silent (consistent with the
+D11 verdict; the same mechanism bottleneck).
 
-<!-- D13_RESULTS -->
+**E2 — the multi-step cue-memory task separates the two memory
+conditions cleanly (n = 16 trials each):**
+
+| measure | A (brain-only) | B (brain + EXTERNAL episodic memory) |
+|---|---|---|
+| cue detection (orient to cue ≤1.5 s) | 0.312 | 0.312 |
+| choice decided | 0.562 | 0.562 |
+| **cue-following (choice = cue side)** | **0.111** | **0.667** |
+| reward rate (full chain completed) | 0.000 | 0.000 |
+| reach rate (approach stage) | 0.000 | 0.000 |
+
+Reading (honest): the brain-only condition cannot carry the cue across
+the cue→choice gap — cue-following at/below chance, exactly as the
+canonical model predicts (no persistent activity; the eligibility
+trace is too weak and too short). The external-memory condition follows
+the cue at 66.7% — **that performance belongs to the ENGINEERED harness
+module, never to the fly brain** (mandate). Neither condition completed
+the full approach→interact→delay chain within the stage caps (reach
+rate 0) — the multi-step motor chain is beyond the frozen brain's
+within-trial budget at these caps; reported as an honest limitation,
+not hidden.
 
 ## 6. Machine-readable evidence
 
