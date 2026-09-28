@@ -1,0 +1,11 @@
+{
+ "gate_hz": 148.46,
+ "gate_ok": true,
+ "update_ok": true,
+ "n_synapses_changed": 360,
+ "avoid_r_base": 0.0,
+ "avoid_r_pairing": 73.106,
+ "response_change_hz": 73.106,
+ "response_ok": true,
+ "uscheck_pass": true
+}

@@ -54,7 +54,12 @@ def build_specs():
     # ---- readout populations (v2, corrected classes) -------------------
     d9_spec = json.loads(
         (BRAIN / "data" / "d7_d10" / "motor_readout.json").read_text())
-    pops = {k: list(v) for k, v in d9_spec["populations"].items()}
+    # DN_ALL_left/right removed: they overlap the route-C DN pops and
+    # DualModeBrain._build_readout assigns each neuron to exactly ONE
+    # population ("later pops win overlaps").  DN_ALL rates were
+    # descriptive only; the route-A decoder uses P9/MDN/WALK/STOP/GF.
+    pops = {k: list(v) for k, v in d9_spec["populations"].items()
+            if k not in ("DN_ALL_left", "DN_ALL_right")}
 
     def by_side(ids, cls):
         sel = [i for i in ids if classes.get(int(i)) == cls]
@@ -70,20 +75,22 @@ def build_specs():
     pops["MBON_avoidance_left"], pops["MBON_avoidance_right"], \
         pops["MBON_avoidance_unside"] = vl, vr, vu
 
-    # reward-US DAN population: PAM01-11 (Aso compartment-matched set)
+    # reward-US DAN population: PAM01-11 (Aso compartment-matched set).
+    # Overlap discipline: ONLY the full set is a readout population (no
+    # left/right children), so its spike counts are complete.
     us_ids = sorted(i for t in audit["reward_us_set"]
                     for i in audit["dan_types"][t]["ids"])
     pops["PAM_US_SET"] = us_ids
-    pops["PAM_US_SET_left"] = [i for i in us_ids if sides.get(int(i)) == "left"]
-    pops["PAM_US_SET_right"] = [i for i in us_ids
-                                if sides.get(int(i)) == "right"]
+    ppl1 = d11.load_ids("PPL1")
+    pops["PPL1_left"] = [i for i in ppl1 if sides.get(int(i)) == "left"]
+    pops["PPL1_right"] = [i for i in ppl1
+                          if sides.get(int(i)) == "right"]
 
     # route-C DN populations: DNs reachable from approach- vs avoidance-
-    # class MBONs (v783 MBON->DN direct wiring), per side
+    # class MBONs (v783 MBON->DN direct wiring), per side.  Pure sets are
+    # disjoint by construction; "both" cells go to their own pops.
     appr_dn = set(routes["reachable_dn_approach_valence"])
-    avoid_dn = set(routes["reachable_dn_avoidance_valance"]
-                   if "reachable_dn_avoidance_valance" in routes
-                   else routes["reachable_dn_avoidance_valence"])
+    avoid_dn = set(routes["reachable_dn_avoidance_valence"])
     pops["DN_apprRoute_left"] = [i for i in sorted(appr_dn - avoid_dn)
                                  if sides.get(int(i)) == "left"]
     pops["DN_apprRoute_right"] = [i for i in sorted(appr_dn - avoid_dn)

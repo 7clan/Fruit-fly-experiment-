@@ -1,0 +1,347 @@
+{
+ "generated": "2026-09-28 20:49:40",
+ "n_boot": 10000,
+ "rng_seed": 20261201,
+ "A1_eligibility": {
+  "per_session": [
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0,
+   1.0
+  ],
+  "mean_fraction": 1.0,
+  "gate": true
+ },
+ "A2_weights": {
+  "per_session": {
+   "B_R1": {
+    "diff": 0.05
+   },
+   "B_L1": {
+    "diff": 0.05
+   },
+   "B_R2": {
+    "diff": 0.05
+   },
+   "B_L2": {
+    "diff": 0.05
+   },
+   "B_R3": {
+    "diff": 0.05
+   },
+   "B_L3": {
+    "diff": 0.05
+   }
+  },
+  "pooled": {
+   "observed": 0.05,
+   "ci95": [
+    0.05,
+    0.05
+   ],
+   "n_outer": 6,
+   "n_total": 6
+  },
+  "gate": true
+ },
+ "A3_mbon_response_descriptive": {
+  "B_R1": {
+   "baseline": 5.0,
+   "acquisition": 5.0,
+   "change": 0.0
+  },
+  "B_L1": {
+   "baseline": 5.0,
+   "acquisition": 5.0,
+   "change": 0.0
+  },
+  "B_R2": {
+   "baseline": 5.0,
+   "acquisition": 5.0,
+   "change": 0.0
+  },
+  "B_L2": {
+   "baseline": 5.0,
+   "acquisition": 5.0,
+   "change": 0.0
+  },
+  "B_R3": {
+   "baseline": 5.0,
+   "acquisition": 5.0,
+   "change": 0.0
+  },
+  "B_L3": {
+   "baseline": 5.0,
+   "acquisition": 5.0,
+   "change": 0.0
+  }
+ },
+ "A4_valence_signal": {
+  "per_session": {
+   "B_R1": 1.0,
+   "B_L1": 1.0,
+   "B_R2": 1.0,
+   "B_L2": 1.0,
+   "B_R3": 1.0,
+   "B_L3": 1.0
+  },
+  "pooled": {
+   "observed": 1.0,
+   "ci95": [
+    1.0,
+    1.0
+   ],
+   "n_outer": 6,
+   "n_total": 48
+  },
+  "gate": true
+ },
+ "G4A_verdict": "PASS",
+ "B1_preference_shift": {
+  "per_session": {
+   "B_R1": 0.5,
+   "B_L1": 0.5,
+   "B_R2": 0.5,
+   "B_L2": 0.5,
+   "B_R3": 0.5,
+   "B_L3": 0.5
+  },
+  "pooled": {
+   "observed": 0.5,
+   "ci95": [
+    0.5,
+    0.5
+   ],
+   "n_outer": 6,
+   "n_total": 6
+  }
+ },
+ "B2_both_directions": {
+  "right_rewarded": {
+   "per": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "mean": 0.5
+  },
+  "left_rewarded": {
+   "per": [
+    0.5,
+    0.5,
+    0.5
+   ],
+   "mean": 0.5
+  }
+ },
+ "B3_controls": {
+  "A_R": {
+   "per_session": {
+    "A_R": 0.0
+   },
+   "pooled": {
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "n_outer": 1,
+    "n_total": 1
+   }
+  },
+  "A_L": {
+   "per_session": {
+    "A_L": 0.0
+   },
+   "pooled": {
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "n_outer": 1,
+    "n_total": 1
+   }
+  },
+  "C_R": {
+   "per_session": {
+    "C_R": 0.5
+   },
+   "pooled": {
+    "observed": 0.5,
+    "ci95": [
+     0.5,
+     0.5
+    ],
+    "n_outer": 1,
+    "n_total": 1
+   },
+   "vs_B_diff": 0.0
+  },
+  "D_R": {
+   "per_session": {
+    "D_R": 0.0
+   },
+   "pooled": {
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "n_outer": 1,
+    "n_total": 1
+   },
+   "vs_B_diff": 0.5
+  },
+  "F_R": {
+   "per_session": {
+    "F_R": 0.0
+   },
+   "pooled": {
+    "observed": 0.0,
+    "ci95": [
+     0.0,
+     0.0
+    ],
+    "n_outer": 1,
+    "n_total": 1
+   }
+  }
+ },
+ "B3_gate": false,
+ "G4B_verdict": "FAIL",
+ "OVERALL_GATE4": "FAIL",
+ "descriptive_battery": {
+  "B_R1": {
+   "extinction": {
+    "first3": 0.6666666666666666,
+    "last3": 0.6666666666666666
+   },
+   "reversal": {
+    "p_new_side": 1.0
+   },
+   "context": {
+    "p_rewarded_x08": NaN,
+    "p_rewarded_x12": NaN
+   },
+   "distractor": {
+    "p_rewarded": NaN
+   },
+   "route_a": {
+    "n": 4,
+    "n_decided": 4,
+    "p_left": 0.0
+   }
+  },
+  "B_L1": {
+   "extinction": {
+    "first3": 0.6666666666666666,
+    "last3": 0.6666666666666666
+   },
+   "reversal": {
+    "p_new_side": 1.0
+   },
+   "context": {
+    "p_rewarded_x08": NaN,
+    "p_rewarded_x12": NaN
+   },
+   "distractor": {
+    "p_rewarded": NaN
+   },
+   "route_a": {
+    "n": 4,
+    "n_decided": 4,
+    "p_left": 1.0
+   }
+  },
+  "B_R2": {
+   "extinction": {
+    "first3": 0.6666666666666666,
+    "last3": 0.6666666666666666
+   },
+   "reversal": {
+    "p_new_side": 1.0
+   },
+   "context": {
+    "p_rewarded_x08": NaN,
+    "p_rewarded_x12": NaN
+   },
+   "distractor": {
+    "p_rewarded": NaN
+   },
+   "route_a": {
+    "n": 4,
+    "n_decided": 4,
+    "p_left": 0.0
+   }
+  },
+  "B_L2": {
+   "extinction": {
+    "first3": 0.6666666666666666,
+    "last3": 0.6666666666666666
+   },
+   "reversal": {
+    "p_new_side": 1.0
+   },
+   "context": {
+    "p_rewarded_x08": NaN,
+    "p_rewarded_x12": NaN
+   },
+   "distractor": {
+    "p_rewarded": NaN
+   },
+   "route_a": {
+    "n": 4,
+    "n_decided": 4,
+    "p_left": 1.0
+   }
+  },
+  "B_R3": {
+   "extinction": {
+    "first3": 0.6666666666666666,
+    "last3": 0.6666666666666666
+   },
+   "reversal": {
+    "p_new_side": 1.0
+   },
+   "context": {
+    "p_rewarded_x08": NaN,
+    "p_rewarded_x12": NaN
+   },
+   "distractor": {
+    "p_rewarded": NaN
+   },
+   "route_a": {
+    "n": 4,
+    "n_decided": 4,
+    "p_left": 0.0
+   }
+  },
+  "B_L3": {
+   "extinction": {
+    "first3": 0.6666666666666666,
+    "last3": 0.6666666666666666
+   },
+   "reversal": {
+    "p_new_side": 1.0
+   },
+   "context": {
+    "p_rewarded_x08": NaN,
+    "p_rewarded_x12": NaN
+   },
+   "distractor": {
+    "p_rewarded": NaN
+   },
+   "route_a": {
+    "n": 4,
+    "n_decided": 4,
+    "p_left": 1.0
+   }
+  }
+ },
+ "E_rl_descriptive": {},
+ "performance": {},
+ "wall_s": 0.7
+}

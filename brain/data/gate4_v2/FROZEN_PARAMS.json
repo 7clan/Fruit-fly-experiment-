@@ -1,0 +1,26 @@
+{
+ "frozen_at": "2026-09-28 21:27:51",
+ "n_cs_per_side": 100,
+ "cs_rate_right_hz": 75.0,
+ "cs_rate_left_hz": 35.0,
+ "us_rate_hz": 150.0,
+ "us_set": "PAM01-11 (252 cells)",
+ "plasticity": {
+  "eta": 0.3,
+  "scale_min": 0.05,
+  "tau_relax_trials": 50.0,
+  "tau_elig_s": 2.0,
+  "elig_power": 2.0,
+  "pam_gate_hz": 10.0,
+  "ppl1_gate_hz": 10.0,
+  "target": "KC->avoidance-class (GLUT) MBONs"
+ },
+ "interface_spec": "brain/data/gate4_v2/interface_v2.json",
+ "readout_spec": "brain/data/gate4_v2/readout_v2.json",
+ "boundary": {
+  "p_left": 0.5,
+  "n_trials": 60,
+  "in_neutral_range": true
+ },
+ "reward_side_assignment_pre_registered": "B_R1 R, B_L1 L, B_R2 R, B_L2 L, B_R3 R, B_L3 L; A_R R, A_L L; C_R R, D_R R, F_R R (GATE4_V2_PREREG s7)"
+}
