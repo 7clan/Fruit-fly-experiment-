@@ -1,0 +1,81 @@
+{
+ "condition": "shuffled_motor",
+ "scenario": "target_center",
+ "rep": 2,
+ "seed": 20328930,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 100,
+ "bio_s": 5.0,
+ "wall_s": 50.9,
+ "bio_per_wall": 0.0982,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.0,
+ "path_efficiency": null,
+ "mean_abs_bearing_deg": 0.2,
+ "wrong_turn_rate": 0.0,
+ "stop_frequency": 1.0,
+ "escape_emitted": false,
+ "escape_latency_ms": null,
+ "n_spikes_total": 91930,
+ "n_conflicts": 2,
+ "conflict_examples": [
+  {
+   "action": "STOP",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 50.0
+  },
+  {
+   "action": "STOP",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 100.0
+  }
+ ],
+ "decision_latency_wall_ms": {
+  "mean": 508.1,
+  "p95": 518.6
+ },
+ "peak_rss_mb": 2929.0,
+ "cpu_user_s": 54.0,
+ "motor_shuffle_map": {
+  "BPN_bilateral": "GF_right",
+  "BRK_bilateral": "P9_left",
+  "DN_ALL_left": "DN_ALL_left",
+  "DN_ALL_right": "BRK_bilateral",
+  "GF_left": "DN_ALL_right",
+  "GF_right": "P9_right",
+  "MDN_bilateral": "BPN_bilateral",
+  "P9_left": "GF_left",
+  "P9_right": "MDN_bilateral"
+ },
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": 0.0,
+  "y": 0.0,
+  "escaped": false,
+  "jumps": 0
+ },
+ "dn_rate_hz": {
+  "P9_left": 0.0,
+  "P9_right": 0.2,
+  "GF_left": 5.2,
+  "GF_right": 0.0,
+  "MDN_bilateral": 0.2,
+  "BPN_bilateral": 0.0,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 0.74,
+  "DN_ALL_right": 0.0
+ }
+}

@@ -208,8 +208,11 @@ def run_seeded_trial(seed, version="783", exc_fly_ids=(), exc2_fly_ids=(),
         exc2, miss_exc2 = resolve_ids(exc2_fly_ids, version)
         slnc, miss_slnc = resolve_ids(slnc_fly_ids, version)
         n_total_override = None
-    exc2, miss_exc2 = resolve_ids(exc2_fly_ids, version)
-    slnc, miss_slnc = resolve_ids(slnc_fly_ids, version)
+    # (D7 fix) the two lines that used to sit here re-resolved exc2/slnc
+    # against the FULL connectome map even in path_override (filtered) mode,
+    # which would have produced wrong indices for those sets in subcircuit
+    # runs. Latent since D4-D6: the perf study never passed exc2/slnc with a
+    # path override. Removed 2026-09-28, harness-only fix.
 
     params = copy.copy(dbm.default_params)
     params["t_run"] = t_run_ms * ms

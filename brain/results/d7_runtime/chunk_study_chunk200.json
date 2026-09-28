@@ -1,0 +1,15 @@
+{
+ "mode": "interactive",
+ "n_neurons": 138639,
+ "chunk_ms": 200.0,
+ "n_chunks": 11,
+ "wall_s": 14.261,
+ "bio_s_per_wall_s": 0.1543,
+ "chunk_wall_ms_mean": 1296.4,
+ "chunk_wall_ms_p95": 1413.5,
+ "chunk_wall_ms_max": 1520.1,
+ "n_spikes": 24162,
+ "peak_rss_mb": 2920.2,
+ "cpu_user_s": 17.0,
+ "cpu_sys_s": 1.0
+}

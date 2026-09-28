@@ -1,0 +1,23 @@
+{
+ "mode": "interactive",
+ "n_neurons": 138639,
+ "chunk_ms": 50.0,
+ "t_bio_s": 1.0,
+ "n_chunks": 20,
+ "build_wall_s": 1.62,
+ "wall_s": 10.23,
+ "bio_s_per_wall_s": 0.0977,
+ "decision_latency_wall_ms_mean": 511.6,
+ "decision_latency_wall_ms_p95": 529.4,
+ "decision_latency_wall_ms_max": 755.1,
+ "bio_ms_per_decision": 50.0,
+ "n_spikes": 34638,
+ "cpu_user_s": 12.8,
+ "cpu_sys_s": 1.0,
+ "peak_rss_mb": 2935.1,
+ "machine": {
+  "cores": 2,
+  "model": "Intel(R) Xeon(R) Processor",
+  "mem_total_mb": 4041.6
+ }
+}

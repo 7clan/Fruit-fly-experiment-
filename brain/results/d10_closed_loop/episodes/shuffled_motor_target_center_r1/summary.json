@@ -1,0 +1,102 @@
+{
+ "condition": "shuffled_motor",
+ "scenario": "target_center",
+ "rep": 1,
+ "seed": 20327929,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 100,
+ "bio_s": 5.0,
+ "wall_s": 51.6,
+ "bio_per_wall": 0.097,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.735,
+ "path_efficiency": 1.088,
+ "mean_abs_bearing_deg": 2.4,
+ "wrong_turn_rate": 0.0,
+ "stop_frequency": 0.02,
+ "escape_emitted": false,
+ "escape_latency_ms": null,
+ "n_spikes_total": 92997,
+ "n_conflicts": 91,
+ "conflict_examples": [
+  {
+   "action": "STOP",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 50.0
+  },
+  {
+   "action": "STOP",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 100.0
+  },
+  {
+   "action": "BACKWARD",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 150.0
+  },
+  {
+   "action": "BACKWARD",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 200.0
+  },
+  {
+   "action": "BACKWARD",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 250.0
+  }
+ ],
+ "decision_latency_wall_ms": {
+  "mean": 514.6,
+  "p95": 621.1
+ },
+ "peak_rss_mb": 2933.5,
+ "cpu_user_s": 54.5,
+ "motor_shuffle_map": {
+  "BPN_bilateral": "DN_ALL_left",
+  "BRK_bilateral": "GF_left",
+  "DN_ALL_left": "BPN_bilateral",
+  "DN_ALL_right": "MDN_bilateral",
+  "GF_left": "P9_left",
+  "GF_right": "GF_right",
+  "MDN_bilateral": "DN_ALL_right",
+  "P9_left": "BRK_bilateral",
+  "P9_right": "P9_right"
+ },
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": -0.0,
+  "y": -0.735,
+  "escaped": false,
+  "jumps": 0
+ },
+ "dn_rate_hz": {
+  "P9_left": 0.2,
+  "P9_right": 18.6,
+  "GF_left": 0.0,
+  "GF_right": 0.6,
+  "MDN_bilateral": 223.95,
+  "BPN_bilateral": 17.01,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 0.0,
+  "DN_ALL_right": 0.0
+ }
+}

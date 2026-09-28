@@ -41,12 +41,16 @@ brain runs locally and produces reproducible neural activity — **PASSED
 
 ## Stage II — artificial-environment closed loop (D7–D13)
 
+> D7–D10 were re-scoped by the user's Gate-3 task brief (D7 = engineering
+> runtime, D8 = sensory encoder + artificial environment, D9 = motor
+> decoder, D10 = closed loop + control matrix). Delivered accordingly.
+
 | Step | WHAT | GATE | Status |
 |---|---|---|---|
-| D7 | Simple artificial visual environment (reuse the Phase-1 2D arena where practical) | Env steps + renders headless and reproducibly | pending |
-| D8 | Sensory encoder: env/game state -> stimulation of D4 sensory populations (defensible mapping documented; confidence carried) | Encoder output drives measurable brain activity changes | pending |
-| D9 | Motor decoder: neural activity -> action vocabulary (all emissions logged) | Decoder reads D6 populations; actions reproducible from identical activity | pending |
-| D10 | Closed-loop target navigation in the artificial env | Brain-in-the-loop navigation beats control A (random); no CV->action bypass anywhere in the path | pending |
+| D7 | Dual-mode engineering runtime: REFERENCE (canonical full brain, single-run) vs INTERACTIVE (chunked stepping, dynamic rates, checkpoints, profiling); chunk-size study 25/50/100/200 ms; C++ standalone replay; optional sparse variant | Chunked interactive stepping BIT-IDENTICAL to reference at all four chunk sizes; checkpoints deterministic; interactive 0.099 bio-s/wall-s @ 506 ms/chunk (this box); cpp replay bit-identical & 3.0x; sparse variant honestly workload-bound | **DONE (2026-09-28)** — `brain/results/d7_runtime/` |
+| D8 | Artificial 2D environment + sensory encoder onto Gate-2 populations (LC9-L/R target channels, LPLC2/LC4 looming); open-loop probes with full logging; pre-registered calibration ladder | Lateralized P9 recruitment (left 20 Hz / right 72 Hz, contra 0), looming->GF 90–118 Hz, silent baseline, sensory→DN latency ≤ 50 ms chunk; rung 1 frozen BEFORE closed loop | **DONE (2026-09-28)** — `brain/results/d8_encoder/`, sign-inversion regression caught by unit tests pre-run |
+| D9 | Motor decoder: explicit rules (thresholds, P9 differential + hysteresis, min duration, STOP failsafe, conflict logging) over side-split DN readouts | Decoder reads ONLY DN spike counts (API-contract test); demo + unit tests pass; conflicts logged not hidden | **DONE (2026-09-28)** — `brain/scripts/d9_decoder.py` |
+| D10 | Closed-loop target approach + looming escape; 5 conditions x 5 scenarios x 3 reps pre-registered; no hidden shortcut; bit-exact replays; basic dashboard | Intact 9/9 target successes + 3/3 escapes; shuffled-sensory 0/9; shuffled-motor 0/9; random 0/9 (all bootstrap CI [1.00, 1.00]); replays bit-identical incl. C++ standalone | **DONE (2026-09-28) — GATE 3: PASS** — `D7_D10_FIRST_CONTROL_REPORT.md`, `brain/results/d10_closed_loop/` |
 | D11 | Reward-modulated learning (Stage B readout first; Stage C MB plasticity where defensible) | Learning improves task metric vs control C (fixed connectome); engineered additions labeled | pending |
 | D12 | Internal-state visualization (real variables only, MASTER_SPEC §9) | Dashboard shows live actual variables; no invented decorative activity | pending |
 | D13 | Memory + multi-step artificial tasks | Multi-step success above chance-chaining baseline | pending |

@@ -1,0 +1,51 @@
+{
+  "seed": 11,
+  "n_neurons": 138639,
+  "fresh_vs_restore_reseed": {
+    "fresh": "415d4737b8e26dca9a27c24b4b94fec97e917c7255ea7ad1c4a11dd6946b9de3",
+    "reset": "415d4737b8e26dca9a27c24b4b94fec97e917c7255ea7ad1c4a11dd6946b9de3",
+    "identical": true
+  },
+  "mid_checkpoint_resume": {
+    "identical": true
+  },
+  "disk_store_roundtrip": {
+    "path": "/home/z/my-project/download/fly-agent/brain/results/d7_runtime/checkpoint_state.bin",
+    "size_mb": 238.5,
+    "identical": true
+  },
+  "memory_soak": {
+    "duration_bio_s": 10.0,
+    "chunk_ms": 50,
+    "rss_samples": [
+      {
+        "t_bio_s": 0.0,
+        "rss_mb": 3116.5
+      },
+      {
+        "t_bio_s": 2.0,
+        "rss_mb": 3115.5
+      },
+      {
+        "t_bio_s": 4.0,
+        "rss_mb": 3115.5
+      },
+      {
+        "t_bio_s": 6.0,
+        "rss_mb": 3115.6
+      },
+      {
+        "t_bio_s": 8.0,
+        "rss_mb": 3115.6
+      }
+    ],
+    "rss_growth_mb": -0.9,
+    "wall_s": 96.2
+  },
+  "cpu": {
+    "user_s": 233.91,
+    "sys_s": 2.05,
+    "elapsed_s": 4297410.51
+  },
+  "peak_rss_mb": 3347.5
+}

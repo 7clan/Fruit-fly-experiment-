@@ -1,0 +1,13 @@
+{
+ "episode": "../results/d10_closed_loop/episodes/intact_target_left_r0",
+ "seed": 20290928,
+ "schedule_chunks": 87,
+ "total_bio_ms": 4350.0,
+ "cpp_codegen_compile_run_s": 24.6,
+ "binary_only_run_s": 14.8,
+ "bio_s_per_wall_s_binary": 0.2943,
+ "child_peak_rss_mb": 3037.9,
+ "identical_to_interactive": true,
+ "sha_replay": "bba1053a260115bc",
+ "sha_original": "bba1053a260115bc"
+}

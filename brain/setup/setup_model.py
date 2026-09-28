@@ -92,8 +92,8 @@ def cmd_env(args):
     if not venv.exists():
         print("[env] creating venv ...")
         run([sys.executable, "-m", "venv", str(venv)])
-    py = venv / ("Scripts" / "python.exe" if sys.platform == "win32"
-                 else "bin" / "python")
+    py = venv / (Path("Scripts") / "python.exe" if sys.platform == "win32"
+                 else Path("bin") / "python")
     print("[env] installing pinned requirements ...")
     run([str(py), "-m", "pip", "install", "-r", str(SETUP / "requirements-brain.txt")])
     out = run([str(py), "-c",

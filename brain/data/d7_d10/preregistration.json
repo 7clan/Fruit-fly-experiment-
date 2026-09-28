@@ -1,0 +1,116 @@
+{
+ "version": 1,
+ "written_at": "2026-09-28 07:52:30",
+ "brain": "canonical Shiu LIF model on FlyWire v783 (unmodified), interactive chunked runtime (d7_runtime.py)",
+ "chunk_ms": 50.0,
+ "conditions": [
+  "random",
+  "scripted",
+  "intact",
+  "shuffled_sensory",
+  "shuffled_motor"
+ ],
+ "scenarios": [
+  "target_left",
+  "target_right",
+  "target_center",
+  "no_target",
+  "looming"
+ ],
+ "reps": 3,
+ "master_seed": 20260928,
+ "seed_rule": "episode seed = master + 1000*episode_index + rep",
+ "scenario_params": {
+  "target_left": {
+   "target_bearing_deg": 60.0,
+   "target_dist": 0.8,
+   "target_present": true,
+   "cap_s": 5.0
+  },
+  "target_right": {
+   "target_bearing_deg": -60.0,
+   "target_dist": 0.8,
+   "target_present": true,
+   "cap_s": 5.0
+  },
+  "target_center": {
+   "target_bearing_deg": 0.0,
+   "target_dist": 0.8,
+   "target_present": true,
+   "cap_s": 5.0
+  },
+  "no_target": {
+   "target_present": false,
+   "cap_s": 3.0
+  },
+  "looming": {
+   "target_present": false,
+   "loom": true,
+   "cap_s": 3.0
+  }
+ },
+ "arena": {
+  "half_size": 1.0,
+  "reach_radius": 0.15,
+  "v_forward": 0.25,
+  "v_turn": 0.15,
+  "v_backward": 0.15,
+  "omega_turn_deg_s": 150.0,
+  "jump_hop": 0.3,
+  "bearing_jitter_deg": 8.0,
+  "loom": {
+   "t_on_s": 0.5,
+   "rise_s": 1.5,
+   "max_angular_deg": 70.0
+  }
+ },
+ "encoder": {
+  "r_target_hz": 150.0,
+  "r_loom_hz": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0,
+  "note": "triangular hemifield tuning; bilateral centre zone"
+ },
+ "decoder": {
+  "window_ms": 300.0,
+  "theta_jump_hz": 25.0,
+  "theta_bwd_hz": 4.0,
+  "theta_fwd_hz": 5.0,
+  "theta_diff_hz": 8.0,
+  "delta_hyst_hz": 4.0,
+  "theta_stop_hz": 4.0,
+  "theta_min_walk_hz": 1.5,
+  "min_action_chunks": 2,
+  "turn_source": "P9",
+  "note": "frozen after D8 calibration; same config for intact and shuffled-motor conditions"
+ },
+ "controls": {
+  "random": "uniform over FORWARD/BACKWARD/TURN_LEFT/TURN_RIGHT/STOP",
+  "shuffled_sensory": "each channel drives a wrong same-size random subset of LC9 U LPLC2 U LC4 (seeded per episode)",
+  "shuffled_motor": "decoder population slots permuted (seeded per episode), brain and interface intact"
+ },
+ "metrics": [
+  "success",
+  "time_to_target",
+  "path_efficiency",
+  "orientation_accuracy_mean_abs_bearing",
+  "wrong_turn_rate",
+  "stop_frequency",
+  "escape_emitted",
+  "escape_latency_ms",
+  "decision_latency_wall_ms",
+  "bio_wall_ratio",
+  "dn_rate_stats",
+  "cpu",
+  "ram"
+ ],
+ "gate3_criteria": {
+  "G3_1": "intact closed loop: reproducible neural->motor actions that change the environment; target-approach success clearly above the random control",
+  "G3_2": "shuffled sensory control degrades vs intact",
+  "G3_3": "shuffled motor control degrades vs intact",
+  "G3_4": "random controller substantially worse than intact if meaningful behavior exists",
+  "honesty": "if the fixed brain does not outperform controls, report FAIL - no post-hoc tuning to force a pass"
+ }
+}

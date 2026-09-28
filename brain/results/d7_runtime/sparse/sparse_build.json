@@ -1,0 +1,13 @@
+{
+  "left": 613,
+  "right": 756,
+  "bilateral": 902,
+  "loom": 531,
+  "n_active_union": 1469,
+  "n_roi": 87960,
+  "n_neurons": 87960,
+  "n_connections": 11105169,
+  "comp": "/home/z/my-project/download/fly-agent/brain/results/d7_runtime/sparse/sparse_completeness.csv",
+  "con": "/home/z/my-project/download/fly-agent/brain/results/d7_runtime/sparse/sparse_connectivity.parquet",
+  "build_wall_s": 84.3
+}

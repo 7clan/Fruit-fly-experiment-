@@ -1,0 +1,8 @@
+{
+ "mode": "reference",
+ "n_neurons": 138639,
+ "wall_s": 5.826,
+ "n_spikes": 34638,
+ "bio_s_per_wall_s": 0.1716,
+ "peak_rss_mb": 2930.6
+}

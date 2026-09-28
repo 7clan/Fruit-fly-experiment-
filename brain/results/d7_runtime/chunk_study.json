@@ -1,0 +1,93 @@
+{
+  "seed": 11,
+  "n_neurons": 138639,
+  "schedule": [
+    [
+      400,
+      {}
+    ],
+    [
+      400,
+      {
+        "target_left": 150.0
+      }
+    ],
+    [
+      400,
+      {}
+    ],
+    [
+      400,
+      {
+        "looming": 150.0
+      }
+    ],
+    [
+      400,
+      {}
+    ],
+    [
+      200,
+      {
+        "target_right": 250.0
+      }
+    ]
+  ],
+  "reference": {
+    "sha256": "735341614d6d1479d90e27e6f1463f627cd9021fba77b69d872c0f32e2a98756",
+    "wall_s": 16.22,
+    "bio_s_per_wall_s": 0.1356,
+    "peak_rss_mb": 2963.5
+  },
+  "chunkings": {
+    "25": {
+      "sha256": "735341614d6d1479d90e27e6f1463f627cd9021fba77b69d872c0f32e2a98756",
+      "identical_to_reference": true,
+      "n_chunks": 88,
+      "wall_total_s": 29.196,
+      "bio_s_per_wall_s": 0.0754,
+      "chunk_wall_ms_mean": 331.8,
+      "chunk_wall_ms_p95": 339.2,
+      "chunk_wall_ms_max": 583.2,
+      "peak_rss_mb": 2930.8,
+      "n_spikes": 24162
+    },
+    "50": {
+      "sha256": "735341614d6d1479d90e27e6f1463f627cd9021fba77b69d872c0f32e2a98756",
+      "identical_to_reference": true,
+      "n_chunks": 44,
+      "wall_total_s": 21.705,
+      "bio_s_per_wall_s": 0.1014,
+      "chunk_wall_ms_mean": 493.3,
+      "chunk_wall_ms_p95": 504.2,
+      "chunk_wall_ms_max": 752.2,
+      "peak_rss_mb": 2928.7,
+      "n_spikes": 24162
+    },
+    "100": {
+      "sha256": "735341614d6d1479d90e27e6f1463f627cd9021fba77b69d872c0f32e2a98756",
+      "identical_to_reference": true,
+      "n_chunks": 22,
+      "wall_total_s": 16.741,
+      "bio_s_per_wall_s": 0.1314,
+      "chunk_wall_ms_mean": 761.0,
+      "chunk_wall_ms_p95": 775.1,
+      "chunk_wall_ms_max": 994.8,
+      "peak_rss_mb": 2920.3,
+      "n_spikes": 24162
+    },
+    "200": {
+      "sha256": "735341614d6d1479d90e27e6f1463f627cd9021fba77b69d872c0f32e2a98756",
+      "identical_to_reference": true,
+      "n_chunks": 11,
+      "wall_total_s": 14.261,
+      "bio_s_per_wall_s": 0.1543,
+      "chunk_wall_ms_mean": 1296.4,
+      "chunk_wall_ms_p95": 1413.5,
+      "chunk_wall_ms_max": 1520.1,
+      "peak_rss_mb": 2920.2,
+      "n_spikes": 24162
+    }
+  },
+  "all_chunkings_identical": true
+}

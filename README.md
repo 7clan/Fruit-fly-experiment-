@@ -37,10 +37,19 @@ control path.**
 >   v783 IDs: `D4_D6_NEURAL_IO_MAP.md` + machine-readable
 >   `brain/data/io_map/`. Performance study: full-brain numpy reference
 >   0.094 bio-s/wall-s @ 2.8 GB; exact sparse-active mode; C++ standalone
->   binary 0.283 bio-s/wall-s @ 678 MB (3.1x, bit-identical). Next:
->   D7-D9 (speedup + closed loop in an artificial environment). No
->   Roblox control until Gate 1 (passed) AND the D-order prerequisites
->   (`docs/ROADMAP.md`).
+>   binary 0.283 bio-s/wall-s @ 678 MB (3.1x, bit-identical).
+> - **GATE 3: PASS (2026-09-28)** — FIRST AUTONOMOUS CLOSED-LOOP CONTROL:
+>   the intact connectome-derived Drosophila brain (fixed, no learning)
+>   perceives a visual target through the verified LC9 sensory interface
+>   and steers the agent to it in a REAL closed loop — 9/9 target-approach
+>   successes + 3/3 looming escapes, while EVERY control degrades to 0/9
+>   (random, shuffled-sensory, shuffled-motor; bootstrap CI [1.00,1.00]).
+>   Chunked interactive stepping is bit-identical to the canonical
+>   reference at 25/50/100/200 ms; episodes replay bit-exactly (also in
+>   the 3x-faster C++ standalone route). Full record:
+>   `D7_D10_FIRST_CONTROL_REPORT.md` + `brain/results/d10_closed_loop/`
+>   (+ per-episode dashboard videos). Next: D11 (Drosophila-inspired
+>   reward-modulated learning). Still no Roblox / CV integration.
 > - **Windows target:** the finished application is `DigitalFlyLab.exe`
 >   (window-capture mirror of the Roblox process, CV overlays, neural +
 >   internal-state visualization, replay). Full addendum:

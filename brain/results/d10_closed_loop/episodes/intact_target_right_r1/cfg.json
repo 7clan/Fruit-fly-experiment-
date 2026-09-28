@@ -1,0 +1,1 @@
+{"condition": "intact", "scenario": "target_right", "rep": 1, "seed": 20294929, "episode_dir": "/home/z/my-project/download/fly-agent/brain/results/d10_closed_loop/episodes/intact_target_right_r1", "chunk_ms": 50.0, "interface": "/home/z/my-project/download/fly-agent/brain/data/d7_d10/sensory_interface.json", "motor_shuffle_seed": 20294936}

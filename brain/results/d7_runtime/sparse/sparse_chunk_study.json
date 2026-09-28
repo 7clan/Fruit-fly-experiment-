@@ -1,0 +1,142 @@
+{
+ "seed": 11,
+ "n_neurons": 87960,
+ "schedule": [
+  [
+   400,
+   {}
+  ],
+  [
+   400,
+   {
+    "target_left": 150.0
+   }
+  ],
+  [
+   400,
+   {}
+  ],
+  [
+   400,
+   {
+    "looming": 150.0
+   }
+  ],
+  [
+   400,
+   {}
+  ],
+  [
+   200,
+   {
+    "target_right": 250.0
+   }
+  ]
+ ],
+ "reference": {
+  "sha256": "8cfb9fc015f9ec0493e425941778783be57d99178fcc3f116f467fcd5ebcd5bf",
+  "wall_s": 11.428,
+  "bio_s_per_wall_s": 0.1925,
+  "peak_rss_mb": 2047.6
+ },
+ "chunkings": {
+  "25": {
+   "sha256": "8cfb9fc015f9ec0493e425941778783be57d99178fcc3f116f467fcd5ebcd5bf",
+   "identical_to_reference": true,
+   "n_chunks": 88,
+   "wall_total_s": 25.277,
+   "bio_s_per_wall_s": 0.087,
+   "chunk_wall_ms_mean": 287.2,
+   "chunk_wall_ms_p95": 375.0,
+   "chunk_wall_ms_max": 720.7,
+   "peak_rss_mb": 2039.6,
+   "n_spikes": 24162
+  },
+  "50": {
+   "sha256": "8cfb9fc015f9ec0493e425941778783be57d99178fcc3f116f467fcd5ebcd5bf",
+   "identical_to_reference": true,
+   "n_chunks": 44,
+   "wall_total_s": 16.783,
+   "bio_s_per_wall_s": 0.1311,
+   "chunk_wall_ms_mean": 381.4,
+   "chunk_wall_ms_p95": 394.8,
+   "chunk_wall_ms_max": 619.4,
+   "peak_rss_mb": 2046.0,
+   "n_spikes": 24162
+  },
+  "100": {
+   "sha256": "8cfb9fc015f9ec0493e425941778783be57d99178fcc3f116f467fcd5ebcd5bf",
+   "identical_to_reference": true,
+   "n_chunks": 22,
+   "wall_total_s": 12.456,
+   "bio_s_per_wall_s": 0.1766,
+   "chunk_wall_ms_mean": 566.2,
+   "chunk_wall_ms_p95": 571.4,
+   "chunk_wall_ms_max": 812.6,
+   "peak_rss_mb": 2044.2,
+   "n_spikes": 24162
+  },
+  "200": {
+   "sha256": "8cfb9fc015f9ec0493e425941778783be57d99178fcc3f116f467fcd5ebcd5bf",
+   "identical_to_reference": true,
+   "n_chunks": 11,
+   "wall_total_s": 9.955,
+   "bio_s_per_wall_s": 0.221,
+   "chunk_wall_ms_mean": 905.0,
+   "chunk_wall_ms_p95": 1018.3,
+   "chunk_wall_ms_max": 1137.0,
+   "peak_rss_mb": 2043.9,
+   "n_spikes": 24162
+  }
+ },
+ "all_chunkings_identical": true,
+ "full_reference_sha": "735341614d6d1479d90e27e6f1463f627cd9021fba77b69d872c0f32e2a98756",
+ "full_brain_study_comparison": {
+  "method": "flywire-id spike-train comparison vs full-brain chunk_study files",
+  "chunkings": {
+   "25": {
+    "identical": true,
+    "n_active": 1349,
+    "identical_trains": 1349,
+    "spikes": 24162
+   },
+   "50": {
+    "identical": true,
+    "n_active": 1349,
+    "identical_trains": 1349,
+    "spikes": 24162
+   },
+   "100": {
+    "identical": true,
+    "n_active": 1349,
+    "identical_trains": 1349,
+    "spikes": 24162
+   },
+   "200": {
+    "identical": true,
+    "n_active": 1349,
+    "identical_trains": 1349,
+    "spikes": 24162
+   }
+  },
+  "note": "bit-identical on the D7 study workload"
+ },
+ "episode_verification": {
+  "episode": "intact_target_left_r0 (4.35 s closed loop)",
+  "identical": false,
+  "n_active_sparse": 1089,
+  "n_active_full": 1099,
+  "n_active_common": 1070,
+  "n_train_mismatches": 957,
+  "spikes_sparse": 84865,
+  "spikes_full": 85163,
+  "spike_ratio": 0.9965,
+  "conclusion": "data-driven ROIs are WORKLOAD-BOUND: exact for the probe/study workload, not guaranteed for arbitrary closed-loop episodes. The sparse variant therefore remains an OPTIONAL accelerator requiring per-episode verification; the DEFAULT interactive engine is the FULL canonical brain (bit-identical to reference by construction)."
+ },
+ "speed_vs_full_50ms": {
+  "sparse_bio_s_per_wall_s": 0.1311,
+  "full_bio_s_per_wall_s": 0.101,
+  "speedup": 1.3,
+  "sparse_rss_mb": 2046.0
+ }
+}

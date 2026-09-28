@@ -1,0 +1,32 @@
+{
+ "frozen_at": "2026-09-28 07:52:30",
+ "decision": "D8 calibration complete BEFORE any closed-loop run",
+ "interface_rung": 1,
+ "interface": "40 LC9/side @150 Hz + Gate-2 looming sample (80 LPLC2/LC4)",
+ "decoder": "A: P9 differential (turn), walk-mean (forward), GF (jump)",
+ "criterion": "steady ipsilateral P9 >= 20 Hz AND (ipsi-contra) >= 15 Hz both sides",
+ "evidence": {
+  "target_left": {
+   "P9_left_hz": 20.0,
+   "P9_right_hz": 0.0
+  },
+  "target_right": {
+   "P9_left_hz": 0.0,
+   "P9_right_hz": 72.0
+  },
+  "target_center": {
+   "P9_left_hz": 20.0,
+   "P9_right_hz": 2.0
+  },
+  "loom": {
+   "GF_left_hz": 90.0,
+   "GF_right_hz": 118.0,
+   "P9_hz": 0.0
+  },
+  "baseline": {
+   "total_spikes": 0
+  }
+ },
+ "ladder_escalation": "NOT needed - rung 1 satisfied the pre-registered criterion on both sides (asymmetry 20 vs 72 Hz is biological wiring: LC9_right->P9_right 866 syn vs LC9_left->P9_left 385 syn)",
+ "sensory_to_motor_latency_ms": "<= 50 (chunk resolution); first DN spikes in the first stimulated chunk"
+}

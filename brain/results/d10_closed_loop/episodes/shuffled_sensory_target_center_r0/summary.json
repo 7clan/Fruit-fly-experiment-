@@ -1,0 +1,85 @@
+{
+ "condition": "shuffled_sensory",
+ "scenario": "target_center",
+ "rep": 0,
+ "seed": 20311928,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 100,
+ "bio_s": 5.0,
+ "wall_s": 47.5,
+ "bio_per_wall": 0.1053,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.3,
+ "path_efficiency": 2.667,
+ "mean_abs_bearing_deg": 11.7,
+ "wrong_turn_rate": 0.0,
+ "stop_frequency": 0.0,
+ "escape_emitted": true,
+ "escape_latency_ms": null,
+ "n_spikes_total": 61309,
+ "n_conflicts": 4,
+ "conflict_examples": [
+  {
+   "action": "JUMP",
+   "conflicts": [
+    "JUMP vs other action"
+   ],
+   "t_window_end_ms": 50.0
+  },
+  {
+   "action": "JUMP",
+   "conflicts": [
+    "JUMP vs other action"
+   ],
+   "t_window_end_ms": 100.0
+  },
+  {
+   "action": "JUMP",
+   "conflicts": [
+    "JUMP vs other action"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "JUMP",
+   "conflicts": [
+    "JUMP vs other action"
+   ],
+   "t_window_end_ms": 300.0
+  }
+ ],
+ "decision_latency_wall_ms": {
+  "mean": 474.1,
+  "p95": 497.6
+ },
+ "peak_rss_mb": 2931.2,
+ "cpu_user_s": 50.4,
+ "motor_shuffle_map": null,
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": 0.0,
+  "y": 0.3,
+  "escaped": true,
+  "jumps": 100
+ },
+ "dn_rate_hz": {
+  "P9_left": 1.0,
+  "P9_right": 3.8,
+  "GF_left": 55.0,
+  "GF_right": 68.8,
+  "MDN_bilateral": 0.0,
+  "BPN_bilateral": 0.0,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 0.6,
+  "DN_ALL_right": 0.91
+ }
+}

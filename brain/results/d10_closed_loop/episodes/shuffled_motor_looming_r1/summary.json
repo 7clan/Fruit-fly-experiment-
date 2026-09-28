@@ -1,0 +1,102 @@
+{
+ "condition": "shuffled_motor",
+ "scenario": "looming",
+ "rep": 1,
+ "seed": 20333929,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 60,
+ "bio_s": 3.0,
+ "wall_s": 27.7,
+ "bio_per_wall": 0.1084,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.375,
+ "path_efficiency": null,
+ "mean_abs_bearing_deg": null,
+ "wrong_turn_rate": 0.0,
+ "stop_frequency": 0.317,
+ "escape_emitted": true,
+ "escape_latency_ms": 900.0,
+ "n_spikes_total": 39996,
+ "n_conflicts": 40,
+ "conflict_examples": [
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  }
+ ],
+ "decision_latency_wall_ms": {
+  "mean": 460.4,
+  "p95": 470.5
+ },
+ "peak_rss_mb": 2925.3,
+ "cpu_user_s": 30.4,
+ "motor_shuffle_map": {
+  "BPN_bilateral": "BPN_bilateral",
+  "BRK_bilateral": "DN_ALL_left",
+  "DN_ALL_left": "P9_right",
+  "DN_ALL_right": "BRK_bilateral",
+  "GF_left": "GF_right",
+  "GF_right": "MDN_bilateral",
+  "MDN_bilateral": "DN_ALL_right",
+  "P9_left": "GF_left",
+  "P9_right": "P9_left"
+ },
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": 0.336,
+  "y": 0.13,
+  "escaped": true,
+  "jumps": 31
+ },
+ "dn_rate_hz": {
+  "P9_left": 0.0,
+  "P9_right": 556.0,
+  "GF_left": 0.0,
+  "GF_right": 54.0,
+  "MDN_bilateral": 18.67,
+  "BPN_bilateral": 0.0,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 0.0,
+  "DN_ALL_right": 0.0
+ }
+}

@@ -1,0 +1,97 @@
+{
+  "seed": 11,
+  "rung": 1,
+  "rate_hz": 150.0,
+  "n_neurons": 138639,
+  "interface": "sensory_interface.json",
+  "conditions": {
+    "baseline": {
+      "n_spikes": 0,
+      "latency_ms": {},
+      "steady_hz": {
+        "P9_left": 0.0,
+        "P9_right": 0.0,
+        "GF_left": 0.0,
+        "GF_right": 0.0,
+        "MDN_bilateral": 0.0,
+        "DN_ALL_left": 0.0,
+        "DN_ALL_right": 0.0
+      }
+    },
+    "target_left": {
+      "n_spikes": 19170,
+      "latency_ms": {},
+      "steady_hz": {
+        "P9_left": 20.0,
+        "P9_right": 0.0,
+        "GF_left": 0.0,
+        "GF_right": 0.0,
+        "MDN_bilateral": 0.0,
+        "DN_ALL_left": 1.04,
+        "DN_ALL_right": 1.67
+      }
+    },
+    "target_right": {
+      "n_spikes": 23408,
+      "latency_ms": {},
+      "steady_hz": {
+        "P9_left": 0.0,
+        "P9_right": 72.0,
+        "GF_left": 6.0,
+        "GF_right": 2.0,
+        "MDN_bilateral": 0.0,
+        "DN_ALL_left": 1.74,
+        "DN_ALL_right": 2.3
+      }
+    },
+    "target_center": {
+      "n_spikes": 34608,
+      "latency_ms": {},
+      "steady_hz": {
+        "P9_left": 20.0,
+        "P9_right": 2.0,
+        "GF_left": 0.0,
+        "GF_right": 0.0,
+        "MDN_bilateral": 0.0,
+        "DN_ALL_left": 1.49,
+        "DN_ALL_right": 2.49
+      }
+    },
+    "loom": {
+      "n_spikes": 23717,
+      "latency_ms": {},
+      "steady_hz": {
+        "P9_left": 0.0,
+        "P9_right": 0.0,
+        "GF_left": 90.0,
+        "GF_right": 118.0,
+        "MDN_bilateral": 0.0,
+        "DN_ALL_left": 1.52,
+        "DN_ALL_right": 1.37
+      }
+    },
+    "latency_probe": {
+      "n_spikes": 22470,
+      "latency_ms": {
+        "DN_ALL_left": 50.0,
+        "DN_ALL_right": 50.0,
+        "DN_LEG_left": 50.0,
+        "DN_LEG_right": 50.0,
+        "GF_left": 50.0,
+        "GF_right": 50.0,
+        "P9_right": 50.0,
+        "MDN_left": 100.0,
+        "MDN_right": 100.0
+      },
+      "steady_hz": {
+        "P9_left": 0.0,
+        "P9_right": 70.0,
+        "GF_left": 2.0,
+        "GF_right": 2.0,
+        "MDN_bilateral": 0.0,
+        "DN_ALL_left": 1.71,
+        "DN_ALL_right": 2.31
+      }
+    }
+  }
+}

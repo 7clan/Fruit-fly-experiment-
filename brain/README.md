@@ -16,6 +16,10 @@ Third-party model + data: `THIRD_PARTY.md`.
 | D6 descending / motor | **DONE** — 1,305 DNs (473 types); MDN/DNp09/BPN/RRN/DNp01/FG/BB/BRK resolved via author-deposited FlyWire labels; decoder rules proposed |
 | Gate 2 (sensory→motor) | **PASS** — `results/gate2_io/verdict.json`: looming→giant fiber ~110 Hz; LC9→92 DNs; bit-identical re-runs; entry-off control → 0 downstream |
 | D7 perf study (pre-work) | **DONE** — `results/perf_study/`: reference 0.094 bio-s/wall-s @ 2.8 GB; sparse-active EXACT (Jaccard 1.0); C++ standalone binary 3.5 s @ 678 MB (3.1×, bit-identical); task-relevant subcircuit is brain-wide at hop radius ≥ 2 |
+| D7 runtime (REFERENCE/INTERACTIVE) | **DONE** — `results/d7_runtime/`: chunked stepping bit-identical at 25/50/100/200 ms; checkpoints (restore+reseed, disk round-trip) bit-identical; interactive 0.099 bio-s/wall-s @ 506 ms/chunk, 2.9 GB; cpp-standalone episode replay bit-identical @ 0.294 bio-s/wall-s (3.0×); optional sparse variant honestly workload-bound |
+| D8 encoder + arena | **DONE** — `results/d8_encoder/`: lateralized LC9→P9 channel (L 20 Hz / R 72 Hz, contra 0), looming→GF 90–118 Hz, silent baseline, sensory→DN ≤ 50 ms; rung-1 calibration frozen BEFORE the closed loop |
+| D9 motor decoder | **DONE** — `scripts/d9_decoder.py`: explicit thresholds/hysteresis/min-duration/STOP-failsafe/conflict-logging over side-split DN readouts; decoder never sees arena state |
+| D10 closed loop | **DONE — GATE 3 PASS** — `results/d10_closed_loop/`: intact 9/9 target approach + 3/3 looming escape; shuffled-sensory / shuffled-motor / random all 0/9 (CI [1.00,1.00]); bit-exact replays incl. C++; dashboard MP4s per episode |
 
 **GATE 1: PASS** — the connectome-derived digital Drosophila brain runs
 locally and produces reproducible neural activity. Full record:
@@ -24,6 +28,12 @@ locally and produces reproducible neural activity. Full record:
 **GATE 2: PASS** — a verified sensory → digital Drosophila → motor path
 exists and can be stimulated/read reproducibly. Full record:
 `../D4_D6_NEURAL_IO_MAP.md` + machine-readable `data/io_map/`.
+
+**GATE 3: PASS** — the connectome-derived digital Drosophila perceives a
+simple visual target through the verified sensory interface and produces
+reproducible motor action that changes the environment in closed loop
+(intact 9/9 + 3/3 escapes; all shuffled/random controls 0/9). Full record:
+`../D7_D10_FIRST_CONTROL_REPORT.md`.
 
 Operational notes learned here (matter for every later step):
 

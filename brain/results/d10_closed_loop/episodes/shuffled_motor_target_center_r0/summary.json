@@ -1,0 +1,102 @@
+{
+ "condition": "shuffled_motor",
+ "scenario": "target_center",
+ "rep": 0,
+ "seed": 20326928,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 100,
+ "bio_s": 5.0,
+ "wall_s": 49.5,
+ "bio_per_wall": 0.101,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.735,
+ "path_efficiency": 1.088,
+ "mean_abs_bearing_deg": 86.8,
+ "wrong_turn_rate": 0.449,
+ "stop_frequency": 0.02,
+ "escape_emitted": false,
+ "escape_latency_ms": null,
+ "n_spikes_total": 103624,
+ "n_conflicts": 43,
+ "conflict_examples": [
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  },
+  {
+   "action": "TURN_RIGHT",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 300.0
+  }
+ ],
+ "decision_latency_wall_ms": {
+  "mean": 494.1,
+  "p95": 500.6
+ },
+ "peak_rss_mb": 2929.6,
+ "cpu_user_s": 52.5,
+ "motor_shuffle_map": {
+  "BPN_bilateral": "GF_right",
+  "BRK_bilateral": "DN_ALL_left",
+  "DN_ALL_left": "P9_right",
+  "DN_ALL_right": "BRK_bilateral",
+  "GF_left": "P9_left",
+  "GF_right": "BPN_bilateral",
+  "MDN_bilateral": "GF_left",
+  "P9_left": "MDN_bilateral",
+  "P9_right": "DN_ALL_right"
+ },
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": 0.003,
+  "y": 0.015,
+  "escaped": false,
+  "jumps": 0
+ },
+ "dn_rate_hz": {
+  "P9_left": 1.6,
+  "P9_right": 867.0,
+  "GF_left": 0.0,
+  "GF_right": 0.0,
+  "MDN_bilateral": 3.2,
+  "BPN_bilateral": 0.04,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 0.0,
+  "DN_ALL_right": 0.05
+ }
+}

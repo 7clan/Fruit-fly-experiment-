@@ -1,0 +1,56 @@
+{
+ "condition": "shuffled_sensory",
+ "scenario": "no_target",
+ "rep": 1,
+ "seed": 20315929,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 60,
+ "bio_s": 3.0,
+ "wall_s": 30.0,
+ "bio_per_wall": 0.0998,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.0,
+ "path_efficiency": null,
+ "mean_abs_bearing_deg": null,
+ "wrong_turn_rate": 0.0,
+ "stop_frequency": 1.0,
+ "escape_emitted": false,
+ "escape_latency_ms": null,
+ "n_spikes_total": 0,
+ "n_conflicts": 0,
+ "conflict_examples": [],
+ "decision_latency_wall_ms": {
+  "mean": 499.9,
+  "p95": 508.6
+ },
+ "peak_rss_mb": 2925.7,
+ "cpu_user_s": 32.9,
+ "motor_shuffle_map": null,
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": 0.0,
+  "y": 0.0,
+  "escaped": false,
+  "jumps": 0
+ },
+ "dn_rate_hz": {
+  "P9_left": 0.0,
+  "P9_right": 0.0,
+  "GF_left": 0.0,
+  "GF_right": 0.0,
+  "MDN_bilateral": 0.0,
+  "BPN_bilateral": 0.0,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 0.0,
+  "DN_ALL_right": 0.0
+ }
+}

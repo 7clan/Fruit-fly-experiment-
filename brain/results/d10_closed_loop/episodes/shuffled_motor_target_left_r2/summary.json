@@ -1,0 +1,102 @@
+{
+ "condition": "shuffled_motor",
+ "scenario": "target_left",
+ "rep": 2,
+ "seed": 20322930,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 100,
+ "bio_s": 5.0,
+ "wall_s": 49.2,
+ "bio_per_wall": 0.1017,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.735,
+ "path_efficiency": 1.088,
+ "mean_abs_bearing_deg": 41.0,
+ "wrong_turn_rate": 0.0,
+ "stop_frequency": 0.02,
+ "escape_emitted": false,
+ "escape_latency_ms": null,
+ "n_spikes_total": 98283,
+ "n_conflicts": 100,
+ "conflict_examples": [
+  {
+   "action": "STOP",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 50.0
+  },
+  {
+   "action": "STOP",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 100.0
+  },
+  {
+   "action": "BACKWARD",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 150.0
+  },
+  {
+   "action": "BACKWARD",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 200.0
+  },
+  {
+   "action": "BACKWARD",
+   "conflicts": [
+    "FORWARD/TURN vs BACKWARD"
+   ],
+   "t_window_end_ms": 250.0
+  }
+ ],
+ "decision_latency_wall_ms": {
+  "mean": 490.8,
+  "p95": 499.6
+ },
+ "peak_rss_mb": 2935.7,
+ "cpu_user_s": 52.1,
+ "motor_shuffle_map": {
+  "BPN_bilateral": "DN_ALL_right",
+  "BRK_bilateral": "P9_right",
+  "DN_ALL_left": "BRK_bilateral",
+  "DN_ALL_right": "BPN_bilateral",
+  "GF_left": "GF_left",
+  "GF_right": "DN_ALL_left",
+  "MDN_bilateral": "P9_left",
+  "P9_left": "MDN_bilateral",
+  "P9_right": "GF_right"
+ },
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": -0.0,
+  "y": -0.735,
+  "escaped": false,
+  "jumps": 0
+ },
+ "dn_rate_hz": {
+  "P9_left": 0.0,
+  "P9_right": 0.0,
+  "GF_left": 0.0,
+  "GF_right": 0.0,
+  "MDN_bilateral": 7.2,
+  "BPN_bilateral": 32.22,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 0.0,
+  "DN_ALL_right": 0.0
+ }
+}

@@ -1,0 +1,45 @@
+{
+ "condition": "random",
+ "scenario": "looming",
+ "rep": 2,
+ "seed": 20274930,
+ "chunk_ms": 50.0,
+ "outcome": "cap",
+ "n_chunks": 60,
+ "bio_s": 3.0,
+ "wall_s": 0.0,
+ "bio_per_wall": null,
+ "success": false,
+ "time_to_target": null,
+ "path_length": 0.428,
+ "path_efficiency": null,
+ "mean_abs_bearing_deg": null,
+ "wrong_turn_rate": 0.0,
+ "stop_frequency": 0.15,
+ "escape_emitted": false,
+ "escape_latency_ms": null,
+ "n_spikes_total": 0,
+ "n_conflicts": 0,
+ "decision_latency_wall_ms": {
+  "mean": 0.0,
+  "p95": 0.0
+ },
+ "peak_rss_mb": 0.0,
+ "cpu_user_s": 0.0,
+ "motor_shuffle_map": null,
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": 0.01,
+  "y": 0.168,
+  "escaped": false,
+  "jumps": 0
+ },
+ "dn_rate_hz": {}
+}

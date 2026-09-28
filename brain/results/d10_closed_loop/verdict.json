@@ -1,0 +1,67 @@
+{
+  "gate": "THE CONNECTOME-DERIVED DIGITAL DROSOPHILA CAN PERCEIVE A SIMPLE VISUAL TARGET THROUGH THE VERIFIED SENSORY INTERFACE AND PRODUCE REPRODUCIBLE MOTOR ACTION THAT CHANGES THE ENVIRONMENT IN CLOSED LOOP",
+  "criteria": {
+    "G3.1_intact_closed_loop": {
+      "intact_target_success": 1.0,
+      "ok": true
+    },
+    "G3.2_shuffled_sensory_degrades": {
+      "intact": 1.0,
+      "shuffled_sensory": 0.0,
+      "ok": true
+    },
+    "G3.3_shuffled_motor_degrades": {
+      "intact": 1.0,
+      "shuffled_motor": 0.0,
+      "ok": true
+    },
+    "G3.4_random_substantially_worse": {
+      "intact": 1.0,
+      "random": 0.0,
+      "ok": true
+    },
+    "contrasts_bootstrap": {
+      "intact_vs_random": {
+        "diff": 1.0,
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "significant": true
+      },
+      "intact_vs_shuffled_sensory": {
+        "diff": 1.0,
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "significant": true
+      },
+      "intact_vs_shuffled_motor": {
+        "diff": 1.0,
+        "ci95": [
+          1.0,
+          1.0
+        ],
+        "significant": true
+      },
+      "intact_vs_scripted": {
+        "diff": 0.0,
+        "ci95": [
+          0.0,
+          0.0
+        ],
+        "significant": false
+      }
+    },
+    "reference_values": {
+      "scripted": 1.0,
+      "looming_escape": {
+        "intact": 1.0,
+        "random": 0.0
+      }
+    }
+  },
+  "overall_pass": true,
+  "honesty_note": "Verdict computed from the pre-registered criteria only; no parameter was tuned after seeing results."
+}

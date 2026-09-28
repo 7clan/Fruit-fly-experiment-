@@ -1,0 +1,12 @@
+{
+  "episode": "../results/d10_closed_loop/episodes/intact_target_left_r0",
+  "n_neurons": 87960,
+  "identical_to_full_brain": false,
+  "comparison": "flywire-id spike trains (sparse net has its own brian index space)",
+  "n_active_sparse": 1089,
+  "n_active_full": 1099,
+  "n_active_common": 1070,
+  "n_train_mismatches": 957,
+  "spikes_sparse": 84865,
+  "spikes_full": 85163
+}

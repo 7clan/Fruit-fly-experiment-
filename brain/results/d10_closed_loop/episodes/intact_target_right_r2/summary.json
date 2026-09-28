@@ -1,0 +1,56 @@
+{
+ "condition": "intact",
+ "scenario": "target_right",
+ "rep": 2,
+ "seed": 20295930,
+ "chunk_ms": 50.0,
+ "outcome": "success",
+ "n_chunks": 82,
+ "bio_s": 4.1,
+ "wall_s": 41.0,
+ "bio_per_wall": 0.0999,
+ "success": true,
+ "time_to_target": 4.05,
+ "path_length": 0.7,
+ "path_efficiency": 1.143,
+ "mean_abs_bearing_deg": 17.2,
+ "wrong_turn_rate": 0.217,
+ "stop_frequency": 0.024,
+ "escape_emitted": false,
+ "escape_latency_ms": null,
+ "n_spikes_total": 80884,
+ "n_conflicts": 0,
+ "conflict_examples": [],
+ "decision_latency_wall_ms": {
+  "mean": 499.4,
+  "p95": 512.0
+ },
+ "peak_rss_mb": 2925.6,
+ "cpu_user_s": 44.0,
+ "motor_shuffle_map": null,
+ "encoder": {
+  "r_target": 150.0,
+  "r_loom": 150.0,
+  "theta0_deg": 15.0,
+  "theta_w_deg": 30.0,
+  "loom_onset_deg": 15.0,
+  "loom_sat_deg": 60.0
+ },
+ "arena_end": {
+  "x": 0.564,
+  "y": 0.35,
+  "escaped": false,
+  "jumps": 0
+ },
+ "dn_rate_hz": {
+  "P9_left": 13.9,
+  "P9_right": 22.93,
+  "GF_left": 0.49,
+  "GF_right": 0.49,
+  "MDN_bilateral": 0.0,
+  "BPN_bilateral": 0.0,
+  "RRN_bilateral": 0.0,
+  "DN_ALL_left": 1.14,
+  "DN_ALL_right": 1.64
+ }
+}

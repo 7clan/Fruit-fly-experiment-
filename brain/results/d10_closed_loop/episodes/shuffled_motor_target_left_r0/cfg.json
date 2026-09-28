@@ -1,0 +1,1 @@
+{"condition": "shuffled_motor", "scenario": "target_left", "rep": 0, "seed": 20320928, "episode_dir": "/home/z/my-project/download/fly-agent/brain/results/d10_closed_loop/episodes/shuffled_motor_target_left_r0", "chunk_ms": 50.0, "interface": "/home/z/my-project/download/fly-agent/brain/data/d7_d10/sensory_interface.json", "motor_shuffle_seed": 20320935}
