@@ -1,0 +1,7 @@
+action_id,status,readout_populations,decoder_rule,known_behavior,confidence
+FORWARD,biologically separable,"['BPN', 'RRN', 'DNp09_P9', 'DN_LEG_CLUSTER']",FORWARD if (rate(BPN_type1)+rate(RRN)+rate(DNp09)) / n > theta_fwd for T samples; theta_fwd from baseline distribution,BPN: straight fast forward; RRN: initiates forward + speed; DNp09: forward + ipsilateral turning,high
+BACKWARD,biologically separable,['MDN'],BACKWARD if rate(MDN) > theta_bwd (per side; bilateral activation = straight backward),MDN activation drives backward walking (Bidaye 2014); necessary for it,high
+LEFT,"biologically separable (as turning, not as pure translation)",['DNp09_P9'],TURN-LEFT if rate(DNp09_left) > rate(DNp09_right) + delta (ipsilateral turning: left DNp09 turns left),DNp09 drives forward walking with ipsilateral turning,high
+RIGHT,"biologically separable (as turning, not as pure translation)",['DNp09_P9'],TURN-RIGHT if rate(DNp09_right) > rate(DNp09_left) + delta,mirror of LEFT,high
+STOP,biologically separable (two mechanisms; we use walk-OFF),"['FG_CB0890', 'BB_DNg60', 'BRK']",STOP if (rate(FG)+rate(BB))/n > theta_stop OR all walk populations below theta_idle for T_idle samples; STOP is also the DEFAULT (failsafe) state,"FG halts forward walking, BB halts turning (walk-OFF); BRK actively brakes (partly VNC-resident)",high
+STARTLE_JUMP,"biologically separable (bonus action, maps to game jump/dash if present)",['DNp01_GF'],JUMP if rate(DNp01) > theta_jump (requires strong looming input),giant-fiber escape jump,high

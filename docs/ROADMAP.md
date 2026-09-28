@@ -31,9 +31,9 @@ progression".
 | D1 | Install + reproduce the Shiu et al. whole-brain LIF model from a pinned commit | Model runs; its example/tutorial executes | **DONE 2026-09-28** |
 | D2 | Configure/test FlyWire v783 connectome data | Data loads; SHA-256 manifest verifies; structural counts recorded and cross-checked against the model's published values | **DONE 2026-09-28** (138,639 / 15,091,983) |
 | D3 | Benchmark the whole-brain simulation | Metrics table: RAM, CPU, initialization time, simulation speed (bio-s per wall-s), neuron count, synapse/connection count | **DONE 2026-09-28** (0.148 bio-s/wall-s here) |
-| D4 | Identify sensory/visual neural populations (optic lobe targets, other sensory neuropils) in the model | Documented population inventory with model node IDs and stimulation entry points | pending |
-| D5 | Identify mushroom-body/dopamine learning circuitry (Kenyon cells, MBONs, PAM, PPL1) | Documented inventory + literature notes (MB research base for Stage C plasticity) | pending |
-| D6 | Identify descending/motor-related populations | Documented inventory; candidate motor readout sites | pending |
+| D4 | Identify sensory/visual neural populations (optic lobe targets, other sensory neuropils) in the model | Documented population inventory with model node IDs and stimulation entry points | **DONE (2026-09-28)** - see D4_D6_NEURAL_IO_MAP.md + brain/data/io_map/ |
+| D5 | Identify mushroom-body/dopamine learning circuitry (Kenyon cells, MBONs, PAM, PPL1) | Documented inventory + literature notes (MB research base for Stage C plasticity) | **DONE (2026-09-28)** - incl. three-tier reward interface proposal |
+| D6 | Identify descending/motor-related populations | Documented inventory; candidate motor readout sites | **DONE (2026-09-28)** - 1,305 DNs; MDN/DNp09/BPN/RRN/GF/FG/BB/BRK resolved to v783 IDs; GATE 2 PASS |
 
 **Gate 1 (blocks everything):** the connectome-derived digital Drosophila
 brain runs locally and produces reproducible neural activity — **PASSED

@@ -171,11 +171,16 @@ def cpu_info():
 # ------------------------------------------------------------- core trial
 def run_seeded_trial(seed, version="783", exc_fly_ids=(), exc2_fly_ids=(),
                      slnc_fly_ids=(), t_run_ms=1000, r_poi_hz=150,
-                     r_poi2_hz=0, quiet=True):
+                     r_poi2_hz=0, quiet=True, codegen=None,
+                     device=None, device_dir=None, path_override=None):
     """One fully seeded, in-process simulation trial.
 
     Uses the third-party model's own create_model/poi/silence (unmodified).
     Returns a plain-dict record; spikes are {brian_index: [spike times s]}.
+
+    D7 additions (additive, defaults keep Gate-1 behavior identical):
+      codegen    'cython' | 'numpy' | None (brian2 default = numpy)
+      device     'cpp_standalone' | None (must be set before build)
     """
     import brian2 as b2
     from brian2 import Hz, ms
@@ -183,10 +188,26 @@ def run_seeded_trial(seed, version="783", exc_fly_ids=(), exc2_fly_ids=(),
     ensure_model()
     import model as dbm
 
-    flyid2i, _ = load_maps(version)
     cfg = VERSIONS[version]
-
-    exc, miss_exc = resolve_ids(exc_fly_ids, version)
+    if path_override:
+        # filtered (subcircuit) connectome: build the flywire<->brian map
+        # from the FILTERED completeness file so stimulation indices match.
+        df_comp = pd.read_csv(path_override[0], index_col=0)
+        flyid2i = {int(j): int(i) for i, j in enumerate(df_comp.index)}
+        def resolve(ids):
+            idx = [flyid2i[int(f)] for f in ids if int(f) in flyid2i]
+            miss = [int(f) for f in ids if int(f) not in flyid2i]
+            return idx, miss
+        exc, miss_exc = resolve(exc_fly_ids)
+        exc2, miss_exc2 = resolve(exc2_fly_ids)
+        slnc, miss_slnc = resolve(slnc_fly_ids)
+        n_total_override = len(df_comp)
+    else:
+        flyid2i, _ = load_maps(version)
+        exc, miss_exc = resolve_ids(exc_fly_ids, version)
+        exc2, miss_exc2 = resolve_ids(exc2_fly_ids, version)
+        slnc, miss_slnc = resolve_ids(slnc_fly_ids, version)
+        n_total_override = None
     exc2, miss_exc2 = resolve_ids(exc2_fly_ids, version)
     slnc, miss_slnc = resolve_ids(slnc_fly_ids, version)
 
@@ -200,11 +221,18 @@ def run_seeded_trial(seed, version="783", exc_fly_ids=(), exc2_fly_ids=(),
         import logging
         logging.getLogger("brian2").setLevel(logging.WARNING)
 
+    if device is not None:                     # e.g. cpp_standalone
+        b2.set_device(device, directory=str(device_dir), with_output=False)
+    if codegen is not None:
+        b2.prefs.codegen.target = codegen
+
     b2.seed(seed)
     np.random.seed(seed % (2**32))
 
+    p_comp, p_con = (path_override if path_override
+                     else (cfg["path_comp"], cfg["path_con"]))
     t_build0 = time.perf_counter()
-    neu, syn, spk_mon = dbm.create_model(cfg["path_comp"], cfg["path_con"], params)
+    neu, syn, spk_mon = dbm.create_model(p_comp, p_con, params)
     pois, neu = dbm.poi(neu, exc, exc2, params)
     if slnc:
         syn = dbm.silence(slnc, syn)
@@ -229,15 +257,18 @@ def run_seeded_trial(seed, version="783", exc_fly_ids=(), exc2_fly_ids=(),
         "missing_exc": miss_exc,
         "missing_exc2": miss_exc2,
         "missing_slnc": miss_slnc,
+        "codegen": codegen or "default(numpy)",
+        "device": device or "runtime",
         "wall_build_s": round(t_build, 3),
         "wall_run_s": round(t_run_wall, 3),
         "n_spikes": int(sum(len(v) for v in spikes.values())),
         "n_active_neurons": len(spikes),
         "n_neurons_total": None,     # filled by caller (cheap below)
         "peak_rss_kb": peak_rss_kb(),
+        "child_peak_rss_kb": None,   # filled by caller for standalone runs
         "spikes": spikes,
     }
-    rec["n_neurons_total"] = len(flyid2i)
+    rec["n_neurons_total"] = n_total_override if n_total_override is not None else len(flyid2i)
     return rec
 
 

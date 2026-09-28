@@ -1,0 +1,120 @@
+{
+ "gate": "A VERIFIED SENSORY -> DIGITAL DROSOPHILA -> MOTOR PATH EXISTS AND CAN BE STIMULATED/READ REPRODUCIBLY",
+ "criteria": {
+  "G2.1_stimulus_effect": {
+   "detail": {
+    "vis_L2_L": true,
+    "vis_L2_R": true,
+    "loom_LPLC2_LC4": true,
+    "motion_T4T5": true
+   },
+   "ok": true
+  },
+  "G2.2_motor_readout": {
+   "loom_condition_motor_spikes": {
+    "MDN": 0,
+    "DNp09_P9": 0,
+    "DNp01_GF": 220,
+    "RRN": 0,
+    "BPN": 0,
+    "DN_LEG_CLUSTER": 5,
+    "FG_CB0890": 0,
+    "BB_DNg60": 0,
+    "BRK": 0,
+    "DN_ALL": 2087,
+    "MOTOR_BRAIN": 0,
+    "MBON": 0
+   },
+   "loom_ok": true,
+   "other_condition_dn_active": {
+    "target_LC9": 92,
+    "vis_L2_L": 0,
+    "vis_L2_R": 0,
+    "motion_T4T5": 0
+   },
+   "multi_hop_note": "lamina(L2) and motion(T4/T5) entries propagate 3-4 hops into the optic lobe/central brain but attenuate below DN threshold under default parameters; convergent visual-projection entries (LC9, LPLC2/LC4) reach DNs directly - see hop-depth analysis",
+   "ok": true
+  },
+  "G2.3_reproducibility": {
+   "detail": {
+    "vis_L2_L": {
+     "identical": true,
+     "sha256_rep0": "a113fa413e481b4c4569bd4ce2c69296a98cb9407e7a4302e860588eef2a71f7",
+     "sha256_rep1": "a113fa413e481b4c4569bd4ce2c69296a98cb9407e7a4302e860588eef2a71f7"
+    },
+    "loom_LPLC2_LC4": {
+     "identical": true,
+     "sha256_rep0": "ee52eafd72853d100ebdc3805475597d0d63449807a868ba25c49a9cb66ecc29",
+     "sha256_rep1": "ee52eafd72853d100ebdc3805475597d0d63449807a868ba25c49a9cb66ecc29"
+    }
+   },
+   "ok": true
+  },
+  "G2.4_sensitivity": {
+   "seed11": "a113fa413e481b4c4569bd4ce2c69296a98cb9407e7a4302e860588eef2a71f7",
+   "seed12": "332086196f214afb2946b7835d8f9be2f40990e66dc9910bec1c3a0de1c13226",
+   "ok": true
+  },
+  "G2.5_causal_control": {
+   "stim_active": 295,
+   "ctrl_active": 40,
+   "stim_downstream_active": 255,
+   "ctrl_downstream_active": 0,
+   "stim_spikes": 12452,
+   "ctrl_spikes": 5793,
+   "ok": true,
+   "note": "entry-off: identical Poisson drive, entry outgoing synapses zeroed; active counts include the driven entry cells themselves (downstream = active - n_exc)"
+  },
+  "supplementary_relay_silencing": {
+   "stim_active": 295,
+   "relay_ctrl_active": 293,
+   "observation": "silencing 1.5% of the medullary OFF-relay changes activity by <1%: the optic-lobe relay is massively parallel; meaningful silencing requires population-level targets"
+  },
+  "G2.6_lateralization": {
+   "left_active": 295,
+   "right_active": 376,
+   "jaccard": 0.0,
+   "ok": true
+  },
+  "propagation_depth": {
+   "vis_L2_L": {
+    "n_active": 295,
+    "max_hop_reached": 2,
+    "active_per_hop": {
+     "0": 40,
+     "1": 204,
+     "2": 51
+    }
+   },
+   "loom_LPLC2_LC4": {
+    "n_active": 466,
+    "max_hop_reached": 3,
+    "active_per_hop": {
+     "0": 80,
+     "1": 160,
+     "2": 223,
+     "3": 3
+    }
+   },
+   "motion_T4T5": {
+    "n_active": 51,
+    "max_hop_reached": 1,
+    "active_per_hop": {
+     "0": 40,
+     "1": 11
+    }
+   },
+   "target_LC9": {
+    "n_active": 580,
+    "max_hop_reached": 3,
+    "active_per_hop": {
+     "0": 40,
+     "1": 172,
+     "2": 366,
+     "3": 2
+    }
+   }
+  }
+ },
+ "overall_pass": true
+}

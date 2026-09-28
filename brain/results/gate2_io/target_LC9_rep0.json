@@ -1,0 +1,21 @@
+{
+  "seed": 11,
+  "version": "783",
+  "t_run_ms": 1000,
+  "r_poi_hz": 150,
+  "n_exc": 40,
+  "n_exc2": 0,
+  "n_slnc": 0,
+  "missing_exc": [],
+  "missing_exc2": [],
+  "missing_slnc": [],
+  "codegen": "default(numpy)",
+  "device": "runtime",
+  "wall_build_s": 1.902,
+  "wall_run_s": 8.171,
+  "n_spikes": 18121,
+  "n_active_neurons": 580,
+  "n_neurons_total": 138639,
+  "peak_rss_kb": 2895472,
+  "child_peak_rss_kb": null
+}

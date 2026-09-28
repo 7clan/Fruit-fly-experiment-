@@ -26,8 +26,19 @@ control path.**
 >   activity: seeded trials are bit-identical across processes and
 >   invocations; stimulation propagates multi-synaptically (255 active
 >   neurons at 2 hops) and drives the MN9 motor neuron; benchmark
->   recorded. Full record: `DIGITAL_BRAIN_REPORT.md`. Next roadmap steps:
->   D4–D6 (sensory / mushroom-body / motor population inventories). No
+>   recorded. Full record: `DIGITAL_BRAIN_REPORT.md`.
+> - **GATE 2: PASS (2026-09-28)** — a verified SENSORY -> DIGITAL
+>   DROSOPHILA -> MOTOR path exists and can be stimulated/read
+>   reproducibly: looming (LPLC2+LC4) drives the giant-fiber escape
+>   neurons (~110 Hz, 63 DNs active); visual-target (LC9) recruits 92
+>   DNs; bit-identical cross-process re-runs; causal entry-off control
+>   collapses downstream activity to zero. Neural I/O map for D4
+>   (sensory), D5 (mushroom body/dopamine), D6 (descending/motor) with
+>   v783 IDs: `D4_D6_NEURAL_IO_MAP.md` + machine-readable
+>   `brain/data/io_map/`. Performance study: full-brain numpy reference
+>   0.094 bio-s/wall-s @ 2.8 GB; exact sparse-active mode; C++ standalone
+>   binary 0.283 bio-s/wall-s @ 678 MB (3.1x, bit-identical). Next:
+>   D7-D9 (speedup + closed loop in an artificial environment). No
 >   Roblox control until Gate 1 (passed) AND the D-order prerequisites
 >   (`docs/ROADMAP.md`).
 > - **Windows target:** the finished application is `DigitalFlyLab.exe`

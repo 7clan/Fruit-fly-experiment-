@@ -1,0 +1,7 @@
+mode,status,n_neurons,wall_build_s,wall_run_s,bio_s_per_wall_s,peak_rss_mb,child_peak_rss_mb,n_active,n_spikes
+full_reference,OK,138639,2.117,10.662,0.0938,2841.6,2493.5,466,23524
+subcircuit,OK,49817,0.484,7.297,0.137,792.8,700.1,362,22235
+sparse_active,OK,53781,0.845,8.134,0.1229,1296.6,1144.9,466,23524
+cython_cold,OK,138639,4.544,178.412,0.0056,3137.5,3085.7,466,23524
+cython_warm,OK,138639,1.948,10.603,0.0943,2841.4,2493.5,466,23524
+cpp_standalone,OK,138639,1.745,36.852,0.0271,2955.0,2955.0,466,23524

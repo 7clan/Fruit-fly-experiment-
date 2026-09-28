@@ -1,0 +1,10 @@
+channel_id,description,entry_populations,encoding,confidence,notes
+vis_target_left,Visual target present in LEFT visual hemifield (coarse),"['LMC_L2', 'LMC_L1', 'TM_OFF']",Poisson drive at rate proportional to target salience onto LEFT-eye members of the entry populations (hemisphere = hemifield at this stage),medium,Refinement path: use column_assignment x/y to stimulate only columns covering the target's screen position.
+vis_target_right,Visual target present in RIGHT visual hemifield (coarse),"['LMC_L2', 'LMC_L1', 'TM_OFF']",same as vis_target_left but RIGHT-eye members,medium,
+looming_threat,"Looming/expanding threat (enemy attack, projectile)","['LPLC2', 'LC4']",Poisson drive whose rate scales with simulated angular expansion velocity,high,
+optic_flow,Global self-motion optic flow (camera pan/velocity),"['LPTC_HS', 'LPTC_VS']",differential drive of HS vs VS populations signed by flow direction,medium,
+motion_directional,Directional motion in the visual field (object movement),"['T4', 'T5']",subtype-selective drive: T4a-d/T5a-d subtypes correspond to four directional preferences; drive the subtype matching the CV-measured motion vector,medium,Direction->subtype assignment needs a calibration experiment before use.
+brightness_contrast,Scene brightness / contrast (screen luminance statistics),"['LMC_L1', 'LMC_L2', 'LMC_L3']",L1 (ON) vs L2 (OFF) drive ratio encodes luminance change; L3 baseline encodes ambient level,high,
+object_approach,"Discrete approaching object (non-looming, e.g. NPC walking toward player)","['LC16', 'LC17', 'LPLC2']",LC16/LC17 drive scaled by object size/approach speed; fallback to LPLC2 for fast expansions,medium,
+reward_pulse,"Game reward event (EXP gain, level-up, item, quest complete)",['PAM'],brief Poisson burst onto a PAM reward subset (biological analog: sugar-reward DAN activation),medium,ENGINEERED: game events are not sugar; the mapping is an analogy that must stay labeled.
+punish_pulse,"Game punishment event (damage taken, death, fall)",['PPL1'],brief Poisson burst onto a PPL1 punishment subset (biological analog: shock/bitter DAN activation),medium,ENGINEERED: same as reward_pulse.

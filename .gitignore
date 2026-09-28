@@ -33,3 +33,9 @@ brain/third_party/
 brain/results/**/*.parquet
 brain/results/*.log
 brain/results/**/*.log
+
+# D7 perf study: regenerable heavy artifacts (cpp_project 589 MB, filtered
+# connectome parquets ~61 MB) stay out of git; records/tables/spike files committed
+brain/results/perf_study/cpp_project/
+brain/results/perf_study/*_connectivity.parquet
+brain/results/perf_study/*_completeness.csv
