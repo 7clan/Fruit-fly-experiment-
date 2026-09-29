@@ -32,7 +32,8 @@ from .action.motor_executor import MotorExecutor, SafeNoopBackend
 from .brain.worker import BrainWorker
 from .brain.runtime import CanonicalBrianRuntime
 from .bus import Bus, BusMode
-from .capture.base import CaptureAdapter, SyntheticCapture
+from .capture.base import (CaptureAdapter, SyntheticCapture,
+                           create_windows_capture)
 from .clock import SHARED_CLOCK
 from .dashboard.dashboard import (DashboardWorker, TextDashboardRenderer)
 from .perception.channel_encoder import FlyChannelEncoder
@@ -50,6 +51,7 @@ class DigitalFlyLab:
     """Assembled pipeline. Passive by default (Gate-5 discipline)."""
 
     def __init__(self, capture: CaptureAdapter | None = None,
+                 capture_kind: str = "synthetic",
                  runtime_kind: str = "mock", chunk_ms: float = 50.0,
                  session_dir: Path | None = None,
                  mode: BusMode = BusMode.THREADED,
@@ -64,8 +66,15 @@ class DigitalFlyLab:
         self.session_dir = Path(session_dir) if session_dir else \
             AGENT_ROOT / "runs" / f"lab_{time.strftime('%Y%m%d_%H%M%S')}"
         self.session_dir.mkdir(parents=True, exist_ok=True)
-        self.capture = capture if capture is not None else \
-            SyntheticCapture(self.bus, fps=capture_fps)
+        if capture is not None:
+            self.capture = capture
+        elif capture_kind == "windows":
+            self.capture = create_windows_capture(
+                self.bus, window_title_re=r"^Roblox$")
+        elif capture_kind == "synthetic":
+            self.capture = SyntheticCapture(self.bus, fps=capture_fps)
+        else:
+            raise ValueError(f"unknown capture_kind {capture_kind!r}")
         self.memory = MemoryStore(self.session_dir / "memory")
         self.value = ValueTable(self.memory)
         # workers (order = pipeline flow)
@@ -207,6 +216,8 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser("DigitalFlyLab (dev entry)")
     ap.add_argument("--self-test", action="store_true")
     ap.add_argument("--runtime", default="mock", choices=["mock", "canonical"])
+    ap.add_argument("--capture", default="synthetic",
+                    choices=["synthetic", "windows"])
     ap.add_argument("--seconds", type=float, default=10.0)
     ap.add_argument("--chunk-ms", type=float, default=50.0)
     ap.add_argument("--brain-hz", type=float, default=10.0)
@@ -229,7 +240,8 @@ def main(argv=None) -> int:
         print("session:", res["session_dir"])
         return 0 if res["ok"] else 1
 
-    lab = DigitalFlyLab(runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
+    lab = DigitalFlyLab(capture_kind=args.capture,
+                        runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
                         brain_hz=args.brain_hz, dashboard=args.dashboard,
                         brain_codegen=args.brain_codegen)
     lab.start()
