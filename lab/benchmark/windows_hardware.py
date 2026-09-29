@@ -270,7 +270,8 @@ def bench_canonical_brain(chunk_sizes_ms=(50.0, 100.0), n_chunks=20) -> dict:
             "per_chunk": per_chunk,
             "n_chunks_each": n_chunks,
             "note": "canonical 138,639-neuron brain; C++ standalone "
-                    "(3x faster, bit-identical) wired on the Windows box"}
+                    "is validated for offline fixed-schedule replay, not "
+                    "live closed-loop control"}
 
 
 # ---------------------------------------------------------------------------
@@ -317,15 +318,16 @@ def choose_live_settings(pipeline_bench: dict,
         if c100:
             settings["canonical_100ms_p95_ms"] = c100
 
-        if c50 and c50 <= 200:
-            selected_chunk_ms = 50
-            selected_brain_p95 = c50
-        elif c100:
-            selected_chunk_ms = 100
-            selected_brain_p95 = c100
-        elif c50:
-            selected_chunk_ms = 50
-            selected_brain_p95 = c50
+        candidates = []
+        if c50:
+            candidates.append((50, c50))
+        if c100:
+            candidates.append((100, c100))
+        meeting = [(cm, p95) for cm, p95 in candidates if p95 <= 200]
+        pool = meeting if meeting else candidates
+        if pool:
+            selected_chunk_ms, selected_brain_p95 = min(
+                pool, key=lambda item: item[1])
 
     if selected_brain_p95 is not None:
         # Canonical brain is the limiting live decision stage.  Never impose
