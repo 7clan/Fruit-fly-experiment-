@@ -21,7 +21,6 @@ from __future__ import annotations
 
 import copy
 import json
-import resource
 import sys
 import time
 from pathlib import Path
@@ -105,8 +104,49 @@ def resolve_ids(fly_ids, version: str):
 
 
 # ------------------------------------------------------------ memory info
+def _windows_process_memory_kb():
+    """Return (current_rss_kb, peak_rss_kb) on Windows via psapi.
+
+    Uses only the standard library; returns (-1, -1) if unavailable.
+    """
+    if sys.platform != "win32":
+        return -1, -1
+    try:
+        import ctypes
+        from ctypes import wintypes
+
+        class PROCESS_MEMORY_COUNTERS(ctypes.Structure):
+            _fields_ = [
+                ("cb", wintypes.DWORD),
+                ("PageFaultCount", wintypes.DWORD),
+                ("PeakWorkingSetSize", ctypes.c_size_t),
+                ("WorkingSetSize", ctypes.c_size_t),
+                ("QuotaPeakPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaPeakNonPagedPoolUsage", ctypes.c_size_t),
+                ("QuotaNonPagedPoolUsage", ctypes.c_size_t),
+                ("PagefileUsage", ctypes.c_size_t),
+                ("PeakPagefileUsage", ctypes.c_size_t),
+            ]
+
+        counters = PROCESS_MEMORY_COUNTERS()
+        counters.cb = ctypes.sizeof(counters)
+        handle = ctypes.windll.kernel32.GetCurrentProcess()
+        ok = ctypes.windll.psapi.GetProcessMemoryInfo(
+            handle, ctypes.byref(counters), counters.cb
+        )
+        if not ok:
+            return -1, -1
+        return (
+            int(counters.WorkingSetSize // 1024),
+            int(counters.PeakWorkingSetSize // 1024),
+        )
+    except Exception:
+        return -1, -1
+
+
 def peak_rss_kb():
-    """Peak resident set size of this process (VmHWM on Linux)."""
+    """Peak resident set size of this process in kB, cross-platform."""
     try:
         with open("/proc/self/status") as fh:
             for line in fh:
@@ -114,14 +154,17 @@ def peak_rss_kb():
                     return int(line.split()[1])
     except OSError:
         pass
+    if sys.platform == "win32":
+        return _windows_process_memory_kb()[1]
     try:
+        import resource
         return resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
     except Exception:
         return -1
 
 
 def rss_kb():
-    """Current resident set size in kB (Linux)."""
+    """Current resident set size in kB, cross-platform."""
     try:
         with open("/proc/self/status") as fh:
             for line in fh:
@@ -129,6 +172,8 @@ def rss_kb():
                     return int(line.split()[1])
     except OSError:
         pass
+    if sys.platform == "win32":
+        return _windows_process_memory_kb()[0]
     return -1
 
 
