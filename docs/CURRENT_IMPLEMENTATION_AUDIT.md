@@ -14,11 +14,15 @@ This file separates code that exists today from the target architecture.
 - Fly-channel encoder and intention decoder.
 - Planner scaffold and passive action pipeline.
 - OpenCV dashboard showing game capture plus fly/helper/action state.
+- Canonical Brian2 brain isolated in its own subprocess for Windows live runs.
+- One-command persistent passive launcher: `run_live_windows.ps1`.
+- Lightweight temporal tracklets for GPO humanoid/quest-NPC candidates.
 
 ## Prototype or incomplete
 
-- GPO perception currently recognizes only a limited set of cues. General
-  enemy/NPC/boss recognition and combat-state estimation are not validated.
+- GPO perception currently recognizes player/camera anchor, quest-marker
+  evidence, health/stamina, and tracked humanoid candidates. Hostile-vs-
+  nonhostile/boss classification and combat-state estimation are not validated.
 - The planner is a small deterministic goal rule set, not a complete
   quest/navigation/progression system.
 - The ability resolver exists as infrastructure but is not yet a validated
@@ -29,9 +33,10 @@ This file separates code that exists today from the target architecture.
 
 ## Missing
 
-- A true Windows multi-process live launcher. lab.app currently runs the
-  workers as threads in one Python process.
-- Validated humanoid tracking and hostile-vs-nonhostile classification.
+- Full worker-process isolation. The canonical brain is now a subprocess,
+  while capture/perception/planner/executor/replay/dashboard still share the
+  main process.
+- Validated hostile-vs-nonhostile/boss classification.
 - Validated combat perception.
 - Completed Gate-5 real-game assessment.
 - Gate-6+ active movement/combat.
@@ -46,6 +51,6 @@ This file separates code that exists today from the target architecture.
 
 ## Next priorities
 
-1. Real GPO entity tracking and role classification.
-2. Process isolation for the canonical brain.
+1. Validate the new GPO tracklets against real gameplay and add role evidence.
+2. Add hostile/attack/combat-state classification without inventing unknowns.
 3. Gate-5 assessment only after perception is meaningful.
