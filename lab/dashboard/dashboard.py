@@ -27,7 +27,7 @@ DashboardWorker, which reads bus state channels at 10–30 Hz.
 
 from __future__ import annotations
 
-from ..bus import Bus, StateChannel, StreamChannel
+from ..bus import Bus, StateChannel
 from ..worker import Worker
 
 TOPICS = ("world.observation", "world.semantics", "brain.output",
@@ -59,7 +59,7 @@ class DashboardWorker(Worker):
         super().__init__(bus, target_hz=target_hz)
         self.renderer = renderer
         self.snapshot_state: StateChannel = bus.state(self.TOPIC_SNAP)
-        self.mirror: StreamChannel = bus.stream(mirror_channel, maxsize=4)
+        self.mirror: StateChannel = bus.state(mirror_channel + ".latest")
         self._channels = {t: bus.state(t) for t in TOPICS}
         self.stats.update({"rendered": 0, "dropped_renders": 0,
                            "last_render_ms": None})
@@ -79,7 +79,7 @@ class DashboardWorker(Worker):
         # drop the mirror frame if one is not fresh (never queue renders)
         t0 = self.clock.now_ns()
         try:
-            self.renderer.render(snap, self.mirror.newest())
+            self.renderer.render(snap, self.mirror.read())
         except Exception as e:  # noqa: BLE001 — dashboard errors never kill control
             self.stats["errors"] += 1
             self.stats["last_error"] = repr(e)
@@ -217,14 +217,21 @@ class OpenCVDashboardRenderer:
         put(x0, 62, f"chunk={brain.get('chunk_id')} "
                     f"runtime={brain.get('runtime')}")
         ch = d.get("fly.channels") or {}
-        put(x0, 82, f"tgt L/R {ch.get('target_left'):.2f}/"
-                    f"{ch.get('target_right'):.2f} "
-                    f"threat {ch.get('threat_intensity'):.2f}")
+        tl = float(ch.get("target_left") or 0.0)
+        tr = float(ch.get("target_right") or 0.0)
+        threat = float(ch.get("threat_intensity") or 0.0)
+        put(x0, 82, f"tgt L/R {tl:.2f}/{tr:.2f} threat {threat:.2f}")
         put(x0, 110, "HYBRID HELPER [ENGINEERED]", (120, 180, 240))
         goal = d.get("helper.goal") or {}
         put(x0, 130, f"goal={(goal.get('goal') or {}).get('label')}")
-        put(x0, 160, "ACTION SYSTEM [ENGINEERED]", (240, 180, 120))
+        obs = d.get("world.observation") or {}
+        player = obs.get("player") or {}
+        target = obs.get("target") or {}
+        put(x0, 148, f"target={target.get('type')} enemies={len(obs.get('enemies', []))}")
+        put(x0, 166, f"health={player.get('health')} stamina={player.get('stamina')}")
+        put(x0, 194, "ACTION SYSTEM [ENGINEERED]", (240, 180, 120))
         act = d.get("action.selected") or {}
-        put(x0, 180, f"autonomy={act.get('autonomy')} "
+        put(x0, 214, f"autonomy={act.get('autonomy')} "
                     f"ability={act.get('ability_id') or '-'}")
+        put(x0, 242, "PASSIVE / SHADOW - no game input", (140, 140, 255))
         return canvas
