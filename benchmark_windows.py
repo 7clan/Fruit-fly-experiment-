@@ -51,7 +51,9 @@ def main(argv=None) -> int:
     write_report(report, REPORT_PATH)
     if args.json:
         REPORT_PATH.with_suffix(".raw.json").write_text(
-            json.dumps(report, indent=1, default=str))
+            json.dumps(report, indent=1, default=str),
+            encoding="utf-8",
+        )
     print(f"[benchmark] report     -> {REPORT_PATH}")
     print(f"[benchmark] settings   -> {LIVE_SETTINGS_PATH}")
     ls = report["live_settings"]
