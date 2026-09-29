@@ -310,13 +310,21 @@ class DualModeBrain:
         self.chunk_walls.append(wall)
 
         i_new = np.asarray(self.mon.i[self.cursor:])
+        # Read-only instrumentation for the live dashboard. This does not
+        # alter the network, RNG, equations, or spike stream.
+        active_new = np.unique(i_new)
+        active_sample = [
+            int(self.i2fly[int(i)]) for i in active_new[:24]
+            if int(i) in self.i2fly
+        ]
         rec = dict(
             t_bio_s=float(self.net.t / b2.second),
             chunk_ms=float(chunk_ms),
             wall_s=round(wall, 4),
             rss_kb=bl.rss_kb(),
             n_spikes_new=int(len(i_new)),
-            n_active_new=int(len(np.unique(i_new))),
+            n_active_new=int(len(active_new)),
+            active_flywire_ids_sample=active_sample,
         )
         if self.pop_code is not None:
             counts = np.bincount(self.pop_code[i_new] + 1,
