@@ -116,7 +116,8 @@ class DigitalFlyLab:
             if dashboard_renderer == "opencv":
                 # OpenCV HighGUI is substantially more stable on Windows
                 # when imshow/waitKey are pumped by the main thread.
-                self.dashboard_ui = OpenCVDashboardRenderer()
+                self.dashboard_ui = OpenCVDashboardRenderer(
+                    evidence_dir=self.session_dir / "evidence")
                 renderer = None
             elif dashboard_renderer == "text":
                 renderer = TextDashboardRenderer()
