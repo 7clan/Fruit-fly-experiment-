@@ -134,7 +134,10 @@ def cmd_env(args):
         run([sys.executable, "-m", "venv", str(venv)])
     print("[env] installing pinned requirements ...")
     proc = subprocess.run(
-        [str(py), "-m", "pip", "install", "-r", str(SETUP / "requirements-brain.txt")],
+        [str(py), "-m", "pip", "install",
+         "--timeout", "120", "--retries", "10",
+         "--prefer-binary",
+         "-r", str(SETUP / "requirements-brain.txt")],
         text=True,
     )
     if proc.returncode != 0:
