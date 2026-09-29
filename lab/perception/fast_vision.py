@@ -342,6 +342,39 @@ class GPOHeuristicFastVision:
                           np.array([179, 255, 255], dtype=np.uint8))
         )
 
+        # Direct hostile-role anchors from the observed starter-town
+        # overhead red diamonds. This is stronger evidence than generic edge
+        # texture and avoids depending on a hedge-prone humanoid proposal.
+        hostile_anchors = []
+        marker_roi = np.zeros_like(red)
+        my0, my1 = int(0.12 * h), int(0.50 * h)
+        mx0, mx1 = int(0.14 * w), int(0.93 * w)
+        marker_roi[my0:my1, mx0:mx1] = red[my0:my1, mx0:mx1]
+        nred, _rlab, rstats, rcents = cv2.connectedComponentsWithStats(
+            marker_roi)
+        area_scale = max(1.0, (w / 640.0) ** 2)
+        for ri in range(1, nred):
+            rx, ry, rw, rh, rarea = rstats[ri]
+            if not (2 * area_scale <= rarea <= 24 * area_scale):
+                continue
+            if rw > max(8, int(0.018 * w)) or rh > max(9, int(0.028 * h)):
+                continue
+            rcx, rcy = map(float, rcents[ri])
+            # The red diamond/name marker sits above the body. Build a
+            # conservative body box below it. It remains a candidate until
+            # the next passive evidence run confirms the cue.
+            bw = 0.050 * w
+            bh = 0.145 * h
+            bx1 = max(0.0, rcx - bw * 0.5)
+            bx2 = min(float(w), rcx + bw * 0.5)
+            by1 = max(0.0, rcy + 0.018 * h)
+            by2 = min(float(h), by1 + bh)
+            hostile_anchors.append({
+                "bbox": [bx1 / w, by1 / h, bx2 / w, by2 / h],
+                "kind": "hostile_candidate",
+                "confidence": 0.78,
+            })
+
         out = []
         for score, cx, cy, x1, y1, x2, y2 in selected:
             ix1, iy1 = int(max(0, x1)), int(max(0, y1))
@@ -453,6 +486,26 @@ class GPOHeuristicFastVision:
                     "kind": "quest_npc",
                     "confidence": 0.82,
                 })
+
+        # Merge direct hostile anchors with generic proposals. If an anchor
+        # overlaps a generic candidate, upgrade that proposal instead of
+        # duplicating it.
+        for anchor in hostile_anchors:
+            acx = (anchor["bbox"][0] + anchor["bbox"][2]) * 0.5
+            acy = (anchor["bbox"][1] + anchor["bbox"][3]) * 0.5
+            merged = False
+            for det in out:
+                dcx = (det["bbox"][0] + det["bbox"][2]) * 0.5
+                dcy = (det["bbox"][1] + det["bbox"][3]) * 0.5
+                if (dcx - acx) ** 2 + (dcy - acy) ** 2 < 0.055 ** 2:
+                    if det.get("kind") != "quest_npc":
+                        det["kind"] = "hostile_candidate"
+                        det["confidence"] = max(
+                            float(det.get("confidence", 0.0)), 0.78)
+                    merged = True
+                    break
+            if not merged:
+                out.append(anchor)
 
         return out
 
