@@ -15,9 +15,9 @@ Default run mode is PASSIVE (Gate-5): autonomy disabled — the
 MotorExecutor runs in SHADOW mode: it logs what it WOULD do, the input
 backend is SafeNoop, and no input is ever injected.
 
-The same assembly runs threaded (dev/sandbox/CI) or multiprocess
-(Windows live). This skeleton ships the threaded assembly; the Windows
-process launcher spawns the same worker classes.
+The control/perception assembly is threaded today. On Windows live runs,
+the canonical Brian2 brain is isolated in its own subprocess; broader
+worker-process isolation remains future engineering work.
 """
 
 from __future__ import annotations
@@ -268,7 +268,8 @@ def main(argv=None) -> int:
     ap.add_argument("--runtime", default="mock", choices=["mock", "canonical"])
     ap.add_argument("--capture", default="synthetic",
                     choices=["synthetic", "windows"])
-    ap.add_argument("--seconds", type=float, default=10.0,\n                    help="run duration; 0 = run until Ctrl+C")
+    ap.add_argument("--seconds", type=float, default=10.0,
+                    help="run duration; 0 = run until Ctrl+C")
     ap.add_argument("--capture-fps", type=float, default=30.0)
     ap.add_argument("--chunk-ms", type=float, default=50.0)
     ap.add_argument("--brain-hz", type=float, default=10.0)
