@@ -5,11 +5,11 @@ $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
 Set-Location $root
 
-$mainPython = ".\\.venv\\Scripts\\python.exe"
-$brainPython = ".\\brain\\.venv\\Scripts\\python.exe"
+$mainPython = ".\.venv\Scripts\python.exe"
+$brainPython = ".\brain\.venv\Scripts\python.exe"
 
 if (-not (Test-Path $mainPython)) {
-    throw "Main venv missing; run .\\setup_windows.ps1 first"
+    throw "Main venv missing; run .\setup_windows.ps1 first"
 }
 if (-not (Test-Path $brainPython)) {
     throw "Brain venv missing; run .\\setup_windows.ps1 first"
