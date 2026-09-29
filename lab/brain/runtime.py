@@ -288,7 +288,10 @@ class CanonicalBrianRuntime:
             n = sizes.get(pop, 0)
             rates_hz[pop] = round(c / (n * n_s), 3) if n > 0 else 0.0
         return BrainChunkRecord(
-            chunk_id=rec.get("chunk_id", self._brain.cursor),
+            # d7_runtime.cursor is a SPIKE cursor, not a chunk number.
+            # Use the runtime's chunk-wall record count when the validated
+            # D7 record does not carry an explicit chunk_id.
+            chunk_id=rec.get("chunk_id", len(self._brain.chunk_walls) - 1),
             t_bio_s=rec["t_bio_s"],
             chunk_ms=rec["chunk_ms"],
             wall_s=rec["wall_s"],
