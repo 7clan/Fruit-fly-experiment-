@@ -73,7 +73,8 @@ class HeavyVisionWorker(Worker):
                  frames_channel: str = "capture.frames",
                  backend=None):
         super().__init__(bus, target_hz=target_hz)
-        self.frames: StreamChannel = bus.stream(frames_channel, maxsize=4)
+        self.frames: StateChannel = bus.state(frames_channel + ".latest")
+        self._last_frame_id = None
         self.sem_state: StateChannel = bus.state(self.TOPIC_SEM)
         self.events: StreamChannel = bus.stream(self.TOPIC_EVT, maxsize=64)
         self.backend = backend if backend is not None else MockOCRBackend()
@@ -81,10 +82,14 @@ class HeavyVisionWorker(Worker):
         self._cache_hits = 0
 
     def step(self) -> None:
-        env = self.frames.newest()
-        if env is None:
+        snap = self.frames.read()
+        if snap is None:
             return
-        payload = env.payload
+        payload = snap.payload
+        frame_id = payload.get("frame_id")
+        if frame_id == self._last_frame_id:
+            return
+        self._last_frame_id = frame_id
         img = payload.get("data_ref")
         if img is None:
             return
