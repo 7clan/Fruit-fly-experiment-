@@ -26,6 +26,9 @@ def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--seconds", type=float, default=10.0)
     ap.add_argument("--fps", type=float, default=30.0)
+    ap.add_argument(
+        "--native-only", action="store_true",
+        help="count native WGC callbacks without numpy copy/bus publish")
     args = ap.parse_args()
 
     bus = Bus()
@@ -33,6 +36,67 @@ def main() -> int:
     target = cap.find_target_window()
     print(f"[capture-probe] target={target['title']!r} hwnd={target['handle']}")
     print("[capture-probe] PASSIVE capture only; no input emission")
+
+    if args.native_only:
+        from windows_capture import (
+            Frame, InternalCaptureControl, WindowsCapture)
+
+        seen = 0
+        times = []
+        first_shape = None
+        closed = False
+        hwnd = int(target["handle"])
+        capture = WindowsCapture(
+            cursor_capture=None,
+            draw_border=None,
+            secondary_window=None,
+            dirty_region=None,
+            monitor_index=None,
+            window_hwnd=hwnd,
+            minimum_update_interval=None,
+        )
+
+        @capture.event
+        def on_frame_arrived(frame: Frame,
+                             capture_control: InternalCaptureControl):
+            nonlocal seen, first_shape
+            seen += 1
+            times.append(time.perf_counter())
+            if first_shape is None:
+                first_shape = [int(frame.height), int(frame.width), 4]
+
+        @capture.event
+        def on_closed():
+            nonlocal closed
+            closed = True
+
+        t0 = time.perf_counter()
+        ctl = capture.start_free_threaded()
+        try:
+            while time.perf_counter() - t0 < args.seconds and not closed:
+                time.sleep(0.005)
+        finally:
+            ctl.stop()
+
+        elapsed = max(time.perf_counter() - t0, 1e-9)
+        gaps_ms = [(b-a)*1000.0 for a, b in zip(times, times[1:])]
+        result = {
+            "ok": bool(seen > 0 and first_shape is not None),
+            "mode": "native_only_no_pixel_copy",
+            "target_title": target["title"],
+            "frames_seen": seen,
+            "elapsed_s": round(elapsed, 3),
+            "observed_fps": round(seen / elapsed, 2),
+            "frame_shape": first_shape,
+            "copy_count": 0,
+            "interframe_p50_ms": round(statistics.median(gaps_ms), 2)
+                if gaps_ms else None,
+            "interframe_p95_ms": round(sorted(gaps_ms)[
+                min(len(gaps_ms)-1, int(0.95 * len(gaps_ms)))], 2)
+                if gaps_ms else None,
+        }
+        print(json.dumps(result, indent=2))
+        return 0 if result["ok"] else 1
 
     ch = cap.frames
     seen = 0
