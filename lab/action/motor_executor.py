@@ -190,7 +190,8 @@ class MotorExecutor(Worker):
             "autonomy": self.autonomy_enabled,
             "backend": self.backend.name}, ts_ns=now)
         # one decision event per brain output (exact latency chain in replay)
-        if brain_out_ts != self._last_brain_out_ts:
+        new_brain_decision = brain_out_ts != self._last_brain_out_ts
+        if new_brain_decision:
             self._last_brain_out_ts = brain_out_ts
             self.inputs.publish({
                 "kind": "decision", "ts_ns": now,
@@ -200,7 +201,7 @@ class MotorExecutor(Worker):
                 "ability_id": action.ability_id,
                 "shadow": not self.autonomy_enabled,
             }, ts_ns=now)
-        self._execute(action, now)
+        self._execute(action, now, new_brain_decision=new_brain_decision)
 
     # -- action materialization -------------------------------------------
     def _materialize(self, brain_out: dict,
@@ -226,7 +227,7 @@ class MotorExecutor(Worker):
                            "score": ra.score})
         # basic movement binding map (Gate-6 set; validated subset)
         binding_map = {
-            "STOP": (["key:S"], 0.05),
+            "STOP": ([], 0.0),
             "TURN_LEFT": (["key:A"], 0.12),
             "TURN_RIGHT": (["key:D"], 0.12),
             "APPROACH": (["key:W"], 0.30),   # held W — extended by repeats
@@ -239,9 +240,15 @@ class MotorExecutor(Worker):
                               notes={"source": "basic_movement_map"})
 
     # -- execution ------------------------------------------------------------
-    def _execute(self, action: ConcreteAction, now_ns: int) -> None:
+    def _execute(self, action: ConcreteAction, now_ns: int,
+                 new_brain_decision: bool = True) -> None:
         shadow = not self.autonomy_enabled
         sig = (action.intention, action.ability_id, tuple(action.bindings))
+        # State channels are polled much faster than the canonical brain.
+        # Re-reading the same brain.output is NOT a repeated biological
+        # decision and must not refresh a key forever.
+        if not new_brain_decision:
+            return
         with self._lock:
             same_action = sig == self._last_sig
             if same_action and action.bindings:
