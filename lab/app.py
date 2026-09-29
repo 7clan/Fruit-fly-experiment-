@@ -110,6 +110,24 @@ class DigitalFlyLab:
             w.start()
         return meta
 
+    def wait_for_brain_ready(self, timeout_s: float = 180.0) -> bool:
+        """Wait for the brain worker's one-time initialization/prewarm.
+
+        Canonical whole-brain construction can take tens of seconds on a
+        laptop. Timed smoke-test duration must begin AFTER this completes;
+        otherwise a nominal 30 s test can end with zero brain chunks even
+        though initialization is still progressing normally.
+        """
+        deadline = time.monotonic() + float(timeout_s)
+        while time.monotonic() < deadline:
+            if self.brain.decoder is not None:
+                return True
+            th = getattr(self.brain, "_thread", None)
+            if th is not None and not th.is_alive():
+                return False
+            time.sleep(0.1)
+        return False
+
     def stop(self) -> dict:
         for w in self.workers:
             w.stop()
@@ -208,6 +226,17 @@ def main(argv=None) -> int:
                         brain_hz=args.brain_hz, dashboard=args.dashboard)
     lab.start()
     try:
+        if args.runtime == "canonical":
+            print("[lab] waiting for canonical brain init/prewarm ...", flush=True)
+            if not lab.wait_for_brain_ready(timeout_s=180.0):
+                raise RuntimeError(
+                    "canonical brain did not become ready within 180 s")
+            print(
+                f"[lab] canonical brain READY: init={lab.brain.stats.get('init_ms')} ms "
+                f"prewarm={lab.brain.stats.get('prewarm_ms')} ms; "
+                f"starting {args.seconds}s timed smoke test",
+                flush=True,
+            )
         if isinstance(lab.capture, SyntheticCapture):
             lab.drive_synthetic(seconds=args.seconds, fps=30.0)
         else:
