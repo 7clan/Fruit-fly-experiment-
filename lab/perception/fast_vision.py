@@ -43,7 +43,8 @@ class FastVisionWorker(Worker):
                  frames_channel: str = "capture.frames",
                  max_detect_width: int = 640):
         super().__init__(bus, target_hz=target_hz)
-        self.frames: StreamChannel = bus.stream(frames_channel, maxsize=4)
+        self.frames: StateChannel = bus.state(frames_channel + ".latest")
+        self._last_frame_id = None
         self.obs_state: StateChannel = bus.state(self.TOPIC_OBS)
         self.events: StreamChannel = bus.stream(self.TOPIC_EVT, maxsize=64)
         self.detector = HeuristicFastVision()
@@ -54,10 +55,14 @@ class FastVisionWorker(Worker):
         self.detector.warmup()
 
     def step(self) -> None:
-        env = self.frames.newest()          # drop obsolete frames
-        if env is None:
+        snap = self.frames.read()
+        if snap is None:
             return
-        payload = env.payload
+        payload = snap.payload
+        frame_id = payload.get("frame_id")
+        if frame_id == self._last_frame_id:
+            return
+        self._last_frame_id = frame_id
         img = payload.get("data_ref")
         if img is None:
             return
