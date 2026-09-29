@@ -27,6 +27,8 @@ DashboardWorker, which reads bus state channels at 10–30 Hz.
 
 from __future__ import annotations
 
+from collections import deque
+
 from ..bus import Bus, StateChannel
 from ..worker import Worker
 
@@ -165,16 +167,24 @@ class TextDashboardRenderer:
 
 
 class OpenCVDashboardRenderer:
-    """Live mirror + panel overlay via OpenCV (guarded import; desktop).
+    """Live scientific view of the fly's actual readouts.
 
-    Uses the SAME capture stream for the mirror (never a second capture).
-    Rendering here is best-effort: frame drops are counted by the worker.
+    This renderer intentionally distinguishes:
+      * real canonical whole-brain chunk activity
+      * verified sensory rates delivered to the canonical model
+      * descending-neuron population readouts used by the decoder
+      * engineered perception/helper/action state
+
+    The node links below visualize the DECODER READOUT FLOW, not anatomical
+    connectome edges. The full 138k-neuron connectome is not redrawn every
+    frame because doing so would be both unreadable and expensive on the
+    target laptop.
     """
 
     name = "opencv"
 
     def __init__(self, window_name: str = "DigitalFlyLab",
-                 width: int = 1280, height: int = 720):
+                 width: int = 1440, height: int = 810):
         try:
             import cv2  # noqa: F401
         except Exception as e:
@@ -183,60 +193,338 @@ class OpenCVDashboardRenderer:
         self._cv2 = cv2
         self.window_name = window_name
         self.width, self.height = width, height
+        self._history = deque(maxlen=90)
+        self._last_chunk_id = None
 
     def render(self, snap: Snapshot, mirror_env=None) -> None:
         cv2 = self._cv2
         canvas = self._compose(snap, mirror_env)
         cv2.imshow(self.window_name, canvas)
-        cv2.waitKey(1)          # non-blocking pump
+        cv2.waitKey(1)
+
+    @staticmethod
+    def _safe_float(v, default=0.0):
+        try:
+            return float(v)
+        except (TypeError, ValueError):
+            return float(default)
+
+    def _put(self, canvas, x, y, text, color=(220, 220, 220),
+             scale=0.46, thickness=1):
+        self._cv2.putText(
+            canvas, str(text), (int(x), int(y)),
+            self._cv2.FONT_HERSHEY_SIMPLEX, scale, color, thickness,
+            self._cv2.LINE_AA)
+
+    def _bar(self, canvas, x, y, w, label, value, vmax,
+             color=(120, 220, 120)):
+        cv2 = self._cv2
+        value = max(0.0, self._safe_float(value))
+        vmax = max(1e-9, float(vmax))
+        frac = min(1.0, value / vmax)
+        self._put(canvas, x, y - 4, f"{label}  {value:.1f}", (210, 210, 210),
+                  scale=0.38)
+        cv2.rectangle(canvas, (x, y), (x + w, y + 10), (70, 70, 70), 1)
+        if frac > 0:
+            cv2.rectangle(
+                canvas, (x + 1, y + 1),
+                (x + max(1, int((w - 2) * frac)), y + 9),
+                color, -1)
+
+    def _activity_node(self, canvas, x, y, label, rate, max_rate=30.0,
+                       color=(120, 220, 120)):
+        cv2 = self._cv2
+        rate = max(0.0, self._safe_float(rate))
+        frac = min(1.0, rate / max(1e-9, max_rate))
+        radius = 12 + int(8 * frac)
+        base = tuple(int(55 + frac * max(0, c - 55)) for c in color)
+        cv2.circle(canvas, (x, y), radius, base, -1, cv2.LINE_AA)
+        cv2.circle(canvas, (x, y), radius, (180, 180, 180), 1, cv2.LINE_AA)
+        self._put(canvas, x + 24, y + 4, f"{label} {rate:.1f} Hz",
+                  (215, 215, 215), scale=0.36)
+
+    def _draw_game(self, canvas, mirror_env, obs, game_w):
+        cv2 = self._cv2
+        if mirror_env is None or mirror_env.payload.get("data_ref") is None:
+            self._put(canvas, 24, 44, "WAITING FOR GAME FRAME...",
+                      (120, 180, 240), scale=0.55)
+            return
+
+        img = mirror_env.payload["data_ref"]
+        if img.ndim == 3 and img.shape[2] == 4:
+            img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
+        h, w = img.shape[:2]
+        scale = min(game_w / w, self.height / h)
+        out_w, out_h = int(w * scale), int(h * scale)
+        mirror = cv2.resize(img, (out_w, out_h))
+        canvas[0:out_h, 0:out_w] = mirror
+
+        notes = (obs or {}).get("notes") or {}
+        tracks = notes.get("entity_tracks") or []
+        for tr in tracks:
+            box = tr.get("bbox") or []
+            if len(box) != 4:
+                continue
+            x1, y1, x2, y2 = box
+            p1 = (int(x1 * out_w), int(y1 * out_h))
+            p2 = (int(x2 * out_w), int(y2 * out_h))
+            kind = str(tr.get("kind", "unknown"))
+            if kind == "quest_npc":
+                color = (0, 220, 255)
+            else:
+                color = (255, 180, 70)
+            cv2.rectangle(canvas, p1, p2, color, 1)
+            self._put(
+                canvas, p1[0], max(14, p1[1] - 5),
+                f"T{tr.get('track_id')} {kind}", color, scale=0.32)
+
+        cv2.rectangle(canvas, (0, 0), (game_w - 1, self.height - 1),
+                      (65, 65, 65), 1)
+        self._put(canvas, 14, self.height - 16,
+                  "GAME / PERCEPTION VIEW  [ENGINEERED CV]",
+                  (180, 180, 180), scale=0.40)
+
+    def _draw_decoder_flow(self, canvas, x0, y0, rates):
+        cv2 = self._cv2
+        # These lines are semantic decoder-flow links, not anatomical edges.
+        sx = x0 + 25
+        mx = x0 + 205
+        ix = x0 + 415
+
+        positions = {
+            "target_left": (sx, y0 + 34),
+            "target_right": (sx, y0 + 92),
+            "looming": (sx, y0 + 150),
+            "P9_left": (mx, y0 + 24),
+            "P9_right": (mx, y0 + 76),
+            "MDN": (mx, y0 + 128),
+            "GF": (mx, y0 + 180),
+            "STOP": (mx, y0 + 232),
+            "INTENT": (ix, y0 + 124),
+        }
+
+        for a, b in (
+            ("target_left", "P9_left"),
+            ("target_right", "P9_right"),
+            ("looming", "GF"),
+            ("P9_left", "INTENT"),
+            ("P9_right", "INTENT"),
+            ("MDN", "INTENT"),
+            ("GF", "INTENT"),
+            ("STOP", "INTENT"),
+        ):
+            cv2.line(canvas, positions[a], positions[b], (62, 62, 62), 1,
+                     cv2.LINE_AA)
+
+        self._activity_node(
+            canvas, *positions["target_left"], "sens L",
+            rates.get("_sens_left", 0.0), max_rate=250.0,
+            color=(170, 210, 100))
+        self._activity_node(
+            canvas, *positions["target_right"], "sens R",
+            rates.get("_sens_right", 0.0), max_rate=250.0,
+            color=(170, 210, 100))
+        self._activity_node(
+            canvas, *positions["looming"], "loom",
+            rates.get("_loom", 0.0), max_rate=150.0,
+            color=(90, 170, 255))
+
+        self._activity_node(
+            canvas, *positions["P9_left"], "P9-L",
+            rates.get("P9_left", 0.0), max_rate=30.0)
+        self._activity_node(
+            canvas, *positions["P9_right"], "P9-R",
+            rates.get("P9_right", 0.0), max_rate=30.0)
+        mdn = max(
+            self._safe_float(rates.get("MDN_bilateral")),
+            self._safe_float(rates.get("MDN_left")),
+            self._safe_float(rates.get("MDN_right")),
+        )
+        gf = max(
+            self._safe_float(rates.get("GF_left")),
+            self._safe_float(rates.get("GF_right")),
+        )
+        stop = max(
+            self._safe_float(rates.get("FG_bilateral")),
+            self._safe_float(rates.get("BB_bilateral")),
+            self._safe_float(rates.get("FG_left")),
+            self._safe_float(rates.get("FG_right")),
+        )
+        self._activity_node(canvas, *positions["MDN"], "MDN", mdn,
+                            max_rate=12.0, color=(255, 170, 90))
+        self._activity_node(canvas, *positions["GF"], "GF", gf,
+                            max_rate=35.0, color=(80, 80, 255))
+        self._activity_node(canvas, *positions["STOP"], "FG/BB", stop,
+                            max_rate=12.0, color=(180, 130, 240))
+
+        cv2.circle(canvas, positions["INTENT"], 27, (50, 50, 50), -1,
+                   cv2.LINE_AA)
+        cv2.circle(canvas, positions["INTENT"], 27, (200, 200, 200), 1,
+                   cv2.LINE_AA)
+        self._put(canvas, positions["INTENT"][0] - 22,
+                  positions["INTENT"][1] + 4, "INTENT",
+                  (230, 230, 230), scale=0.30)
+
+    def _draw_history(self, canvas, x, y, w, h):
+        cv2 = self._cv2
+        cv2.rectangle(canvas, (x, y), (x + w, y + h), (55, 55, 55), 1)
+        if not self._history:
+            self._put(canvas, x + 8, y + 22, "No brain chunks yet",
+                      (150, 150, 150), scale=0.38)
+            return
+        vals = list(self._history)
+        step = max(2, int(w / max(1, len(vals))))
+        colors = {
+            "STOP": (150, 150, 150),
+            "TURN_LEFT": (220, 180, 80),
+            "TURN_RIGHT": (220, 180, 80),
+            "APPROACH": (100, 220, 100),
+            "RETREAT": (80, 170, 255),
+            "ESCAPE": (80, 80, 255),
+        }
+        for i, item in enumerate(vals[-max(1, w // step):]):
+            name = item.get("intention") or "?"
+            active = self._safe_float(item.get("active"))
+            bar_h = min(h - 18, int(4 + active / 250.0))
+            xx = x + i * step
+            cv2.line(
+                canvas, (xx, y + h - 4), (xx, y + h - 4 - bar_h),
+                colors.get(name, (180, 180, 180)), max(1, step - 1))
+        self._put(canvas, x + 8, y + 17,
+                  "WHOLE-BRAIN ACTIVITY HISTORY (active neurons/chunk)",
+                  (175, 175, 175), scale=0.34)
 
     def _compose(self, snap: Snapshot, mirror_env):
         import numpy as np
         cv2 = self._cv2
         canvas = np.zeros((self.height, self.width, 3), dtype=np.uint8)
-        # LEFT: live mirror (same stream as vision)
-        if mirror_env is not None and mirror_env.payload.get("data_ref") is not None:
-            img = mirror_env.payload["data_ref"]
-            if img.ndim == 3 and img.shape[2] == 4:
-                img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
-            h, w = img.shape[:2]
-            scale = min((self.width * 0.5) / w, self.height / h)
-            mirror = cv2.resize(img, (int(w * scale), int(h * scale)))
-            canvas[0:mirror.shape[0], 0:mirror.shape[1]] = mirror
-        # RIGHT: three stacked panels
+
         d = snap.data
-        def put(x, y, text, color=(220, 220, 220)):
-            cv2.putText(canvas, text, (x, y), cv2.FONT_HERSHEY_SIMPLEX,
-                        0.45, color, 1, cv2.LINE_AA)
-        x0 = int(self.width * 0.52)
         brain = d.get("brain.output") or {}
-        intention = brain.get("intention") or {}
-        put(x0, 24, "FLY BRAIN", (120, 220, 120))
-        put(x0, 44, f"intention={intention.get('name')} "
-                    f"conf={intention.get('confidence')}")
-        put(x0, 62, f"chunk={brain.get('chunk_id')} "
-                    f"runtime={brain.get('runtime')}")
-        put(x0, 80, f"transport={brain.get('transport')} "
-                    f"chunk_wall={brain.get('chunk_wall_s')}s")
-        ch = d.get("fly.channels") or {}
-        tl = float(ch.get("target_left") or 0.0)
-        tr = float(ch.get("target_right") or 0.0)
-        threat = float(ch.get("threat_intensity") or 0.0)
-        put(x0, 100, f"tgt L/R {tl:.2f}/{tr:.2f} threat {threat:.2f}")
-        put(x0, 128, "HYBRID HELPER [ENGINEERED]", (120, 180, 240))
-        goal = d.get("helper.goal") or {}
-        put(x0, 148, f"goal={(goal.get('goal') or {}).get('label')}")
         obs = d.get("world.observation") or {}
+        ch = d.get("fly.channels") or {}
+        goal = d.get("helper.goal") or {}
+        act = d.get("action.selected") or {}
+
+        game_w = int(self.width * 0.56)
+        self._draw_game(canvas, mirror_env, obs, game_w)
+
+        x0 = game_w + 18
+        panel_w = self.width - x0 - 14
+
+        chunk_id = brain.get("chunk_id")
+        if chunk_id is not None and chunk_id != self._last_chunk_id:
+            self._last_chunk_id = chunk_id
+            intention = (brain.get("intention") or {}).get("name")
+            self._history.append({
+                "chunk": chunk_id,
+                "intention": intention,
+                "active": brain.get("n_active_new", 0),
+                "spikes": brain.get("n_spikes_new", 0),
+            })
+
+        self._put(canvas, x0, 28, "DIGITAL DROSOPHILA — LIVE NEURAL ACTIVITY",
+                  (120, 230, 120), scale=0.54, thickness=1)
+
+        if not brain:
+            self._put(canvas, x0, 58,
+                      "CANONICAL BRAIN INITIALIZING / PREWARMING...",
+                      (90, 190, 255), scale=0.46)
+            self._put(canvas, x0, 80,
+                      "Game perception is live; neural output appears after READY.",
+                      (165, 165, 165), scale=0.36)
+        else:
+            intention = brain.get("intention") or {}
+            self._put(
+                canvas, x0, 58,
+                f"INTENTION: {intention.get('name')}   "
+                f"confidence={intention.get('confidence')}",
+                (230, 230, 230), scale=0.50, thickness=1)
+            self._put(
+                canvas, x0, 80,
+                f"chunk={brain.get('chunk_id')}  bio_t={self._safe_float(brain.get('t_bio_s')):.3f}s  "
+                f"wall/chunk={self._safe_float(brain.get('chunk_wall_s')):.2f}s  "
+                f"transport={brain.get('transport')}",
+                (165, 165, 165), scale=0.34)
+            self._put(
+                canvas, x0, 100,
+                f"whole brain: spikes={brain.get('n_spikes_new', 0)}  "
+                f"active neurons={brain.get('n_active_new', 0)} / 138639",
+                (165, 215, 165), scale=0.38)
+
+        sensory = brain.get("sensory_rates_hz") or {}
+        self._bar(canvas, x0, 126, 170, "D8 target_left Hz",
+                  sensory.get("target_left", 0.0), 250.0,
+                  color=(170, 210, 100))
+        self._bar(canvas, x0 + 190, 126, 170, "D8 target_right Hz",
+                  sensory.get("target_right", 0.0), 250.0,
+                  color=(170, 210, 100))
+        self._bar(canvas, x0 + 380, 126, min(160, panel_w - 380),
+                  "D8 looming Hz", sensory.get("looming", 0.0), 150.0,
+                  color=(90, 170, 255))
+
+        self._put(canvas, x0, 162,
+                  "DECODER READOUT FLOW  (lines are NOT connectome edges)",
+                  (150, 150, 150), scale=0.34)
+
+        intention = brain.get("intention") or {}
+        dn = dict(intention.get("dn_rates_hz") or brain.get("dn_rates_hz") or {})
+        dn["_sens_left"] = sensory.get("target_left", 0.0)
+        dn["_sens_right"] = sensory.get("target_right", 0.0)
+        dn["_loom"] = sensory.get("looming", 0.0)
+        self._draw_decoder_flow(canvas, x0, 176, dn)
+
+        ybars = 465
+        self._put(canvas, x0, ybars - 12,
+                  "DESCENDING POPULATION FIRING RATES",
+                  (175, 210, 175), scale=0.38)
+        key_pops = [
+            ("P9_left", 30.0), ("P9_right", 30.0),
+            ("BPN_bilateral", 20.0), ("RRN_bilateral", 20.0),
+            ("MDN_bilateral", 12.0), ("GF_left", 35.0),
+            ("GF_right", 35.0), ("FG_bilateral", 12.0),
+            ("BB_bilateral", 12.0),
+        ]
+        for i, (name, vmax) in enumerate(key_pops):
+            col = i % 3
+            row = i // 3
+            self._bar(canvas, x0 + col * 185, ybars + row * 31,
+                      160, name, dn.get(name, 0.0), vmax)
+
+        sample = brain.get("active_flywire_ids_sample") or []
+        if sample:
+            short_ids = " ".join(str(x)[-6:] for x in sample[:10])
+            self._put(canvas, x0, 570,
+                      "spiking FlyWire ID sample: " + short_ids,
+                      (150, 150, 190), scale=0.31)
+        else:
+            self._put(canvas, x0, 570,
+                      "spiking FlyWire ID sample: waiting for brain chunk",
+                      (120, 120, 140), scale=0.31)
+
+        self._draw_history(canvas, x0, 590, min(panel_w, 540), 100)
+
+        notes = obs.get("notes") or {}
         player = obs.get("player") or {}
         target = obs.get("target") or {}
-        notes = obs.get("notes") or {}
-        put(x0, 166, f"target={target.get('type')} enemies={len(obs.get('enemies', []))}")
-        put(x0, 184, f"tracked humanoids={notes.get('humanoid_track_count', 0)} "
-                     f"quest NPCs={notes.get('quest_npc_track_count', 0)}")
-        put(x0, 202, f"health={player.get('health')} stamina={player.get('stamina')}")
-        put(x0, 230, "ACTION SYSTEM [ENGINEERED]", (240, 180, 120))
-        act = d.get("action.selected") or {}
-        put(x0, 250, f"autonomy={act.get('autonomy')} "
-                    f"ability={act.get('ability_id') or '-'}")
-        put(x0, 278, "PASSIVE / SHADOW - no game input", (140, 140, 255))
+        self._put(
+            canvas, x0, 715,
+            f"ENGINEERED PERCEPTION: target={target.get('type')}  "
+            f"tracked humanoids={notes.get('humanoid_track_count', 0)}  "
+            f"quest NPCs={notes.get('quest_npc_track_count', 0)}",
+            (120, 180, 240), scale=0.34)
+        self._put(
+            canvas, x0, 736,
+            f"health={player.get('health')} stamina={player.get('stamina')}  "
+            f"goal={(goal.get('goal') or {}).get('label')}",
+            (120, 180, 240), scale=0.34)
+        self._put(
+            canvas, x0, 764,
+            f"ACTION SYSTEM: autonomy={act.get('autonomy')} "
+            f"ability={act.get('ability_id') or '-'}",
+            (240, 180, 120), scale=0.34)
+        self._put(canvas, x0, 790,
+                  "PASSIVE / SHADOW — neural decisions visible, no game input",
+                  (110, 110, 255), scale=0.38)
         return canvas
+
