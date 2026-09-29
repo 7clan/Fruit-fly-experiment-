@@ -232,7 +232,9 @@ class GPOHeuristicFastVision:
     name = "gpo_heuristic_v2"
 
     def __init__(self):
-        self._tracker = SimpleTrackletTracker(max_misses=4, center_gate=0.08)
+        # Conservative association: false positives are more dangerous than
+        # missed detections for the first autonomous movement gate.
+        self._tracker = SimpleTrackletTracker(max_misses=3, center_gate=0.055)
 
     def warmup(self) -> None:
         # OpenCV is optional outside the Windows/live environment; avoid
@@ -266,86 +268,192 @@ class GPOHeuristicFastVision:
         return float(max(0.0, min(1.0, best_width / calibrated_full_width)))
 
     def _humanoid_proposals(self, img, player_xy, quest_xy=None):
-        """Cheap scene proposals; semantics come from temporal/context evidence.
+        """Conservative avatar candidates with explicit role evidence.
 
-        The detector deliberately calls these humanoid *candidates*. A track is
-        not promoted to EnemyState merely because it looks avatar-like.
+        This remains engineered CV, not a learned detector. The goal here is
+        to stop treating high-contrast scenery (hedges, walls, windows) as
+        people. Quest NPCs may be anchored directly from the observed QUEST
+        marker. A non-quest candidate is only called hostile_candidate when a
+        compact saturated-red overhead marker is visible above it. Everything
+        else stays humanoid_unknown.
         """
         import cv2
 
         h, w = img.shape[:2]
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        edge = cv2.Canny(gray, 50, 120).astype(np.float32) / 255.0
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+        edge = cv2.Canny(gray, 55, 130).astype(np.float32) / 255.0
+        gx = np.abs(cv2.Sobel(gray, cv2.CV_32F, 1, 0, ksize=3))
+        gy = np.abs(cv2.Sobel(gray, cv2.CV_32F, 0, 1, ksize=3))
 
         roi = np.zeros((h, w), dtype=np.uint8)
-        roi[int(0.22 * h):int(0.68 * h),
-            int(0.04 * w):int(0.96 * w)] = 1
+        roi[int(0.22 * h):int(0.67 * h),
+            int(0.05 * w):int(0.95 * w)] = 1
 
-        # Window sizes are calibrated around the existing 640px detection
-        # width but scale with resolution. Native box filters keep this cheap.
         scale = w / 640.0
         sizes = [
-            (max(8, int(12 * scale)), max(16, int(24 * scale))),
-            (max(10, int(16 * scale)), max(20, int(32 * scale))),
-            (max(12, int(20 * scale)), max(24, int(40 * scale))),
-            (max(14, int(24 * scale)), max(28, int(48 * scale))),
+            (max(10, int(14 * scale)), max(22, int(30 * scale))),
+            (max(12, int(18 * scale)), max(28, int(38 * scale))),
+            (max(14, int(22 * scale)), max(34, int(46 * scale))),
         ]
         raw = []
-        peak_kernel = np.ones((13, 13), dtype=np.uint8)
+        peak_kernel = np.ones((15, 15), dtype=np.uint8)
         for ww, hh in sizes:
             density = cv2.boxFilter(
                 edge, -1, (ww, hh), normalize=True,
                 borderType=cv2.BORDER_REPLICATE)
             local_max = cv2.dilate(density, peak_kernel)
-            mask = ((density >= 0.19)
+            mask = ((density >= 0.205)
                     & (density >= local_max - 1e-6)
                     & (roi > 0))
             ys, xs = np.where(mask)
             if len(xs) == 0:
                 continue
             vals = density[ys, xs]
-            order = np.argsort(vals)[::-1][:30]
+            order = np.argsort(vals)[::-1][:24]
             for j in order:
                 cx, cy = float(xs[j]), float(ys[j])
-                # Do not rediscover the player's own central avatar.
-                if (abs(cx - player_xy[0]) < 0.10 * w
-                        and abs(cy - player_xy[1]) < 0.16 * h):
+                if (abs(cx - player_xy[0]) < 0.11 * w
+                        and abs(cy - player_xy[1]) < 0.17 * h):
                     continue
                 x1 = max(0.0, cx - ww * 0.5)
                 y1 = max(0.0, cy - hh * 0.5)
                 x2 = min(float(w), cx + ww * 0.5)
                 y2 = min(float(h), cy + hh * 0.5)
-                raw.append((float(vals[j]), x1, y1, x2, y2))
+                raw.append((float(vals[j]), cx, cy, x1, y1, x2, y2))
 
-        # Center-distance NMS. We want proposals, not dozens of overlapping
-        # windows around the same avatar/fence.
+        # Center-distance NMS.
         selected = []
-        min_sep2 = (0.028 * w) ** 2
-        for score, x1, y1, x2, y2 in sorted(raw, reverse=True):
-            cx, cy = (x1 + x2) * 0.5, (y1 + y2) * 0.5
+        min_sep2 = (0.038 * w) ** 2
+        for score, cx, cy, x1, y1, x2, y2 in sorted(raw, reverse=True):
             if any((cx - q[1]) ** 2 + (cy - q[2]) ** 2 < min_sep2
                    for q in selected):
                 continue
             selected.append((score, cx, cy, x1, y1, x2, y2))
-            if len(selected) >= 14:
+            if len(selected) >= 10:
                 break
+
+        # Red mask is only role evidence when it is compact and immediately
+        # above a plausible avatar candidate.
+        red = (
+            cv2.inRange(hsv, np.array([0, 150, 130], dtype=np.uint8),
+                        np.array([9, 255, 255], dtype=np.uint8))
+            | cv2.inRange(hsv, np.array([171, 150, 130], dtype=np.uint8),
+                          np.array([179, 255, 255], dtype=np.uint8))
+        )
 
         out = []
         for score, cx, cy, x1, y1, x2, y2 in selected:
-            kind = "humanoid_unknown"
-            confidence = max(0.15, min(0.60, (score - 0.17) * 3.2))
+            ix1, iy1 = int(max(0, x1)), int(max(0, y1))
+            ix2, iy2 = int(min(w, x2)), int(min(h, y2))
+            if ix2 <= ix1 or iy2 <= iy1:
+                continue
+            patch = hsv[iy1:iy2, ix1:ix2]
+            pgray = gray[iy1:iy2, ix1:ix2]
+            pedge = edge[iy1:iy2, ix1:ix2]
+            pgx = gx[iy1:iy2, ix1:ix2]
+            pgy = gy[iy1:iy2, ix1:ix2]
+            if patch.size == 0:
+                continue
+
+            # Grass/hedges caused most of the observed false positives.
+            hue = patch[..., 0]
+            sat = patch[..., 1]
+            val = patch[..., 2]
+            green_frac = float(np.mean(
+                (hue >= 32) & (hue <= 88) & (sat >= 55) & (val >= 35)))
+            texture = float(np.std(pgray))
+            edge_density = float(np.mean(pedge))
+            ex = float(np.mean(pgx))
+            ey = float(np.mean(pgy))
+            vertical_ratio = ex / max(ex + ey, 1e-6)
+
+            # Quest proximity may rescue an otherwise green/low-contrast NPC
+            # because the independently observed QUEST marker is strong role
+            # evidence. Ordinary candidates must pass conservative appearance
+            # checks.
+            near_quest = False
             if quest_xy is not None:
                 qdx = abs(cx - quest_xy[0]) / max(w, 1)
                 qdy = (cy - quest_xy[1]) / max(h, 1)
-                # QUEST marker sits above/near its NPC.
-                if qdx < 0.07 and -0.02 <= qdy < 0.22:
-                    kind = "quest_npc"
-                    confidence = max(confidence, 0.62)
+                near_quest = qdx < 0.075 and -0.01 <= qdy < 0.23
+
+            if not near_quest:
+                if green_frac > 0.48:
+                    continue
+                if texture < 22.0:
+                    continue
+                if not (0.11 <= edge_density <= 0.48):
+                    continue
+                if vertical_ratio < 0.36:
+                    continue
+
+            kind = "quest_npc" if near_quest else "humanoid_unknown"
+            confidence = max(
+                0.20, min(0.72, 0.30 + (score - 0.20) * 2.4
+                          + min(texture / 180.0, 0.18)))
+            if near_quest:
+                confidence = max(confidence, 0.76)
+
+            # Hostile evidence: a compact red marker/name indicator directly
+            # above the candidate. This is deliberately not promoted to
+            # EnemyState yet; the next passive run validates it.
+            if kind != "quest_npc":
+                bw = max(2, ix2 - ix1)
+                bh = max(2, iy2 - iy1)
+                rx1 = max(0, int(cx - 0.75 * bw))
+                rx2 = min(w, int(cx + 0.75 * bw))
+                ry1 = max(0, int(y1 - 0.55 * bh))
+                ry2 = min(h, int(y1 + 0.10 * bh))
+                rpatch = red[ry1:ry2, rx1:rx2]
+                if rpatch.size:
+                    nred = int(np.count_nonzero(rpatch))
+                    red_frac = nred / float(rpatch.size)
+                    if nred >= 3 and red_frac >= 0.008:
+                        kind = "hostile_candidate"
+                        confidence = max(confidence, 0.70)
+
             out.append({
                 "bbox": [x1 / w, y1 / h, x2 / w, y2 / h],
                 "kind": kind,
                 "confidence": confidence,
             })
+
+        # Strong QUEST evidence gets one explicit NPC anchor even if generic
+        # edge proposals miss the body. This prevents quest NPC count=0 when
+        # the yellow marker is clearly detected.
+        if quest_xy is not None:
+            qx, qy = quest_xy
+            bw = 0.060 * w
+            bh = 0.155 * h
+            cx = float(qx)
+            cy = float(min(h - bh * 0.5, qy + 0.095 * h))
+            qbox = [
+                max(0.0, cx - bw * 0.5) / w,
+                max(0.0, cy - bh * 0.5) / h,
+                min(float(w), cx + bw * 0.5) / w,
+                min(float(h), cy + bh * 0.5) / h,
+            ]
+            # Avoid a duplicate quest proposal if one already overlaps it.
+            qcx = (qbox[0] + qbox[2]) * 0.5
+            qcy = (qbox[1] + qbox[3]) * 0.5
+            duplicate = False
+            for det in out:
+                bx = (det["bbox"][0] + det["bbox"][2]) * 0.5
+                by = (det["bbox"][1] + det["bbox"][3]) * 0.5
+                if (bx - qcx) ** 2 + (by - qcy) ** 2 < 0.035 ** 2:
+                    det["kind"] = "quest_npc"
+                    det["confidence"] = max(
+                        float(det.get("confidence", 0.0)), 0.82)
+                    duplicate = True
+                    break
+            if not duplicate:
+                out.append({
+                    "bbox": qbox,
+                    "kind": "quest_npc",
+                    "confidence": 0.82,
+                })
+
         return out
 
     def detect(self, img: np.ndarray) -> dict:
@@ -461,7 +569,7 @@ class GPOHeuristicFastVision:
         entity_tracks = self._tracker.update(proposals)
         stable_tracks = [
             t for t in entity_tracks
-            if t["hits"] >= 2 and t["misses"] == 0
+            if t["hits"] >= 3 and t["misses"] == 0
         ]
 
         ui = {
@@ -488,7 +596,10 @@ class GPOHeuristicFastVision:
                 "quest_npc_track_count": sum(
                     1 for t in stable_tracks
                     if t["kind"] == "quest_npc"),
-                "enemy_detector": "tracked_candidates_not_yet_promoted",
+                "hostile_candidate_count": sum(
+                    1 for t in stable_tracks
+                    if t["kind"] == "hostile_candidate"),
+                "enemy_detector": "role_evidence_v1_not_yet_promoted",
             },
         }
 
