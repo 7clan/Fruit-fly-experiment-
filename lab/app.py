@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import json
 import signal
+import shutil
 import time
 from pathlib import Path
 
@@ -346,7 +347,13 @@ def main(argv=None) -> int:
         rep = lab.stop()
     print(lab.status_line())
     p = lab.write_report_json()
+    bundle = shutil.make_archive(
+        str(lab.session_dir), "zip",
+        root_dir=str(lab.session_dir.parent),
+        base_dir=lab.session_dir.name,
+    )
     print("session:", lab.session_dir, "| report:", p)
+    print("bundle:", bundle)
     bad = [
         (w.name, int(w.stats.get("errors", 0)), w.stats.get("last_error"))
         for w in lab.workers
