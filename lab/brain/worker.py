@@ -79,6 +79,8 @@ class BrainWorker(Worker):
         self.stats["init_ms"] = round(init_ms, 1)
         self.stats["prewarm_ms"] = round(prewarm_ms, 1)
         self.stats["runtime"] = self.runtime.runtime_label
+        self.stats["runtime_transport"] = getattr(
+            self.runtime, "transport_label", "inprocess")
         self.stats["decoder_config"] = self.decoder.decoder_config
         # seed the input channel with silence so the first chunk is valid
         if self.channels_in.read() is None:
