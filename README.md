@@ -2,7 +2,7 @@
 
 **A simulated Drosophila neural agent — derived as closely as practical
 from real fruit-fly neuroscience — eventually learns and plays Grand Piece
-Online (Roblox), with the Drosophila brain model meaningfully in the
+Online, with the Drosophila brain model meaningfully in the
 control path.**
 
 > ### Project status — read this first
@@ -76,15 +76,15 @@ control path.**
 - **GATE 4 v2 (2026-09-29): FAIL — honest, pre-registered, fail-closed.** The source audit (Aso 2014 + Owald 2015 full texts) corrected the v1 MBON valence classification (the M4/M6 family was backwards: glutamatergic MBONs are activation-AVERSIVE; reward DEPRESSES their input), the US became the compartment-matched PAM01-11 set, and the assay moved to a calibrated balanced boundary (P(left)=0.500). Result: the KC->GLUT-MBON synapses carry a STRONG cue-specific associative trace (paired 0.20 vs unpaired 0.80 scale, CI [0.61,0.76]) — but it does not propagate to a directional population signal or credit-specific behaviour (the readout sits on a bistable lateralized MB gain state; US cascades contaminate credit assignment; controls C/D reproduce the drift). Biological tuning STOPPED per the pre-registration. Full record: `GATE4_V2_REPORT.md`.
 >   No post-hoc tuning was applied; the mechanistic diagnosis and the
 >   pre-registered v2 follow-up are in `D11_D13_LEARNING_REPORT.md`.
->   No Roblox connection was made (blocked before Gate 4).
+>   No live-game connection was made (blocked before Gate 4).
 >   (+ per-episode dashboard videos). Next: D11 (Drosophila-inspired
->   reward-modulated learning). Still no Roblox / CV integration.
+>   reward-modulated learning). Still no live-game / CV integration.
 > - **Windows target:** the finished application is `DigitalFlyLab.exe`
->   (window-capture mirror of the Roblox process, CV overlays, neural +
+>   (window-capture mirror of the game process, CV overlays, neural +
 >   internal-state visualization, replay). Full addendum:
 >   `docs/WINDOWS_RUNTIME_SPEC.md`; implementation gated at D14–D15.
 > - **Source policy (corrected):** only the single Grand Piece Online
->   Roblox page may be accessed on Roblox properties; NON-Roblox guides/
+>   approved game page may be accessed on the platform; independent guides/
 >   wikis/videos are allowed as **UNVERIFIED GUIDE KNOWLEDGE**, upgraded
 >   to **VERIFIED IN GAME** only by direct observation
 >   (`docs/GPO_PLAN.md`).
@@ -171,8 +171,8 @@ design; it never ran. See `legacy/README.md`.
 
 ## Source policy for the target game
 
-Only `https://www.roblox.com/games/1730877806/Grand-Piece-Online` may be
-accessed on Roblox properties. Non-Roblox third-party resources are
-permitted for learning GPO facts but are stored as UNVERIFIED GUIDE
-KNOWLEDGE until verified by direct in-game observation; direct observation
-always wins. Full register: `docs/GPO_PLAN.md`.
+Only the single approved Grand Piece Online game page may be accessed on
+the platform. Independent third-party resources are permitted for learning
+GPO facts but are stored as UNVERIFIED GUIDE KNOWLEDGE until verified by
+direct in-game observation; direct observation always wins. Full register:
+`docs/GPO_PLAN.md`.
