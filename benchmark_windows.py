@@ -55,8 +55,12 @@ def main(argv=None) -> int:
     print(f"[benchmark] report     -> {REPORT_PATH}")
     print(f"[benchmark] settings   -> {LIVE_SETTINGS_PATH}")
     ls = report["live_settings"]
+    latency_label = ("estimated_canonical_s2a_p95"
+                     if "estimated_canonical_s2a_p95_ms" in ls
+                     else "measured_s2a_p95")
     print(f"[benchmark] brain_hz={ls['brain_hz']} chunk_ms={ls['brain_chunk_ms']} "
-          f"s2a_p95={ls['measured_s2a_p95_ms']}ms target_met={ls['s2a_target_met']}")
+          f"{latency_label}={ls['measured_s2a_p95_ms']}ms "
+          f"target_met={ls['s2a_target_met']}")
     return 0
 
 
