@@ -150,6 +150,10 @@ class DigitalFlyLab:
         self.dashboard_ui.render(snap, self.capture.latest.read())
 
     def wait_live(self, seconds: float) -> None:
+        if float(seconds) <= 0:
+            while True:
+                self.render_dashboard_once()
+                time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
         deadline = time.monotonic() + float(seconds)
         while time.monotonic() < deadline:
             self.render_dashboard_once()
@@ -250,7 +254,7 @@ def main(argv=None) -> int:
     ap.add_argument("--runtime", default="mock", choices=["mock", "canonical"])
     ap.add_argument("--capture", default="synthetic",
                     choices=["synthetic", "windows"])
-    ap.add_argument("--seconds", type=float, default=10.0)
+    ap.add_argument("--seconds", type=float, default=10.0,\n                    help="run duration; 0 = run until Ctrl+C")
     ap.add_argument("--capture-fps", type=float, default=30.0)
     ap.add_argument("--chunk-ms", type=float, default=50.0)
     ap.add_argument("--brain-hz", type=float, default=10.0)
@@ -297,7 +301,9 @@ def main(argv=None) -> int:
             print(
                 f"[lab] canonical brain READY: init={lab.brain.stats.get('init_ms')} ms "
                 f"prewarm={lab.brain.stats.get('prewarm_ms')} ms; "
-                f"starting {args.seconds}s timed smoke test",
+                + ("starting persistent passive run (Ctrl+C to stop)"
+                   if args.seconds <= 0 else
+                   f"starting {args.seconds}s timed smoke test"),
                 flush=True,
             )
         if isinstance(lab.capture, SyntheticCapture):
