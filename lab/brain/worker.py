@@ -96,6 +96,19 @@ class BrainWorker(Worker):
     def on_stop(self) -> None:
         self.runtime.close()
 
+    def stop(self, join_timeout: float = 8.0) -> None:
+        """Stop cleanly even when a canonical chunk is still in flight."""
+        self.stop_event.set()
+        th = self._thread
+        if th is None:
+            return
+        th.join(timeout=join_timeout)
+        if th.is_alive():
+            force = getattr(self.runtime, "force_terminate", None)
+            if force is not None:
+                force()
+                th.join(timeout=2.0)
+
     # -- main step ----------------------------------------------------------
     def step(self) -> None:
         from ..perception.fly_channels import to_sensory_rates
