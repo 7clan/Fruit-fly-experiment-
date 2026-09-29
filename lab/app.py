@@ -31,6 +31,7 @@ from . import __version__
 from .action.motor_executor import MotorExecutor, SafeNoopBackend
 from .brain.worker import BrainWorker
 from .brain.runtime import CanonicalBrianRuntime
+from .brain.subprocess_runtime import CanonicalBrainSubprocessRuntime
 from .bus import Bus, BusMode
 from .capture.base import (CaptureAdapter, SyntheticCapture,
                            create_windows_capture)
@@ -63,7 +64,8 @@ class DigitalFlyLab:
                  fast_hz: float = 24.0, heavy_hz: float = 8.0,
                  executor_hz: float = 40.0, planner_hz: float = 1.0,
                  dashboard_hz: float = 20.0, capture_fps: float = 30.0,
-                 runtime=None, brain_codegen: str | None = None):
+                 runtime=None, brain_codegen: str | None = None,
+                 brain_transport: str = "auto"):
         self.bus = Bus(mode=mode)
         self.session_dir = Path(session_dir) if session_dir else \
             AGENT_ROOT / "runs" / f"lab_{time.strftime('%Y%m%d_%H%M%S')}"
@@ -85,10 +87,22 @@ class DigitalFlyLab:
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
-        if runtime is None and runtime_kind in ("canonical", "canonical_brian") \
-                and brain_codegen is not None:
-            runtime = CanonicalBrianRuntime(
-                chunk_ms=chunk_ms, codegen_target=brain_codegen)
+        if runtime is None and runtime_kind in ("canonical", "canonical_brian"):
+            chosen_transport = brain_transport
+            if chosen_transport == "auto":
+                chosen_transport = (
+                    "subprocess" if capture_kind == "windows" else "inprocess")
+            if chosen_transport == "subprocess":
+                runtime = CanonicalBrainSubprocessRuntime(
+                    chunk_ms=chunk_ms,
+                    codegen_target=brain_codegen or "cython",
+                )
+            elif chosen_transport == "inprocess":
+                runtime = CanonicalBrianRuntime(
+                    chunk_ms=chunk_ms, codegen_target=brain_codegen)
+            else:
+                raise ValueError(
+                    f"unknown brain_transport {brain_transport!r}")
         self.brain = BrainWorker(self.bus, target_hz=brain_hz,
                                  runtime=runtime, runtime_kind=runtime_kind,
                                  chunk_ms=chunk_ms)
@@ -262,6 +276,10 @@ def main(argv=None) -> int:
     ap.add_argument("--heavy-hz", type=float, default=8.0)
     ap.add_argument("--brain-codegen", choices=["numpy", "cython"], default=None,
                     help="canonical runtime codegen target for measured comparison")
+    ap.add_argument("--brain-transport",
+                    choices=["auto", "inprocess", "subprocess"],
+                    default="auto",
+                    help="canonical brain isolation; Windows live defaults to subprocess")
     ap.add_argument("--dashboard", action="store_true")
     ap.add_argument("--dashboard-ui", action="store_true",
                     help="show the OpenCV live fly-brain dashboard window")
@@ -290,7 +308,8 @@ def main(argv=None) -> int:
                         dashboard=(args.dashboard or args.dashboard_ui),
                         dashboard_renderer=("opencv" if args.dashboard_ui else "text"),
                         dashboard_hz=args.dashboard_hz,
-                        brain_codegen=args.brain_codegen)
+                        brain_codegen=args.brain_codegen,
+                        brain_transport=args.brain_transport)
     lab.start()
     try:
         if args.runtime == "canonical":
