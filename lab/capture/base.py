@@ -37,7 +37,7 @@ import platform
 from abc import ABC, abstractmethod
 from typing import Callable, Optional
 
-from ..bus import Bus, StreamChannel
+from ..bus import Bus, StateChannel, StreamChannel
 from ..clock import SHARED_CLOCK
 
 
@@ -54,6 +54,10 @@ class CaptureAdapter(ABC):
         self.bus = bus
         self.channel_name = channel
         self.frames: StreamChannel = bus.stream(channel, maxsize=4)
+        # Non-destructive latest-frame snapshot for multiple readers.
+        # A queue cannot be shared by vision/dashboard as a broadcast:
+        # one consumer would drain frames away from the others.
+        self.latest: StateChannel = bus.state(channel + ".latest")
 
     # -- lifecycle ----------------------------------------------------------
     @abstractmethod
@@ -86,6 +90,7 @@ class CaptureAdapter(ABC):
         if extra:
             payload.update(extra)
         self.frames.publish(payload, ts_ns=ts)
+        self.latest.write(payload, ts_ns=ts)
         return payload
 
 
