@@ -337,6 +337,15 @@ def main(argv=None) -> int:
     print(lab.status_line())
     p = lab.write_report_json()
     print("session:", lab.session_dir, "| report:", p)
+    bad = [
+        (w.name, int(w.stats.get("errors", 0)), w.stats.get("last_error"))
+        for w in lab.workers
+        if int(w.stats.get("errors", 0)) > 0
+    ]
+    if bad:
+        print("[lab] worker errors:")
+        for name, count, last_error in bad:
+            print(f"  - {name}: errors={count} last_error={last_error}")
     return 0
 
 
