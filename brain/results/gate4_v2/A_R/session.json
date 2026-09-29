@@ -1,0 +1,98 @@
+{
+ "label": "A_R",
+ "condition": "A_no_plastic",
+ "reward_side": "right",
+ "n_trials": 94,
+ "phase_acquisition": {
+  "n": 28,
+  "n_pref": 8,
+  "p_left_b": 0.75,
+  "p_rewarded_b": 0.25,
+  "mean_V": 17.377,
+  "mean_C": 5.327,
+  "p_left_c": 1.0,
+  "n_pair": 16,
+  "us_delivered": 0,
+  "mean_pam_us_hz": 147.6,
+  "routea_n": 4,
+  "routea_p_left": 0.0
+ },
+ "phase_baseline": {
+  "n": 6,
+  "n_pref": 6,
+  "p_left_b": 0.667,
+  "p_rewarded_b": 0.333,
+  "mean_V": 13.37,
+  "mean_C": 4.646,
+  "p_left_c": 1.0
+ },
+ "phase_context": {
+  "n": 6,
+  "n_pref": 6,
+  "p_left_b": 0.5,
+  "p_rewarded_b": 0.5,
+  "mean_V": 10.974,
+  "mean_C": 4.021,
+  "p_left_c": 1.0
+ },
+ "phase_distractor": {
+  "n": 3,
+  "n_pref": 3,
+  "p_left_b": 0.667,
+  "p_rewarded_b": 0.333,
+  "mean_V": 8.8,
+  "mean_C": 3.775,
+  "p_left_c": 1.0
+ },
+ "phase_extinction": {
+  "n": 12,
+  "n_pref": 12,
+  "p_left_b": 0.417,
+  "p_rewarded_b": 0.583,
+  "mean_V": 0.939,
+  "mean_C": 2.558,
+  "p_left_c": 1.0
+ },
+ "phase_retention": {
+  "n": 11,
+  "n_pref": 3,
+  "p_left_b": 0.0,
+  "p_rewarded_b": 1.0,
+  "mean_V": -9.877,
+  "mean_C": 0.321,
+  "p_left_c": 1.0
+ },
+ "phase_reversal": {
+  "n": 28,
+  "n_pref": 8,
+  "p_left_b": 0.5,
+  "p_rewarded_b": 0.5,
+  "mean_V": 9.313,
+  "mean_C": 3.889,
+  "p_left_c": 1.0,
+  "n_pair": 16,
+  "us_delivered": 0,
+  "mean_pam_us_hz": 147.8,
+  "routea_n": 4,
+  "routea_p_left": 0.0
+ },
+ "session_wall_s": 2020.2,
+ "peak_rss_mb": 3025.9,
+ "cpu_user_s": 2018.3,
+ "bio_s_total": 196.7,
+ "mean_pref_wall_s": 24.4,
+ "final_weight_stats": {
+  "n_synapses": 62261,
+  "mean_scale": 1.0,
+  "frac_below_canonical": 0.0,
+  "approach_class_mean": 1.0,
+  "avoidance_class_mean": 1.0,
+  "min_scale": 1.0
+ },
+ "frozen_params": {
+  "n_cs": 100,
+  "rate_l": 35.0,
+  "rate_r": 75.0
+ },
+ "plan": "GATE4_V2_PREREG.md section 7"
+}
