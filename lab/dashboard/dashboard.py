@@ -300,6 +300,8 @@ class OpenCVDashboardRenderer:
             kind = str(tr.get("kind", "unknown"))
             if kind == "quest_npc":
                 color = (0, 220, 255)
+            elif kind == "hostile_candidate":
+                color = (80, 80, 255)
             else:
                 color = (255, 180, 70)
             cv2.rectangle(canvas, p1, p2, color, 1)
@@ -547,8 +549,9 @@ class OpenCVDashboardRenderer:
         self._put(
             canvas, x0, 715,
             f"ENGINEERED PERCEPTION: target={target.get('type')}  "
-            f"tracked humanoids={notes.get('humanoid_track_count', 0)}  "
-            f"quest NPCs={notes.get('quest_npc_track_count', 0)}",
+            f"unknown={notes.get('humanoid_track_count', 0)}  "
+            f"quest={notes.get('quest_npc_track_count', 0)}  "
+            f"hostile?={notes.get('hostile_candidate_count', 0)}",
             (120, 180, 240), scale=0.34)
         self._put(
             canvas, x0, 736,
