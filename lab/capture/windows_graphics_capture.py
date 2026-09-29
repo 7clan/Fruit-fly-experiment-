@@ -1,38 +1,52 @@
-"""Windows.Graphics.Capture adapter (WINDOWS-ONLY, guarded import).
+"""Windows.Graphics.Capture adapter (WINDOWS-ONLY).
 
-FINAL_ARCHITECTURE.md §9: prefer Windows.Graphics.Capture for acquiring
-frames from the Roblox application window. ONE stream feeds computer
-vision AND the dashboard mirror. Minimize unnecessary CPU memory copies
-where feasible.
+Uses the pinned `windows-capture` Python package, which wraps the native
+Windows.Graphics.Capture API.  Gate 5 remains PASSIVE: this module only
+acquires pixels from the explicitly selected game window and never emits
+keyboard/mouse input.
 
-Implementation notes (honest, pre-implementation skeleton):
-  * Uses the winsdk (Python/WinRT) projection of
-    Windows.Graphics.Capture.GraphicsCaptureItem +
-    Direct3D11CaptureFramePool. Frame arrival is an event callback; we
-    copy the surface ONCE into a numpy buffer (copy_count=1 per frame)
-    and publish it. A zero-copy shared-memory path (sensor fingerprint
-    of the D3D texture to a shared handle) is a later optimization —
-    benchmark first (benchmark_windows.py), optimize second.
-  * Window enumeration: use window title match restricted to the
-    authorized target (GPO/Roblox). The app-level policy (ONLY the
-    authorized game, docs/GPO_PLAN.md §0) is enforced by the caller
-    passing the right window descriptor; this adapter still refuses
-    captures of windows whose title matches DigitalFlyLab itself.
-  * Needs Windows 10 1903+ for the programmatic API; self-test reports
-    the OS build and whether border/window enumeration permission works.
-
-This module is NOT imported by tests/sandbox code; it is only imported
-inside create_windows_capture() after availability checks.
+One native capture session feeds the bus.  Each callback makes exactly one
+owned BGR numpy copy because the package's mapped frame is only guaranteed
+for the callback lifetime; that owned array is then shared by reference with
+vision/dashboard consumers (copy_count=1).
 """
 
 from __future__ import annotations
 
+import ctypes
 import re
+import sys
+from ctypes import wintypes
 from typing import Optional
 
 from ..bus import Bus
-from ..clock import SHARED_CLOCK
 from .base import CaptureAdapter, CaptureError
+
+
+def _visible_top_level_windows() -> list[dict]:
+    if sys.platform != "win32":
+        return []
+    user32 = ctypes.windll.user32
+    out: list[dict] = []
+    enum_proc_t = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+
+    @enum_proc_t
+    def callback(hwnd, _lparam):
+        if not user32.IsWindowVisible(hwnd):
+            return True
+        n = user32.GetWindowTextLengthW(hwnd)
+        if n <= 0:
+            return True
+        buf = ctypes.create_unicode_buffer(n + 1)
+        user32.GetWindowTextW(hwnd, buf, n + 1)
+        title = buf.value.strip()
+        if title:
+            out.append({"title": title, "handle": int(hwnd)})
+        return True
+
+    if not user32.EnumWindows(callback, 0):
+        raise CaptureError("Win32 EnumWindows failed")
+    return out
 
 
 class WindowsGraphicsCaptureAdapter(CaptureAdapter):
@@ -45,77 +59,116 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
         self.target_fps = float(target_fps)
         self._running = False
         self._frame_id = 0
-        self._item = None
-        self._pool = None
-        self._session = None
+        self._capture = None
+        self._control = None
         self._last_error: Optional[str] = None
+        self._target: Optional[dict] = None
 
-    # -- window discovery ------------------------------------------------
     def find_target_window(self) -> dict:
-        """Enumerate top-level windows; return descriptor of the first
-        title match (excluding DigitalFlyLab's own windows)."""
-        try:
-            import winsdk.windows.ui.shell as _shell  # type: ignore
-        except Exception as e:  # pragma: no cover - windows only
-            raise CaptureError(f"winsdk shell enumeration unavailable: {e}")
-        found = None
-        try:
-            items = _shell.FindAllWindows()  # IShellWindow-like helper
-        except Exception as e:  # pragma: no cover
-            raise CaptureError(f"window enumeration failed: {e}")
-        for w in items:
-            title = getattr(w, "Title", "") or ""
+        """Fail closed unless exactly one authorized-title candidate exists."""
+        matches = []
+        for w in _visible_top_level_windows():
+            title = w["title"]
             if "DigitalFlyLab" in title:
                 continue
             if self.window_title_re.search(title):
-                found = {"title": title, "handle": getattr(w, "HWND", None)}
-                break
-        if not found:
+                matches.append(w)
+        if not matches:
             raise CaptureError(
-                f"no window matching {self.window_title_re.pattern!r} — "
-                "is the authorized GPO target running?")
-        return found
+                f"no visible window matching {self.window_title_re.pattern!r}; "
+                "open the authorized GPO game window first")
+        if len(matches) != 1:
+            desc = ", ".join(f"{w['title']!r} (HWND {w['handle']})"
+                             for w in matches)
+            raise CaptureError(
+                "ambiguous target: expected exactly one matching game window; "
+                f"found {len(matches)}: {desc}")
+        return matches[0]
 
-    # -- lifecycle ---------------------------------------------------------
     def start(self, target: Optional[dict] = None) -> None:
-        """Start capture. target: {"kind":"window","title_re":...} or the
-        descriptor returned by find_target_window()."""
         if self._running:
             return
-        desc = target or self.find_target_window()
-        try:
-            import asyncio
-            import winsdk.windows.graphics.capture as wgc
-            import winsdk.windows.graphics.directx as d3d
-            import numpy as np
+        if sys.platform != "win32":
+            raise CaptureError("Windows.Graphics.Capture requires Windows")
 
-            async def _create():
-                interop = (await wgc.GraphicsCaptureItem
-                           .CreateAsync)  # placeholder; see winsdk docs
-                return None
-            # NOTE: full WinRT item creation from HWND uses
-            # GraphicsCaptureItemInterop (statics). winsdk exposes it via
-            # winsdk.windows.graphics.capture.GraphicsCaptureItem — the
-            # exact interop call is exercised by the Windows self-test
-            # (DigitalFlyLab --self-test) and documented there. This
-            # skeleton keeps the architecture honest: construction,
-            # frame-pool sizing, single numpy copy per frame, publish.
-            self._last_error = "windows capture backend pending on-device wiring"
-            raise CaptureError(self._last_error)
-        except CaptureError:
-            raise
-        except Exception as e:  # pragma: no cover
-            raise CaptureError(f"windows capture start failed: {e}")
+        desc = target or self.find_target_window()
+        hwnd = int(desc.get("handle") or 0)
+        title = str(desc.get("title") or "")
+        if hwnd <= 0:
+            raise CaptureError("target descriptor has no valid HWND")
+        if "DigitalFlyLab" in title:
+            raise CaptureError("refusing to capture DigitalFlyLab itself")
+        if not self.window_title_re.search(title):
+            raise CaptureError(
+                f"target title {title!r} does not match authorized pattern "
+                f"{self.window_title_re.pattern!r}")
+
+        try:
+            from windows_capture import (
+                Frame, InternalCaptureControl, WindowsCapture)
+        except Exception as e:
+            raise CaptureError(
+                "windows-capture 2.0.1 is required; run setup or the "
+                f"Windows capture probe installer first: {e}") from e
+
+        interval_ms = max(1, int(round(1000.0 / max(self.target_fps, 1.0))))
+        capture = WindowsCapture(
+            cursor_capture=False,
+            draw_border=False,
+            monitor_index=None,
+            window_hwnd=hwnd,
+            minimum_update_interval=interval_ms,
+        )
+
+        @capture.event
+        def on_frame_arrived(frame: Frame,
+                             capture_control: InternalCaptureControl):
+            if not self._running:
+                capture_control.stop()
+                return
+            try:
+                # Native mapped frame lifetime ends after callback: one owned
+                # copy is necessary and is the only pixel copy at capture.
+                img = frame.convert_to_bgr().frame_buffer.copy()
+                self._frame_id += 1
+                self.publish_frame(
+                    self._frame_id,
+                    int(frame.width),
+                    int(frame.height),
+                    data_ref=img,
+                    fmt="bgr",
+                    copy_count=1,
+                    extra={"window_title": title, "window_hwnd": hwnd},
+                )
+            except Exception as e:
+                self._last_error = repr(e)
+                self._running = False
+                capture_control.stop()
+
+        @capture.event
+        def on_closed():
+            self._running = False
+
+        self._capture = capture
+        self._target = {"title": title, "handle": hwnd}
+        self._running = True
+        try:
+            self._control = capture.start_free_threaded()
+        except Exception as e:
+            self._running = False
+            self._capture = None
+            raise CaptureError(f"Windows.Graphics.Capture start failed: {e}") from e
 
     def stop(self) -> None:
         self._running = False
-        try:
-            if self._session is not None:
-                self._session.Close()
-        except Exception:
-            pass
-        self._pool = None
-        self._item = None
+        ctl = self._control
+        self._control = None
+        if ctl is not None:
+            try:
+                ctl.stop()
+            except Exception:
+                pass
+        self._capture = None
 
     def is_running(self) -> bool:
         return self._running
