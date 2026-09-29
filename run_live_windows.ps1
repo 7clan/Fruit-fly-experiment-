@@ -15,7 +15,20 @@ if (-not (Test-Path $brainPython)) {
     throw "Brain venv missing; run .\\setup_windows.ps1 first"
 }
 
+$transportCheck = & $mainPython -c "import inspect; from lab.brain.subprocess_runtime import CanonicalBrainSubprocessRuntime as R; print(R.transport_label); print(inspect.getfile(R))"
+if ($LASTEXITCODE -ne 0) {
+    throw "Could not import the local brain subprocess runtime."
+}
+$transportLines = @($transportCheck)
+$transportLabel = if ($transportLines.Count -ge 1) { $transportLines[0].Trim() } else { "" }
+$transportFile = if ($transportLines.Count -ge 2) { $transportLines[1].Trim() } else { "" }
+if ($transportLabel -ne "subprocess_pipe") {
+    throw "STALE CHECKOUT: expected transport=subprocess_pipe but loaded '$transportLabel' from '$transportFile'. Actually Fetch + Pull in GitHub Desktop, then run again."
+}
+
 Write-Host "== DigitalFlyLab LIVE PASSIVE dashboard ==" -ForegroundColor Cyan
+Write-Host "Brain transport: $transportLabel" -ForegroundColor Green
+Write-Host "Runtime source: $transportFile" -ForegroundColor DarkGray
 Write-Host "Canonical brain runs in its own process. No game input is emitted." -ForegroundColor Yellow
 Write-Host "Press Ctrl+C in this PowerShell window to stop." -ForegroundColor Yellow
 
