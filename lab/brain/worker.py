@@ -97,8 +97,14 @@ class BrainWorker(Worker):
     def on_stop(self) -> None:
         self.runtime.close()
 
-    def stop(self, join_timeout: float = 8.0) -> None:
-        """Stop cleanly even when a canonical chunk is still in flight."""
+    def stop(self, join_timeout: float = 2.0) -> None:
+        """Stop cleanly even when a canonical chunk is still in flight.
+
+        The canonical subprocess can spend many wall-seconds inside one
+        50 ms biological chunk on the target laptop. During shutdown we do
+        not wait for that whole chunk: after a short grace period, terminate
+        the isolated child so Ctrl+C feels responsive.
+        """
         self.stop_event.set()
         th = self._thread
         if th is None:
