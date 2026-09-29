@@ -310,6 +310,9 @@ class CanonicalBrianRuntime:
                               for k, v in sensory_rates_hz.items()},
             ts_ns=time.monotonic_ns(),
             n_spikes_new=rec.get("n_spikes_new", 0),
+            n_active_new=rec.get("n_active_new", 0),
+            active_flywire_ids_sample=rec.get(
+                "active_flywire_ids_sample", []),
             rss_kb=rec.get("rss_kb"),
         )
 
