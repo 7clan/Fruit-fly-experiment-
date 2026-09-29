@@ -184,7 +184,8 @@ class OpenCVDashboardRenderer:
     name = "opencv"
 
     def __init__(self, window_name: str = "DigitalFlyLab",
-                 width: int = 1440, height: int = 810):
+                 width: int = 1440, height: int = 810,
+                 evidence_dir=None):
         try:
             import cv2  # noqa: F401
         except Exception as e:
@@ -195,6 +196,11 @@ class OpenCVDashboardRenderer:
         self.width, self.height = width, height
         self._history = deque(maxlen=90)
         self._last_chunk_id = None
+        self._evidence_dir = evidence_dir
+        if self._evidence_dir is not None:
+            from pathlib import Path
+            self._evidence_dir = Path(self._evidence_dir)
+            self._evidence_dir.mkdir(parents=True, exist_ok=True)
 
     def render(self, snap: Snapshot, mirror_env=None) -> None:
         cv2 = self._cv2
@@ -242,6 +248,29 @@ class OpenCVDashboardRenderer:
         cv2.circle(canvas, (x, y), radius, (180, 180, 180), 1, cv2.LINE_AA)
         self._put(canvas, x + 24, y + 4, f"{label} {rate:.1f} Hz",
                   (215, 215, 215), scale=0.36)
+
+    def _save_evidence_frame(self, mirror_env, chunk_id):
+        """Save one raw game frame per completed brain chunk.
+
+        This is deliberately low-rate (the canonical brain is slow), so it
+        provides visual evidence for replay analysis without turning the run
+        into a video recorder or adding meaningful capture load.
+        """
+        if self._evidence_dir is None or mirror_env is None:
+            return
+        try:
+            img = mirror_env.payload.get("data_ref")
+            if img is None:
+                return
+            if img.ndim == 3 and img.shape[2] == 4:
+                img = self._cv2.cvtColor(img, self._cv2.COLOR_BGRA2BGR)
+            path = self._evidence_dir / f"brain_chunk_{int(chunk_id):06d}.jpg"
+            self._cv2.imwrite(
+                str(path), img,
+                [int(self._cv2.IMWRITE_JPEG_QUALITY), 82])
+        except Exception:
+            # Evidence capture must never affect the live pipeline.
+            pass
 
     def _draw_game(self, canvas, mirror_env, obs, game_w):
         cv2 = self._cv2
@@ -429,6 +458,7 @@ class OpenCVDashboardRenderer:
                 "active": brain.get("n_active_new", 0),
                 "spikes": brain.get("n_spikes_new", 0),
             })
+            self._save_evidence_frame(mirror_env, chunk_id)
 
         self._put(canvas, x0, 28, "DIGITAL DROSOPHILA — LIVE NEURAL ACTIVITY",
                   (120, 230, 120), scale=0.54, thickness=1)
