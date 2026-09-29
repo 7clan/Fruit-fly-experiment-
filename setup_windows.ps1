@@ -5,7 +5,7 @@
 #   powershell -ExecutionPolicy Bypass -File setup_windows.ps1
 #
 # What it does:
-#   1. checks Python 3.11+ (py launcher)
+#   1. checks Python 3.12 specifically (required by pinned Brian2/NumPy/SciPy stack)
 #   2. creates the main .venv + installs requirements.txt
 #   3. clones + verifies the pinned third-party brain model (fail-closed)
 #   4. creates the brain venv with pinned brian2 (via setup_model.py env)
@@ -19,17 +19,30 @@ Set-Location $root
 Write-Host "== DigitalFlyLab setup ==" -ForegroundColor Cyan
 
 # --- 1. Python -----------------------------------------------------------------
-$py = Get-Command py -ErrorAction SilentlyContinue
-if (-not $py) { $py = Get-Command python -ErrorAction SilentlyContinue }
-if (-not $py) {
-    throw "Python not found. Install Python 3.11+ from python.org (check 'Add to PATH')."
+$pyLauncher = Get-Command py -ErrorAction SilentlyContinue
+if (-not $pyLauncher) {
+    throw "Python launcher 'py' not found. Install Python 3.12 from python.org with the launcher enabled."
 }
-& $py.Source --version
-Write-Host "Python OK" -ForegroundColor Green
+$py312 = & $pyLauncher.Source -3.12 -c "import sys; print(sys.executable)" 2>$null
+if ($LASTEXITCODE -ne 0 -or -not $py312) {
+    throw "Python 3.12 is required by the pinned Brian2 2.10.1 / NumPy 2.5.3 / SciPy 1.18.1 stack. Install Python 3.12, then rerun setup."
+}
+$py312 = $py312.Trim()
+& $py312 --version
+Write-Host "Python 3.12 OK" -ForegroundColor Green
 
 # --- 2. main venv -------------------------------------------------------------
+$recreateMainVenv = $false
+if (Test-Path ".venv\Scripts\python.exe") {
+    $mainVer = & .\.venv\Scripts\python.exe -c "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+    if ($mainVer.Trim() -ne "3.12") { $recreateMainVenv = $true }
+}
+if ($recreateMainVenv) {
+    Write-Host "Recreating main venv with Python 3.12 (old venv used $mainVer) ..." -ForegroundColor Yellow
+    Remove-Item -Recurse -Force ".venv"
+}
 if (-not (Test-Path ".venv")) {
-    & $py.Source -m venv .venv
+    & $py312 -m venv .venv
 }
 & .\.venv\Scripts\python.exe -m pip install --upgrade pip --quiet
 & .\.venv\Scripts\python.exe -m pip install -r requirements.txt
