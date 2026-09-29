@@ -57,18 +57,28 @@ class Worker:
 
     def _run(self) -> None:
         self.stats["started"] = True
-        self.on_start()
-        while not self.stop_event.is_set():
-            self.governor.tick()
-            t0 = self.clock.now_ns()
+        try:
+            self.on_start()
+            while not self.stop_event.is_set():
+                self.governor.tick()
+                t0 = self.clock.now_ns()
+                try:
+                    self.step()
+                    self.stats["steps"] += 1
+                except Exception as e:  # noqa: BLE001 — keep the loop alive
+                    self.stats["errors"] += 1
+                    self.stats["last_error"] = repr(e)
+                self.stats["last_step_ms"] = self.clock.elapsed_ms(t0)
+        except Exception as e:  # startup failures must be visible in reports
+            self.stats["errors"] += 1
+            self.stats["last_error"] = repr(e)
+            self.stats["startup_failed"] = True
+        finally:
             try:
-                self.step()
-                self.stats["steps"] += 1
-            except Exception as e:  # noqa: BLE001 — keep the loop alive
+                self.on_stop()
+            except Exception as e:  # cleanup failures are also real failures
                 self.stats["errors"] += 1
                 self.stats["last_error"] = repr(e)
-            self.stats["last_step_ms"] = self.clock.elapsed_ms(t0)
-        self.on_stop()
 
     def stop(self, join_timeout: float = 2.0) -> None:
         self.stop_event.set()
