@@ -183,13 +183,21 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
                 "windows-capture 2.0.1 is required; run setup or the "
                 f"Windows capture probe installer first: {e}") from e
 
-        interval_ms = max(1, int(round(1000.0 / max(self.target_fps, 1.0))))
+        # Older Windows.Graphics.Capture implementations (including
+        # Windows 10 builds) may reject attempts to toggle optional session
+        # properties such as border/cursor capture.  Passing None leaves
+        # those properties at the platform default instead of calling the
+        # unsupported setter.  We also leave minimum_update_interval unset;
+        # the bus is bounded/latest-wins, so excess frames are dropped rather
+        # than queued.
         capture = WindowsCapture(
-            cursor_capture=False,
-            draw_border=False,
+            cursor_capture=None,
+            draw_border=None,
+            secondary_window=None,
+            dirty_region=None,
             monitor_index=None,
             window_hwnd=hwnd,
-            minimum_update_interval=interval_ms,
+            minimum_update_interval=None,
         )
 
         @capture.event
