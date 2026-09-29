@@ -16,6 +16,7 @@ from __future__ import annotations
 import ctypes
 import re
 import sys
+import time
 from ctypes import wintypes
 from typing import Optional
 
@@ -131,6 +132,7 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
         self._control = None
         self._last_error: Optional[str] = None
         self._target: Optional[dict] = None
+        self._last_publish_mono = 0.0
 
     def find_target_window(self) -> dict:
         """Fail closed unless exactly one authorized-title candidate exists."""
@@ -206,6 +208,11 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
             if not self._running:
                 capture_control.stop()
                 return
+            now = time.perf_counter()
+            min_dt = 1.0 / max(self.target_fps, 0.1)
+            if self._last_publish_mono and now - self._last_publish_mono < min_dt:
+                return
+            self._last_publish_mono = now
             try:
                 # Best measured full-resolution path on the target
                 # Windows laptop: OpenCV performs the required BGRA->BGR
