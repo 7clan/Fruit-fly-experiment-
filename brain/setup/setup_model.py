@@ -49,8 +49,27 @@ def sha256(path: Path):
 def cmd_clone(args):
     if MODEL_DIR.exists():
         print(f"[clone] already present at {MODEL_DIR} (HEAD {git_head()[:12]})")
+        # Git for Windows commonly enables core.autocrlf globally.  If this
+        # checkout was created before we disabled it, changing the config
+        # alone is not enough: the existing worktree can still contain CRLF
+        # bytes.  Force a fresh checkout from the pinned Git objects so the
+        # byte-level manifest below is identical on Windows/Linux.
+        run(["git", "-C", str(MODEL_DIR), "config", "core.autocrlf", "false"])
         if git_head() != PINNED_COMMIT:
-            print(f"[clone] WARNING: HEAD != pinned {PINNED_COMMIT[:12]}")
+            print(f"[clone] restoring pinned commit {PINNED_COMMIT[:12]} ...")
+        run(["git", "-C", str(MODEL_DIR), "checkout", "-f", PINNED_COMMIT])
+        if sys.platform == "win32":
+            # checkout -f can leave files untouched when only the worktree
+            # representation changed.  Remove tracked worktree files (not
+            # .git), then restore them from the index with autocrlf disabled.
+            tracked = run(["git", "-C", str(MODEL_DIR), "ls-files", "-z"]).stdout
+            for rel in tracked.split("\0"):
+                if not rel:
+                    continue
+                p = MODEL_DIR / rel
+                if p.is_file() or p.is_symlink():
+                    p.unlink()
+            run(["git", "-C", str(MODEL_DIR), "checkout-index", "-a", "-f"])
         return
     MODEL_DIR.parent.mkdir(parents=True, exist_ok=True)
     print(f"[clone] cloning {REPO_URL} ...")
