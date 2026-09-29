@@ -7,7 +7,8 @@
 
 param(
     [switch]$Canonical,
-    [int]$Seconds = 30
+    [int]$Seconds = 30,
+    [double]$CaptureFps = 5.0
 )
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
@@ -33,5 +34,5 @@ if ($Canonical) {
     Write-Host ("Canonical brain: measured settings chunk={0} ms, target={1} Hz; PASSIVE/SHADOW only." -f $chunkMs, $brainHz) -ForegroundColor Yellow
 }
 
-& $python -m lab.app --runtime $runtime --seconds $Seconds --chunk-ms $chunkMs --brain-hz $brainHz --dashboard
+& $python -m lab.app --runtime $runtime --seconds $Seconds --capture-fps $CaptureFps --chunk-ms $chunkMs --brain-hz $brainHz --dashboard
 exit $LASTEXITCODE
