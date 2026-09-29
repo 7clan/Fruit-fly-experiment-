@@ -35,7 +35,8 @@ from .bus import Bus, BusMode
 from .capture.base import (CaptureAdapter, SyntheticCapture,
                            create_windows_capture)
 from .clock import SHARED_CLOCK
-from .dashboard.dashboard import (DashboardWorker, TextDashboardRenderer)
+from .dashboard.dashboard import (
+    DashboardWorker, OpenCVDashboardRenderer, TextDashboardRenderer)
 from .perception.channel_encoder import FlyChannelEncoder
 from .perception.fast_vision import FastVisionWorker
 from .perception.heavy_vision import HeavyVisionWorker
@@ -57,6 +58,7 @@ class DigitalFlyLab:
                  mode: BusMode = BusMode.THREADED,
                  autonomy: bool = False,
                  dashboard: bool = True,
+                 dashboard_renderer: str = "text",
                  brain_hz: float = 10.0,
                  fast_hz: float = 24.0, heavy_hz: float = 8.0,
                  executor_hz: float = 40.0, planner_hz: float = 1.0,
@@ -94,10 +96,18 @@ class DigitalFlyLab:
                                       backend=SafeNoopBackend(),
                                       autonomy_enabled=autonomy)
         self.replay = ReplayRecorder(self.bus, self.session_dir)
-        self.dashboard = DashboardWorker(
-            self.bus, target_hz=dashboard_hz,
-            renderer=TextDashboardRenderer() if dashboard else None) \
-            if dashboard else None
+        if dashboard:
+            if dashboard_renderer == "opencv":
+                renderer = OpenCVDashboardRenderer()
+            elif dashboard_renderer == "text":
+                renderer = TextDashboardRenderer()
+            else:
+                raise ValueError(
+                    f"unknown dashboard_renderer {dashboard_renderer!r}")
+            self.dashboard = DashboardWorker(
+                self.bus, target_hz=dashboard_hz, renderer=renderer)
+        else:
+            self.dashboard = None
         self.workers = [self.fast_vision, self.heavy_vision, self.planner,
                         self.encoder, self.brain, self.executor,
                         self.replay] + ([self.dashboard] if self.dashboard else [])
@@ -228,6 +238,9 @@ def main(argv=None) -> int:
     ap.add_argument("--brain-codegen", choices=["numpy", "cython"], default=None,
                     help="canonical runtime codegen target for measured comparison")
     ap.add_argument("--dashboard", action="store_true")
+    ap.add_argument("--dashboard-ui", action="store_true",
+                    help="show the OpenCV live fly-brain dashboard window")
+    ap.add_argument("--dashboard-hz", type=float, default=5.0)
     ap.add_argument("--autonomy", action="store_true",
                     help="DANGER: enables input emission (gated in app policy)")
     args = ap.parse_args(argv)
@@ -248,7 +261,10 @@ def main(argv=None) -> int:
                         capture_fps=args.capture_fps,
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
                         brain_hz=args.brain_hz, fast_hz=args.fast_hz,
-                        heavy_hz=args.heavy_hz, dashboard=args.dashboard,
+                        heavy_hz=args.heavy_hz,
+                        dashboard=(args.dashboard or args.dashboard_ui),
+                        dashboard_renderer=("opencv" if args.dashboard_ui else "text"),
+                        dashboard_hz=args.dashboard_hz,
                         brain_codegen=args.brain_codegen)
     lab.start()
     try:
