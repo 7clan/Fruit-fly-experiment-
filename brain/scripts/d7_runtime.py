@@ -47,7 +47,6 @@ import copy
 import hashlib
 import json
 import os
-import resource
 import sys
 import time
 from pathlib import Path
@@ -396,7 +395,16 @@ def cpu_times():
 
 
 def child_peak_rss_mb():
-    return round(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024, 1)
+    """Peak child RSS where the platform exposes it.
+
+    Python's Unix-only resource module does not exist on Windows; the
+    Windows live benchmark does not require this child-process metric.
+    """
+    try:
+        import resource
+        return round(resource.getrusage(resource.RUSAGE_CHILDREN).ru_maxrss / 1024, 1)
+    except Exception:
+        return -1.0
 
 
 def _is_standalone():
@@ -600,7 +608,7 @@ def _bench_worker(args):
                for _ in range(int(t_ms / chunk_ms))]
         walls = np.array([r["wall_s"] for r in per])
         spikes = sum(r["n_spikes_new"] for r in per)
-        ru = resource.getrusage(resource.RUSAGE_SELF)
+        ct = cpu_times()
         rec = dict(
             mode="interactive", n_neurons=brain.n_neurons, chunk_ms=chunk_ms,
             t_bio_s=t_ms / 1000.0, n_chunks=len(per),
@@ -613,7 +621,7 @@ def _bench_worker(args):
                 float(np.percentile(walls, 95) * 1000), 1),
             decision_latency_wall_ms_max=round(float(walls.max() * 1000), 1),
             bio_ms_per_decision=chunk_ms, n_spikes=spikes,
-            cpu_user_s=round(ru.ru_utime, 1), cpu_sys_s=round(ru.ru_stime, 1),
+            cpu_user_s=ct["user_s"], cpu_sys_s=ct["sys_s"],
             peak_rss_mb=round(bl.peak_rss_kb() / 1024, 1),
             machine=bl.cpu_info(),
         )
@@ -732,7 +740,7 @@ def main():
                 t_total += dur
             walls = np.array(brain.chunk_walls)
             spikes = sum(len(v) for v in brain.spike_trains().values())
-            ru = resource.getrusage(resource.RUSAGE_SELF)
+            ct = cpu_times()
             rec = dict(mode="interactive", n_neurons=brain.n_neurons,
                        chunk_ms=args.chunk_ms, n_chunks=len(brain.chunk_walls),
                        wall_s=round(float(walls.sum()), 3),
@@ -745,8 +753,8 @@ def main():
                        chunk_wall_ms_max=round(float(walls.max() * 1000), 1),
                        n_spikes=spikes,
                        peak_rss_mb=round(bl.peak_rss_kb() / 1024, 1),
-                       cpu_user_s=round(ru.ru_utime, 1),
-                       cpu_sys_s=round(ru.ru_stime, 1))
+                       cpu_user_s=ct["user_s"],
+                       cpu_sys_s=ct["sys_s"])
         if args.spikes_out:
             Path(args.spikes_out).write_text(brain.canonical_spikes_text())
         Path(args.rec_out).write_text(json.dumps(rec, indent=1, default=str))
