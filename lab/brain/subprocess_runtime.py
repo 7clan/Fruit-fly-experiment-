@@ -110,6 +110,12 @@ class CanonicalBrainSubprocessRuntime:
         ]
         env = os.environ.copy()
         env.setdefault("PYTHONUTF8", "1")
+        creationflags = 0
+        if os.name == "nt":
+            # Keep Ctrl+C in the parent console from being delivered to the
+            # isolated canonical-brain child. The parent owns shutdown and
+            # will terminate the child explicitly after its grace period.
+            creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
         self._proc = subprocess.Popen(
             cmd,
             cwd=str(AGENT_ROOT),
@@ -121,6 +127,7 @@ class CanonicalBrainSubprocessRuntime:
             errors="replace",
             bufsize=1,
             env=env,
+            creationflags=creationflags,
         )
         self._stderr_thread = threading.Thread(
             target=self._drain_stderr,
