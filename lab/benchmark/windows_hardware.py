@@ -279,33 +279,75 @@ def bench_canonical_brain(chunk_sizes_ms=(50.0, 100.0), n_chunks=20) -> dict:
 
 def choose_live_settings(pipeline_bench: dict,
                          canonical_bench: dict | None) -> dict:
-    """Pick CONSERVATIVE rates from MEASURED values (safety margin 0.7)."""
+    """Pick CONSERVATIVE rates from MEASURED values (safety margin 0.7).
+
+    The synthetic assembled-pipeline benchmark uses the explicit MOCK brain,
+    so it may size capture/vision/executor rates but MUST NOT be used to claim
+    canonical-brain decision throughput or the 250 ms target.  When canonical
+    timing is available, the selected canonical chunk P95 controls brain_hz
+    and the latency verdict.
+    """
     s = pipeline_bench["stage_latency"]
-    brain_wall_ms = (s.get("brain_chunk_wall", {}).get("p95_ms") or 100.0)
-    s2a_p95 = (s.get("full_sensory_to_action", {}).get("p95_ms") or 999.0)
-    brain_hz = min(10.0, 1000.0 / max(brain_wall_ms, 1.0) * 0.7)
+    mock_brain_wall_ms = (s.get("brain_chunk_wall", {}).get("p95_ms")
+                          or 100.0)
+    mock_s2a_p95 = (s.get("full_sensory_to_action", {}).get("p95_ms")
+                    or 999.0)
+
+    selected_chunk_ms = 50 if mock_brain_wall_ms <= 200 else 100
+    selected_brain_p95 = None
+
     settings = {
         "derived_from": "measured",
         "margin": 0.7,
         "capture_fps": 30,
         "fast_vision_hz": 24,
         "heavy_vision_hz": 8,
-        "brain_hz": round(max(1.0, brain_hz), 2),
-        "brain_chunk_ms": 50 if brain_wall_ms <= 200 else 100,
         "motor_executor_hz": 40,
         "planner_hz": 1.0,
         "dashboard_hz": 15,
-        "measured_s2a_p95_ms": round(s2a_p95, 1),
+        "measured_mock_pipeline_s2a_p95_ms": round(mock_s2a_p95, 1),
         "s2a_target_ms": 250.0,
-        "s2a_target_met": bool(s2a_p95 <= 250.0),
     }
+
     if canonical_bench and canonical_bench.get("available"):
         c50 = canonical_bench["per_chunk"].get("50ms", {}).get("p95_ms")
         c100 = canonical_bench["per_chunk"].get("100ms", {}).get("p95_ms")
-        if c50 and c100:
+        if c50:
             settings["canonical_50ms_p95_ms"] = c50
+        if c100:
             settings["canonical_100ms_p95_ms"] = c100
-            settings["brain_chunk_ms"] = 50 if c50 <= 200 else 100
+
+        if c50 and c50 <= 200:
+            selected_chunk_ms = 50
+            selected_brain_p95 = c50
+        elif c100:
+            selected_chunk_ms = 100
+            selected_brain_p95 = c100
+        elif c50:
+            selected_chunk_ms = 50
+            selected_brain_p95 = c50
+
+    if selected_brain_p95 is not None:
+        # Canonical brain is the limiting live decision stage.  Never impose
+        # an artificial >=1 Hz floor: if the laptop measures below 1 Hz, the
+        # settings and Gate-5 readiness must say so.
+        brain_hz = min(10.0, 1000.0 / max(selected_brain_p95, 1.0) * 0.7)
+        # Conservative estimate: measured canonical chunk P95 plus the mock
+        # pipeline's measured end-to-end overhead.  This is explicitly an
+        # estimate, not a fabricated canonical end-to-end measurement.
+        canonical_est_s2a = selected_brain_p95 + mock_s2a_p95
+        settings["canonical_selected_chunk_p95_ms"] = selected_brain_p95
+        settings["estimated_canonical_s2a_p95_ms"] = round(
+            canonical_est_s2a, 1)
+        settings["measured_s2a_p95_ms"] = round(canonical_est_s2a, 1)
+        settings["s2a_target_met"] = bool(canonical_est_s2a <= 250.0)
+    else:
+        brain_hz = min(10.0, 1000.0 / max(mock_brain_wall_ms, 1.0) * 0.7)
+        settings["measured_s2a_p95_ms"] = round(mock_s2a_p95, 1)
+        settings["s2a_target_met"] = bool(mock_s2a_p95 <= 250.0)
+
+    settings["brain_hz"] = round(max(0.01, brain_hz), 2)
+    settings["brain_chunk_ms"] = selected_chunk_ms
     return settings
 
 
