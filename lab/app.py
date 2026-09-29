@@ -186,6 +186,7 @@ def main(argv=None) -> int:
     ap.add_argument("--runtime", default="mock", choices=["mock", "canonical"])
     ap.add_argument("--seconds", type=float, default=10.0)
     ap.add_argument("--chunk-ms", type=float, default=50.0)
+    ap.add_argument("--brain-hz", type=float, default=10.0)
     ap.add_argument("--dashboard", action="store_true")
     ap.add_argument("--autonomy", action="store_true",
                     help="DANGER: enables input emission (gated in app policy)")
@@ -204,7 +205,7 @@ def main(argv=None) -> int:
         return 0 if res["ok"] else 1
 
     lab = DigitalFlyLab(runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
-                        dashboard=args.dashboard)
+                        brain_hz=args.brain_hz, dashboard=args.dashboard)
     lab.start()
     try:
         if isinstance(lab.capture, SyntheticCapture):
