@@ -32,6 +32,7 @@ from ..bus import Bus, StateChannel, StreamChannel
 from ..schemas import (AbilityAvailability, EnemyState, PlayerState,
                        TargetState, UIState, WorldObservation)
 from ..worker import Worker
+from .entity_tracker import SimpleTrackletTracker
 
 
 class FastVisionWorker(Worker):
@@ -228,7 +229,10 @@ class GPOHeuristicFastVision:
     visually coincident/touching, matching the fly-channel contract.
     """
 
-    name = "gpo_heuristic_v1"
+    name = "gpo_heuristic_v2"
+
+    def __init__(self):
+        self._tracker = SimpleTrackletTracker(max_misses=4, center_gate=0.08)
 
     def warmup(self) -> None:
         # OpenCV is optional outside the Windows/live environment; avoid
@@ -260,6 +264,89 @@ class GPOHeuristicFastVision:
         best_width = max(candidates)[0]
         calibrated_full_width = max(1.0, 0.153 * w)
         return float(max(0.0, min(1.0, best_width / calibrated_full_width)))
+
+    def _humanoid_proposals(self, img, player_xy, quest_xy=None):
+        """Cheap scene proposals; semantics come from temporal/context evidence.
+
+        The detector deliberately calls these humanoid *candidates*. A track is
+        not promoted to EnemyState merely because it looks avatar-like.
+        """
+        import cv2
+
+        h, w = img.shape[:2]
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        edge = cv2.Canny(gray, 50, 120).astype(np.float32) / 255.0
+
+        roi = np.zeros((h, w), dtype=np.uint8)
+        roi[int(0.22 * h):int(0.68 * h),
+            int(0.04 * w):int(0.96 * w)] = 1
+
+        # Window sizes are calibrated around the existing 640px detection
+        # width but scale with resolution. Native box filters keep this cheap.
+        scale = w / 640.0
+        sizes = [
+            (max(8, int(12 * scale)), max(16, int(24 * scale))),
+            (max(10, int(16 * scale)), max(20, int(32 * scale))),
+            (max(12, int(20 * scale)), max(24, int(40 * scale))),
+            (max(14, int(24 * scale)), max(28, int(48 * scale))),
+        ]
+        raw = []
+        peak_kernel = np.ones((13, 13), dtype=np.uint8)
+        for ww, hh in sizes:
+            density = cv2.boxFilter(
+                edge, -1, (ww, hh), normalize=True,
+                borderType=cv2.BORDER_REPLICATE)
+            local_max = cv2.dilate(density, peak_kernel)
+            mask = ((density >= 0.19)
+                    & (density >= local_max - 1e-6)
+                    & (roi > 0))
+            ys, xs = np.where(mask)
+            if len(xs) == 0:
+                continue
+            vals = density[ys, xs]
+            order = np.argsort(vals)[::-1][:30]
+            for j in order:
+                cx, cy = float(xs[j]), float(ys[j])
+                # Do not rediscover the player's own central avatar.
+                if (abs(cx - player_xy[0]) < 0.10 * w
+                        and abs(cy - player_xy[1]) < 0.16 * h):
+                    continue
+                x1 = max(0.0, cx - ww * 0.5)
+                y1 = max(0.0, cy - hh * 0.5)
+                x2 = min(float(w), cx + ww * 0.5)
+                y2 = min(float(h), cy + hh * 0.5)
+                raw.append((float(vals[j]), x1, y1, x2, y2))
+
+        # Center-distance NMS. We want proposals, not dozens of overlapping
+        # windows around the same avatar/fence.
+        selected = []
+        min_sep2 = (0.028 * w) ** 2
+        for score, x1, y1, x2, y2 in sorted(raw, reverse=True):
+            cx, cy = (x1 + x2) * 0.5, (y1 + y2) * 0.5
+            if any((cx - q[1]) ** 2 + (cy - q[2]) ** 2 < min_sep2
+                   for q in selected):
+                continue
+            selected.append((score, cx, cy, x1, y1, x2, y2))
+            if len(selected) >= 14:
+                break
+
+        out = []
+        for score, cx, cy, x1, y1, x2, y2 in selected:
+            kind = "humanoid_unknown"
+            confidence = max(0.15, min(0.60, (score - 0.17) * 3.2))
+            if quest_xy is not None:
+                qdx = abs(cx - quest_xy[0]) / max(w, 1)
+                qdy = (cy - quest_xy[1]) / max(h, 1)
+                # QUEST marker sits above/near its NPC.
+                if qdx < 0.07 and -0.02 <= qdy < 0.22:
+                    kind = "quest_npc"
+                    confidence = max(confidence, 0.62)
+            out.append({
+                "bbox": [x1 / w, y1 / h, x2 / w, y2 / h],
+                "kind": kind,
+                "confidence": confidence,
+            })
+        return out
 
     def detect(self, img: np.ndarray) -> dict:
         import cv2
@@ -318,6 +405,7 @@ class GPOHeuristicFastVision:
                               float(cx), float(cy)))
 
         target_found = False
+        quest_xy = None
         if comps:
             main = max(comps, key=lambda q: q[0])
             mcx, mcy = main[5], main[6]
@@ -340,6 +428,7 @@ class GPOHeuristicFastVision:
                 "distance": float(proximity),
                 "confidence": confidence,
             }
+            quest_xy = (float(tx), float(ty))
             target_found = True
         else:
             target = {
@@ -366,6 +455,15 @@ class GPOHeuristicFastVision:
             "stamina": stamina,
             "health_units": "fraction" if health is not None else "unknown",
         }
+
+        proposals = self._humanoid_proposals(
+            img, player_xy=(px, py), quest_xy=quest_xy)
+        entity_tracks = self._tracker.update(proposals)
+        stable_tracks = [
+            t for t in entity_tracks
+            if t["hits"] >= 2 and t["misses"] == 0
+        ]
+
         ui = {
             "loading": False,
             "dialogue": False,
@@ -383,7 +481,14 @@ class GPOHeuristicFastVision:
                 "quest_marker_detected": target_found,
                 "health_bar_detected": health is not None,
                 "stamina_bar_detected": stamina is not None,
-                "enemy_detector": "not_yet_calibrated",
+                "entity_tracks": stable_tracks,
+                "humanoid_track_count": sum(
+                    1 for t in stable_tracks
+                    if t["kind"] == "humanoid_unknown"),
+                "quest_npc_track_count": sum(
+                    1 for t in stable_tracks
+                    if t["kind"] == "quest_npc"),
+                "enemy_detector": "tracked_candidates_not_yet_promoted",
             },
         }
 
