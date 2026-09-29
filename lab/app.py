@@ -24,6 +24,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import signal
 import time
 from pathlib import Path
 
@@ -333,6 +334,14 @@ def main(argv=None) -> int:
     except KeyboardInterrupt:
         pass
     finally:
+        # First Ctrl+C requests shutdown. Ignore additional Ctrl+C presses
+        # while workers are draining/terminating so cleanup and the session
+        # report cannot be interrupted halfway through.
+        try:
+            signal.signal(signal.SIGINT, signal.SIG_IGN)
+        except Exception:
+            pass
+        print("[lab] stopping; please wait for cleanup/report...", flush=True)
         rep = lab.stop()
     print(lab.status_line())
     p = lab.write_report_json()
