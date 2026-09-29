@@ -197,6 +197,8 @@ class OpenCVDashboardRenderer:
         # LEFT: live mirror (same stream as vision)
         if mirror_env is not None and mirror_env.payload.get("data_ref") is not None:
             img = mirror_env.payload["data_ref"]
+            if img.ndim == 3 and img.shape[2] == 4:
+                img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
             h, w = img.shape[:2]
             scale = min((self.width * 0.5) / w, self.height / h)
             mirror = cv2.resize(img, (int(w * scale), int(h * scale)))
