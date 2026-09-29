@@ -36,7 +36,7 @@ from .capture.base import (CaptureAdapter, SyntheticCapture,
                            create_windows_capture)
 from .clock import SHARED_CLOCK
 from .dashboard.dashboard import (
-    DashboardWorker, OpenCVDashboardRenderer, TextDashboardRenderer)
+    DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
 from .perception.channel_encoder import FlyChannelEncoder
 from .perception.fast_vision import FastVisionWorker
 from .perception.heavy_vision import HeavyVisionWorker
@@ -96,9 +96,13 @@ class DigitalFlyLab:
                                       backend=SafeNoopBackend(),
                                       autonomy_enabled=autonomy)
         self.replay = ReplayRecorder(self.bus, self.session_dir)
+        self.dashboard_ui = None
         if dashboard:
             if dashboard_renderer == "opencv":
-                renderer = OpenCVDashboardRenderer()
+                # OpenCV HighGUI is substantially more stable on Windows
+                # when imshow/waitKey are pumped by the main thread.
+                self.dashboard_ui = OpenCVDashboardRenderer()
+                renderer = None
             elif dashboard_renderer == "text":
                 renderer = TextDashboardRenderer()
             else:
@@ -135,6 +139,22 @@ class DigitalFlyLab:
             w.start()
         return meta
 
+    def render_dashboard_once(self) -> None:
+        if self.dashboard_ui is None or self.dashboard is None:
+            return
+        snap_state = self.dashboard.snapshot_state.read()
+        if snap_state is None:
+            return
+        payload = snap_state.payload
+        snap = Snapshot(int(payload["ts_ns"]), dict(payload["columns"]))
+        self.dashboard_ui.render(snap, self.capture.latest.read())
+
+    def wait_live(self, seconds: float) -> None:
+        deadline = time.monotonic() + float(seconds)
+        while time.monotonic() < deadline:
+            self.render_dashboard_once()
+            time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
+
     def wait_for_brain_ready(self, timeout_s: float = 180.0) -> bool:
         """Wait for the brain worker's one-time initialization/prewarm.
 
@@ -145,6 +165,7 @@ class DigitalFlyLab:
         """
         deadline = time.monotonic() + float(timeout_s)
         while time.monotonic() < deadline:
+            self.render_dashboard_once()
             if self.brain.decoder is not None:
                 return True
             th = getattr(self.brain, "_thread", None)
@@ -282,7 +303,7 @@ def main(argv=None) -> int:
         if isinstance(lab.capture, SyntheticCapture):
             lab.drive_synthetic(seconds=args.seconds, fps=30.0)
         else:
-            time.sleep(args.seconds)
+            lab.wait_live(args.seconds)
     except KeyboardInterrupt:
         pass
     finally:
