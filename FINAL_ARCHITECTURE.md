@@ -93,7 +93,9 @@ wait → input`. The system is an **asynchronous multi-process pipeline**
 - Nothing in the real-time path may block on: dashboard rendering, disk
   logging, OCR, guide research, or memory persistence.
 
-Approximate process boundaries (tunable with profiling evidence):
+Approximate target process boundaries (tunable with profiling evidence).
+As of 2026-09-30 the Windows implementation isolates the canonical brain in
+its own subprocess; the remaining workers still share the main process:
 
 | # | Process | Target rate |
 |---|---|---|
@@ -135,8 +137,11 @@ brain (138,639 neurons, 15,091,983 connections).
   D7 INTERACTIVE runtime contract (chunked stepping bit-identical to a
   single run; store/restore + reseed determinism; C++ standalone replay
   proven bit-identical).
-- Preferred live route: the validated **Brian2 C++ standalone** binary
-  (compile once, reuse) with the numpy interactive runtime as fallback.
+- Live route: the validated **interactive Brian2 runtime** in a dedicated
+  brain subprocess, using the measured Cython code-generation target on the
+  Windows laptop. Brian2 **C++ standalone is offline replay/verification
+  only** for this project: it compiles a fixed schedule and cannot host the
+  required live closed loop with per-chunk sensory-rate changes/readouts.
 - Cached once at init: connectome preprocessing, neuron ID maps,
   population maps (D4–D6 `brain/data/io_map/`), sensory maps, motor maps.
 - `REFERENCE_REPLAY_MODE` must keep working: important episodes re-run
