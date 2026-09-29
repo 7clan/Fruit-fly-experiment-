@@ -216,22 +216,27 @@ class OpenCVDashboardRenderer:
                     f"conf={intention.get('confidence')}")
         put(x0, 62, f"chunk={brain.get('chunk_id')} "
                     f"runtime={brain.get('runtime')}")
+        put(x0, 80, f"transport={brain.get('transport')} "
+                    f"chunk_wall={brain.get('chunk_wall_s')}s")
         ch = d.get("fly.channels") or {}
         tl = float(ch.get("target_left") or 0.0)
         tr = float(ch.get("target_right") or 0.0)
         threat = float(ch.get("threat_intensity") or 0.0)
-        put(x0, 82, f"tgt L/R {tl:.2f}/{tr:.2f} threat {threat:.2f}")
-        put(x0, 110, "HYBRID HELPER [ENGINEERED]", (120, 180, 240))
+        put(x0, 100, f"tgt L/R {tl:.2f}/{tr:.2f} threat {threat:.2f}")
+        put(x0, 128, "HYBRID HELPER [ENGINEERED]", (120, 180, 240))
         goal = d.get("helper.goal") or {}
-        put(x0, 130, f"goal={(goal.get('goal') or {}).get('label')}")
+        put(x0, 148, f"goal={(goal.get('goal') or {}).get('label')}")
         obs = d.get("world.observation") or {}
         player = obs.get("player") or {}
         target = obs.get("target") or {}
-        put(x0, 148, f"target={target.get('type')} enemies={len(obs.get('enemies', []))}")
-        put(x0, 166, f"health={player.get('health')} stamina={player.get('stamina')}")
-        put(x0, 194, "ACTION SYSTEM [ENGINEERED]", (240, 180, 120))
+        notes = obs.get("notes") or {}
+        put(x0, 166, f"target={target.get('type')} enemies={len(obs.get('enemies', []))}")
+        put(x0, 184, f"tracked humanoids={notes.get('humanoid_track_count', 0)} "
+                     f"quest NPCs={notes.get('quest_npc_track_count', 0)}")
+        put(x0, 202, f"health={player.get('health')} stamina={player.get('stamina')}")
+        put(x0, 230, "ACTION SYSTEM [ENGINEERED]", (240, 180, 120))
         act = d.get("action.selected") or {}
-        put(x0, 214, f"autonomy={act.get('autonomy')} "
+        put(x0, 250, f"autonomy={act.get('autonomy')} "
                     f"ability={act.get('ability_id') or '-'}")
-        put(x0, 242, "PASSIVE / SHADOW - no game input", (140, 140, 255))
+        put(x0, 278, "PASSIVE / SHADOW - no game input", (140, 140, 255))
         return canvas
