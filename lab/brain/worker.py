@@ -129,6 +129,8 @@ class BrainWorker(Worker):
         out = {
             "ts_ns": self.clock.now_ns(),
             "runtime": rec["runtime"],
+            "transport": rec.get(
+                "transport", getattr(self.runtime, "transport_label", "inprocess")),
             "chunk_id": rec["chunk_id"],
             "t_bio_s": rec["t_bio_s"],
             "chunk_ms": rec["chunk_ms"],
