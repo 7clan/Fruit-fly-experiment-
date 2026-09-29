@@ -134,7 +134,7 @@ def main() -> int:
         "observed_fps": round(seen / elapsed, 2),
         "frame_shape": first_shape,
         "copy_count": 1,
-        "copy_path": "opencv_bgra_to_bgr",
+        "copy_path": "native_bgra_owned_copy",
         "interframe_p50_ms": round(statistics.median(gaps_ms), 2)
             if gaps_ms else None,
         "interframe_p95_ms": round(sorted(gaps_ms)[
