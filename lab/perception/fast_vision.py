@@ -47,6 +47,7 @@ class FastVisionWorker(Worker):
         self.obs_state: StateChannel = bus.state(self.TOPIC_OBS)
         self.events: StreamChannel = bus.stream(self.TOPIC_EVT, maxsize=64)
         self.detector = HeuristicFastVision()
+        self.gpo_detector = GPOHeuristicFastVision()
         self.max_detect_width = int(max_detect_width)
 
     def on_start(self) -> None:
@@ -78,9 +79,13 @@ class FastVisionWorker(Worker):
             )
             resized_for_detect = True
 
+        detector = (self.gpo_detector
+                    if payload.get("source") == "windows_graphics_capture"
+                    else self.detector)
         t0 = self.clock.now_ns()
-        det = self.detector.detect(detect_img)
+        det = detector.detect(detect_img)
         detect_ms = self.clock.elapsed_ms(t0)
+        detector_notes = dict(det.get("_notes", {}))
         obs = WorldObservation(
             ts_ns=self.clock.now_ns(),
             frame_ref={"frame_id": payload.get("frame_id"),
@@ -94,10 +99,11 @@ class FastVisionWorker(Worker):
             ui=UIState(**det["ui"]),
             abilities=[AbilityAvailability(**a) for a in det["abilities"]],
             notes={"detect_ms": round(detect_ms, 3),
-                   "detector": self.detector.name,
+                   "detector": detector.name,
                    "source_shape": list(img.shape),
                    "detect_shape": list(detect_img.shape),
-                   "resized_for_detect": resized_for_detect},
+                   "resized_for_detect": resized_for_detect,
+                   **detector_notes},
         )
         self.obs_state.write(obs.to_dict(), ts_ns=obs.ts_ns)
         # replay event (bounded stream; dropped under pressure by design)
@@ -201,6 +207,183 @@ class HeuristicFastVision:
         d = np.hypot((qx - px) / w, (qy - py) / h)
         return float(min(1.0, d * 1.4))
 
+
+class GPOHeuristicFastVision:
+    """First real-game fast detector, calibrated from live GPO frames.
+
+    This deliberately detects only features supported by direct observation:
+      * player/camera anchor from the bright central avatar silhouette
+      * yellow QUEST/! marker as a navigation target
+      * bottom-left red health and cyan stamina bar fill
+
+    It does NOT invent enemy/combat detections. Those remain unknown until
+    combat examples are collected and validated. Geometry and HUD ROIs use
+    normalized coordinates so the detector survives moderate resolution
+    changes. Output distance is screen-proximity in [0,1], where 1 means
+    visually coincident/touching, matching the fly-channel contract.
+    """
+
+    name = "gpo_heuristic_v1"
+
+    def warmup(self) -> None:
+        # OpenCV is optional outside the Windows/live environment; avoid
+        # forcing it into synthetic/CI startup.
+        return
+
+    @staticmethod
+    def _bearing(px, py, qx, qy, w, h):
+        import math
+        dx = (qx - px) / w
+        dy = (py - qy) / h
+        return math.atan2(dx, dy if abs(dy) > 1e-9 else 1e-9)
+
+    @staticmethod
+    def _bar_fraction(mask, w, h):
+        import cv2
+        roi = mask.copy()
+        roi[:int(0.78 * h)] = 0
+        roi[:, int(0.28 * w):] = 0
+        n, _labels, stats, _centroids = cv2.connectedComponentsWithStats(roi)
+        candidates = []
+        min_area = max(12, int(w * h * 0.00015))
+        for i in range(1, n):
+            x, y, ww, hh, area = stats[i]
+            if area >= min_area and ww > max(8, hh * 6):
+                candidates.append((int(ww), int(area), int(x), int(y), int(hh)))
+        if not candidates:
+            return None
+        best_width = max(candidates)[0]
+        calibrated_full_width = max(1.0, 0.153 * w)
+        return float(max(0.0, min(1.0, best_width / calibrated_full_width)))
+
+    def detect(self, img: np.ndarray) -> dict:
+        import cv2
+        import math
+
+        h, w = img.shape[:2]
+        hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+
+        # Player: choose a sufficiently large bright/low-saturation component
+        # in the central lower gameplay region. If appearance changes and no
+        # silhouette survives, use the third-person camera anchor explicitly
+        # as a fallback rather than fabricating a visual detection.
+        white = cv2.inRange(
+            hsv, np.array([0, 0, 205], dtype=np.uint8),
+            np.array([179, 85, 255], dtype=np.uint8))
+        player_roi = np.zeros_like(white)
+        y0, y1 = int(0.34 * h), int(0.72 * h)
+        x0, x1 = int(0.40 * w), int(0.60 * w)
+        player_roi[y0:y1, x0:x1] = white[y0:y1, x0:x1]
+        n, _labels, stats, centroids = cv2.connectedComponentsWithStats(
+            player_roi)
+        player_candidates = []
+        min_player_area = max(12, int(w * h * 0.00008))
+        for i in range(1, n):
+            x, y, ww, hh, area = stats[i]
+            if area < min_player_area or hh < max(3, int(0.015 * h)):
+                continue
+            cx, cy = centroids[i]
+            center_penalty = abs(cx / w - 0.5) * 2.0 + abs(cy / h - 0.52)
+            player_candidates.append(
+                (center_penalty, -int(area), float(cx), float(cy)))
+        if player_candidates:
+            _pen, _neg_area, px, py = min(player_candidates)
+            player_mode = "bright_avatar"
+        else:
+            px, py = 0.5 * w, 0.52 * h
+            player_mode = "camera_anchor_fallback"
+
+        # QUEST target: saturated yellow components only in the gameplay
+        # region. Bottom-left EXP/HUD yellow and top overlays are excluded.
+        yellow = cv2.inRange(
+            hsv, np.array([18, 140, 140], dtype=np.uint8),
+            np.array([42, 255, 255], dtype=np.uint8))
+        scene = np.zeros_like(yellow)
+        sy0, sy1 = int(0.25 * h), int(0.72 * h)
+        sx0, sx1 = int(0.08 * w), int(0.92 * w)
+        scene[sy0:sy1, sx0:sx1] = yellow[sy0:sy1, sx0:sx1]
+        n, _labels, stats, centroids = cv2.connectedComponentsWithStats(scene)
+        comps = []
+        min_yellow_area = max(3, int(w * h * 0.000003))
+        for i in range(1, n):
+            x, y, ww, hh, area = stats[i]
+            if area >= min_yellow_area:
+                cx, cy = centroids[i]
+                comps.append((int(area), int(x), int(y), int(ww), int(hh),
+                              float(cx), float(cy)))
+
+        target_found = False
+        if comps:
+            main = max(comps, key=lambda q: q[0])
+            mcx, mcy = main[5], main[6]
+            cluster = [
+                q for q in comps
+                if abs(q[5] - mcx) <= 0.06 * w
+                and abs(q[6] - mcy) <= 0.12 * h
+            ]
+            total_area = float(sum(q[0] for q in cluster))
+            tx = sum(q[5] * q[0] for q in cluster) / total_area
+            # Use the bottom of the QUEST/! cluster: it points toward the NPC.
+            ty = float(max(q[2] + q[4] for q in cluster))
+            bearing = self._bearing(px, py, tx, ty, w, h)
+            screen_d = math.hypot((tx - px) / w, (ty - py) / h)
+            proximity = max(0.0, min(1.0, 1.0 - screen_d / 0.60))
+            confidence = 0.82 if player_mode == "bright_avatar" else 0.55
+            target = {
+                "type": "quest_marker",
+                "direction": float(bearing),
+                "distance": float(proximity),
+                "confidence": confidence,
+            }
+            target_found = True
+        else:
+            target = {
+                "type": "none", "direction": None,
+                "distance": None, "confidence": 0.0,
+            }
+
+        red = (
+            cv2.inRange(hsv, np.array([0, 120, 100], dtype=np.uint8),
+                        np.array([10, 255, 255], dtype=np.uint8))
+            | cv2.inRange(hsv, np.array([170, 120, 100], dtype=np.uint8),
+                          np.array([179, 255, 255], dtype=np.uint8))
+        )
+        cyan = cv2.inRange(
+            hsv, np.array([95, 110, 90], dtype=np.uint8),
+            np.array([110, 255, 255], dtype=np.uint8))
+        health = self._bar_fraction(red, w, h)
+        stamina = self._bar_fraction(cyan, w, h)
+
+        player = {
+            "position": [float(px / w), float(py / h)],
+            "heading": 0.0,
+            "health": health,
+            "stamina": stamina,
+            "health_units": "fraction" if health is not None else "unknown",
+        }
+        ui = {
+            "loading": False,
+            "dialogue": False,
+            "menu": False,
+            "combat": False,
+        }
+        return {
+            "player": player,
+            "target": target,
+            "enemies": [],
+            "ui": ui,
+            "abilities": [],
+            "_notes": {
+                "player_mode": player_mode,
+                "quest_marker_detected": target_found,
+                "health_bar_detected": health is not None,
+                "stamina_bar_detected": stamina is not None,
+                "enemy_detector": "not_yet_calibrated",
+            },
+        }
+
+
+# ---------------------------------------------------------------------------
 
 class ONNXFastVision:
     """Windows ONNX Runtime / WinML detector — interface placeholder.
