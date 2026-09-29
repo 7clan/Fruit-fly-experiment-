@@ -33,6 +33,7 @@ from ..worker import Worker
 from .intent import CONFIG_ID, IntentionDecoder
 from .runtime import (BrainChunkRecord, CanonicalBrianRuntime,
                       MockBrainRuntime, create_runtime)
+from .subprocess_runtime import CanonicalBrainTransportError
 
 
 class BrainWorker(Worker):
@@ -122,8 +123,15 @@ class BrainWorker(Worker):
         d8_rates = {"target_left": rates["target_left_hz"],
                     "target_right": rates["target_right_hz"],
                     "looming": rates["looming_hz"]}
-        rec: BrainChunkRecord = self.runtime.advance_chunk(d8_rates,
-                                                           chunk_ms=self.chunk_ms)
+        try:
+            rec: BrainChunkRecord = self.runtime.advance_chunk(
+                d8_rates, chunk_ms=self.chunk_ms)
+        except CanonicalBrainTransportError:
+            # Transport loss is fatal for this session. Do not restart the
+            # 138k-neuron brain repeatedly or spam the report with the same
+            # error every worker tick.
+            self.stop_event.set()
+            raise
         intention = self.decoder.decode(rec)
 
         out = {
