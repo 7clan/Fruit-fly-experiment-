@@ -59,18 +59,7 @@ control path.**
 >   FAILED: the frozen brain's innate wiring lean dominated every test
 >   choice (B − A = 0.000 [0,0]; extinction flat; reversal 0%).
   The v1 verdict is PERMANENTLY RECORDED (tag `gate4-v1-FAIL`).
-- **GATE 4 v2 (2026-09-29): source-audited retry, IN PROGRESS.** The
-  audit (Aso 2014 eLife 04577/04580 + Owald 2015 full texts) found the
-  v1 MBON valence classes had the M4/M6 family BACKWARDS (glutamatergic
-  MBONs are activation-AVERSIVE; reward DEPRESSES their input); v2 uses
-  measured-transmitter classes (22 avoidance / 74 approach), a
-  compartment-matched PAM01-11 US (Aso 2014), and a balanced-boundary
-  open-loop preference assay (calibrated P(left) = 0.500 exactly before
-  reward-side assignment). Two INDEPENDENT verdicts: G4A (neural
-  associative learning) and G4B (behavioural expression); prereg
-  `GATE4_V2_PREREG.md` pushed before any outcome data; matrix running;
-  coverage report `brain/data/V783_MODEL_COVERAGE_REPORT.md` (the 616
-  excluded neurons touch no used population).
+- **GATE 4 v2 (2026-09-29): FAIL — honest, pre-registered, fail-closed.** The source audit (Aso 2014 + Owald 2015 full texts) corrected the v1 MBON valence classification (the M4/M6 family was backwards: glutamatergic MBONs are activation-AVERSIVE; reward DEPRESSES their input), the US became the compartment-matched PAM01-11 set, and the assay moved to a calibrated balanced boundary (P(left)=0.500). Result: the KC->GLUT-MBON synapses carry a STRONG cue-specific associative trace (paired 0.20 vs unpaired 0.80 scale, CI [0.61,0.76]) — but it does not propagate to a directional population signal or credit-specific behaviour (the readout sits on a bistable lateralized MB gain state; US cascades contaminate credit assignment; controls C/D reproduce the drift). Biological tuning STOPPED per the pre-registration. Full record: `GATE4_V2_REPORT.md`.
 >   No post-hoc tuning was applied; the mechanistic diagnosis and the
 >   pre-registered v2 follow-up are in `D11_D13_LEARNING_REPORT.md`.
 >   No Roblox connection was made (blocked before Gate 4).
