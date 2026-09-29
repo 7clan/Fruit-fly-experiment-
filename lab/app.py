@@ -30,6 +30,7 @@ from pathlib import Path
 from . import __version__
 from .action.motor_executor import MotorExecutor, SafeNoopBackend
 from .brain.worker import BrainWorker
+from .brain.runtime import CanonicalBrianRuntime
 from .bus import Bus, BusMode
 from .capture.base import CaptureAdapter, SyntheticCapture
 from .clock import SHARED_CLOCK
@@ -58,7 +59,7 @@ class DigitalFlyLab:
                  fast_hz: float = 24.0, heavy_hz: float = 8.0,
                  executor_hz: float = 40.0, planner_hz: float = 1.0,
                  dashboard_hz: float = 20.0, capture_fps: float = 30.0,
-                 runtime=None):
+                 runtime=None, brain_codegen: str | None = None):
         self.bus = Bus(mode=mode)
         self.session_dir = Path(session_dir) if session_dir else \
             AGENT_ROOT / "runs" / f"lab_{time.strftime('%Y%m%d_%H%M%S')}"
@@ -72,6 +73,10 @@ class DigitalFlyLab:
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
+        if runtime is None and runtime_kind in ("canonical", "canonical_brian") \
+                and brain_codegen is not None:
+            runtime = CanonicalBrianRuntime(
+                chunk_ms=chunk_ms, codegen_target=brain_codegen)
         self.brain = BrainWorker(self.bus, target_hz=brain_hz,
                                  runtime=runtime, runtime_kind=runtime_kind,
                                  chunk_ms=chunk_ms)
@@ -205,6 +210,8 @@ def main(argv=None) -> int:
     ap.add_argument("--seconds", type=float, default=10.0)
     ap.add_argument("--chunk-ms", type=float, default=50.0)
     ap.add_argument("--brain-hz", type=float, default=10.0)
+    ap.add_argument("--brain-codegen", choices=["numpy", "cython"], default=None,
+                    help="canonical runtime codegen target for measured comparison")
     ap.add_argument("--dashboard", action="store_true")
     ap.add_argument("--autonomy", action="store_true",
                     help="DANGER: enables input emission (gated in app policy)")
@@ -223,7 +230,8 @@ def main(argv=None) -> int:
         return 0 if res["ok"] else 1
 
     lab = DigitalFlyLab(runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
-                        brain_hz=args.brain_hz, dashboard=args.dashboard)
+                        brain_hz=args.brain_hz, dashboard=args.dashboard,
+                        brain_codegen=args.brain_codegen)
     lab.start()
     try:
         if args.runtime == "canonical":
