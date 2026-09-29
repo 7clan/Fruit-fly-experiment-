@@ -113,14 +113,32 @@ def cmd_verify(args):
 
 
 def cmd_env(args):
+    if sys.version_info[:2] != (3, 12):
+        raise SystemExit(
+            f"FAIL: pinned brain environment requires Python 3.12; "
+            f"current interpreter is {sys.version_info.major}.{sys.version_info.minor}"
+        )
     venv = ROOT / ".venv"
+    py = venv / (Path("Scripts") / "python.exe" if sys.platform == "win32"
+                 else Path("bin") / "python")
+    if venv.exists() and py.exists():
+        ver = run([str(py), "-c",
+                   "import sys; print(f'{sys.version_info.major}.{sys.version_info.minor}')"
+                   ]).stdout.strip()
+        if ver != "3.12":
+            import shutil
+            print(f"[env] removing incompatible brain venv (Python {ver}) ...")
+            shutil.rmtree(venv)
     if not venv.exists():
         print("[env] creating venv ...")
         run([sys.executable, "-m", "venv", str(venv)])
-    py = venv / (Path("Scripts") / "python.exe" if sys.platform == "win32"
-                 else Path("bin") / "python")
     print("[env] installing pinned requirements ...")
-    run([str(py), "-m", "pip", "install", "-r", str(SETUP / "requirements-brain.txt")])
+    proc = subprocess.run(
+        [str(py), "-m", "pip", "install", "-r", str(SETUP / "requirements-brain.txt")],
+        text=True,
+    )
+    if proc.returncode != 0:
+        raise SystemExit(f"FAIL: pinned brain requirements install returned {proc.returncode}")
     out = run([str(py), "-c",
                "import brian2,numpy,pandas,pyarrow,joblib;"
                "print(brian2.__version__, numpy.__version__, pandas.__version__,"
