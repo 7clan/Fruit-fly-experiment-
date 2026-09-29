@@ -23,12 +23,67 @@ from ..bus import Bus
 from .base import CaptureAdapter, CaptureError
 
 
+def _process_image_name(pid: int) -> str:
+    """Return the executable basename for a PID, or empty string."""
+    if sys.platform != "win32":
+        return ""
+    kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+    PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
+
+    kernel32.OpenProcess.argtypes = [
+        wintypes.DWORD, wintypes.BOOL, wintypes.DWORD
+    ]
+    kernel32.OpenProcess.restype = wintypes.HANDLE
+    kernel32.QueryFullProcessImageNameW.argtypes = [
+        wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR,
+        ctypes.POINTER(wintypes.DWORD)
+    ]
+    kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel32.CloseHandle.restype = wintypes.BOOL
+
+    handle = kernel32.OpenProcess(
+        PROCESS_QUERY_LIMITED_INFORMATION, False, int(pid)
+    )
+    if not handle:
+        return ""
+    try:
+        size = wintypes.DWORD(32768)
+        buf = ctypes.create_unicode_buffer(size.value)
+        if not kernel32.QueryFullProcessImageNameW(
+                handle, 0, buf, ctypes.byref(size)):
+            return ""
+        return buf.value.rsplit("\\", 1)[-1]
+    finally:
+        kernel32.CloseHandle(handle)
+
+
 def _visible_top_level_windows() -> list[dict]:
+    """Enumerate visible titled windows with 64-bit-safe Win32 signatures."""
     if sys.platform != "win32":
         return []
-    user32 = ctypes.windll.user32
+
+    user32 = ctypes.WinDLL("user32", use_last_error=True)
+    enum_proc_t = ctypes.WINFUNCTYPE(
+        wintypes.BOOL, wintypes.HWND, wintypes.LPARAM
+    )
+
+    user32.EnumWindows.argtypes = [enum_proc_t, wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+    user32.GetWindowTextW.argtypes = [
+        wintypes.HWND, wintypes.LPWSTR, ctypes.c_int
+    ]
+    user32.GetWindowTextW.restype = ctypes.c_int
+    user32.GetWindowThreadProcessId.argtypes = [
+        wintypes.HWND, ctypes.POINTER(wintypes.DWORD)
+    ]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+
     out: list[dict] = []
-    enum_proc_t = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
 
     @enum_proc_t
     def callback(hwnd, _lparam):
@@ -38,14 +93,24 @@ def _visible_top_level_windows() -> list[dict]:
         if n <= 0:
             return True
         buf = ctypes.create_unicode_buffer(n + 1)
-        user32.GetWindowTextW(hwnd, buf, n + 1)
+        if user32.GetWindowTextW(hwnd, buf, n + 1) <= 0:
+            return True
         title = buf.value.strip()
-        if title:
-            out.append({"title": title, "handle": int(hwnd)})
+        if not title:
+            return True
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        out.append({
+            "title": title,
+            "handle": int(hwnd),
+            "pid": int(pid.value),
+            "process_name": _process_image_name(int(pid.value)),
+        })
         return True
 
     if not user32.EnumWindows(callback, 0):
-        raise CaptureError("Win32 EnumWindows failed")
+        err = ctypes.get_last_error()
+        raise CaptureError(f"Win32 EnumWindows failed (error {err})")
     return out
 
 
@@ -53,9 +118,12 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
     name = "windows_graphics_capture"
 
     def __init__(self, bus: Bus, channel: str = "capture.frames",
-                 window_title_re: str = "Roblox", target_fps: float = 30.0):
+                 window_title_re: str = r"^Roblox$",
+                 process_name_re: str = r"^RobloxPlayerBeta(?:\.exe)?$",
+                 target_fps: float = 30.0):
         super().__init__(bus, channel)
         self.window_title_re = re.compile(window_title_re, re.IGNORECASE)
+        self.process_name_re = re.compile(process_name_re, re.IGNORECASE)
         self.target_fps = float(target_fps)
         self._running = False
         self._frame_id = 0
@@ -69,14 +137,18 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
         matches = []
         for w in _visible_top_level_windows():
             title = w["title"]
+            proc = w.get("process_name", "")
             if "DigitalFlyLab" in title:
                 continue
-            if self.window_title_re.search(title):
+            if (self.window_title_re.search(title)
+                    and self.process_name_re.search(proc)):
                 matches.append(w)
         if not matches:
             raise CaptureError(
-                f"no visible window matching {self.window_title_re.pattern!r}; "
-                "open the authorized GPO game window first")
+                "no visible authorized game window found matching "
+                f"title={self.window_title_re.pattern!r}, "
+                f"process={self.process_name_re.pattern!r}; "
+                "open the GPO game window first")
         if len(matches) != 1:
             desc = ", ".join(f"{w['title']!r} (HWND {w['handle']})"
                              for w in matches)
