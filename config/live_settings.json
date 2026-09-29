@@ -1,0 +1,17 @@
+{
+ "derived_from": "measured",
+ "margin": 0.7,
+ "capture_fps": 30,
+ "fast_vision_hz": 24,
+ "heavy_vision_hz": 8,
+ "brain_hz": 7.0,
+ "brain_chunk_ms": 100,
+ "motor_executor_hz": 40,
+ "planner_hz": 1.0,
+ "dashboard_hz": 15,
+ "measured_s2a_p95_ms": 92.0,
+ "s2a_target_ms": 250.0,
+ "s2a_target_met": true,
+ "canonical_50ms_p95_ms": 508.81,
+ "canonical_100ms_p95_ms": 784.37
+}

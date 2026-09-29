@@ -7,6 +7,20 @@ control path.**
 
 > ### Project status — read this first
 >
+> - **APPLIED PHASE (2026-09-29): FINAL_EXECUTION_SPEC captured in
+>   `FINAL_ARCHITECTURE.md` (authoritative).** The practical system is
+>   explicitly HYBRID: canonical Drosophila brain + ENGINEERED perception
+>   / world model / memory / value / ability resolver, honestly labeled.
+>   Biological-learning work is FROZEN (Gate 4 v2 FAIL stands). The
+>   `lab/` package implements the async multi-rate pipeline
+>   (bus with bounded drop-oldest queues + latest-wins state), the
+>   DigitalFlyLab dashboard skeleton, replay recorder, benchmark
+>   framework (`benchmark_windows.py`), Windows scripts, and the
+>   AbilityRegistry/Resolver/MotorExecutor (autonomy HARD-GATED — zero
+>   game input until Gate 5 passes, then Gate 6 prereg). Gate ladder 5-9
+>   defined; `GATE5_PREREG.md` frozen. Full-pipeline verified with the
+>   CANONICAL brain live in the loop (see
+>   `runs/gate5_dryrun_canonical_20260929/`). 145/145 tests PASS.
 > - **There is NO real biological fruit fly** (project correction,
 >   2026-09-28). The entire experiment is digital and runs on a laptop.
 >   The earlier physical real-fly direction is ARCHIVED under `legacy/`

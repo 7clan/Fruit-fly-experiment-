@@ -84,6 +84,24 @@ brain runs locally and produces reproducible neural activity — **PASSED
 
 ---
 
+## Stage V+ — APPLIED PHASE (Gates 5-9, 2026-09-29)
+
+Authoritative architecture: `FINAL_ARCHITECTURE.md`. Gate ladder:
+
+| Gate | WHAT | Status |
+|---|---|---|
+| 5 | Passive perception on Windows (capture/mirror/brain concurrent/replay; NO input) | prereg frozen (`GATE5_PREREG.md`); pipeline skeleton + dry-run evidence committed |
+| 6 | Basic live movement (FORWARD/TURN/STOP, gated input) | pending (requires Gate 5 PASS + own prereg) |
+| 7 | Combat, staged (single attack -> block/evade -> light/heavy -> ranged -> multi-ability) | pending |
+| 8 | Quest / progression (NPC, OCR, objectives) | pending |
+| 9 | Long-term autonomy (equipment, navigation, bosses) | pending |
+
+The D18-D23 entries above map onto Gates 6-9 under the FINAL_ARCHITECTURE
+hybrid system; implementation now lives in `lab/` (see the code map in
+`FINAL_ARCHITECTURE.md` §14).
+
+---
+
 ## What is deliberately NOT in this roadmap
 
 - No real animal, no physical apparatus, no animal-care workflow

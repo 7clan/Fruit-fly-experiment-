@@ -1,0 +1,128 @@
+{
+ "ts_ns": 2679480039063,
+ "capture": {
+  "source": "synthetic",
+  "published": 650,
+  "dropped": 0
+ },
+ "bus": {
+  "streams": {
+   "capture.frames": {
+    "published": 650,
+    "dropped": 0,
+    "qsize": 0
+   },
+   "perception.fast.events": {
+    "published": 356,
+    "dropped": 0,
+    "qsize": 0
+   },
+   "perception.heavy.events": {
+    "published": 1,
+    "dropped": 0,
+    "qsize": 0
+   },
+   "brain.events": {
+    "published": 73,
+    "dropped": 0,
+    "qsize": 0
+   },
+   "action.inputs": {
+    "published": 178,
+    "dropped": 0,
+    "qsize": 0
+   }
+  },
+  "states": {
+   "world.observation": {
+    "writes": 356
+   },
+   "world.semantics": {
+    "writes": 1
+   },
+   "helper.goal": {
+    "writes": 41
+   },
+   "fly.channels": {
+    "writes": 863
+   },
+   "brain.output": {
+    "writes": 73
+   },
+   "action.selected": {
+    "writes": 1131
+   }
+  }
+ },
+ "workers": {
+  "fast_vision": {
+   "steps": 596,
+   "errors": 0,
+   "last_error": null,
+   "last_step_ms": 187.670773,
+   "started": true
+  },
+  "heavy_vision": {
+   "steps": 321,
+   "errors": 0,
+   "last_error": null,
+   "last_step_ms": 0.021385,
+   "started": true
+  },
+  "planner": {
+   "steps": 42,
+   "errors": 0,
+   "last_error": null,
+   "last_step_ms": 0.01869,
+   "started": true
+  },
+  "fly_channel_encoder": {
+   "steps": 865,
+   "errors": 0,
+   "last_error": null,
+   "last_step_ms": 0.069995,
+   "started": true
+  },
+  "brain_worker": {
+   "steps": 73,
+   "errors": 0,
+   "last_error": null,
+   "last_step_ms": 479.619655,
+   "started": true,
+   "init_ms": 2280.4,
+   "prewarm_ms": 1273.6,
+   "runtime": "canonical_brian",
+   "decoder_config": "intent-decoder-v1",
+   "bio_s_per_wall_s": 0.1044,
+   "last_chunk_wall_ms": 478.8
+  },
+  "motor_executor": {
+   "steps": 1275,
+   "errors": 0,
+   "last_error": null,
+   "last_step_ms": 0.054273,
+   "started": true,
+   "inputs_emitted": 0,
+   "shadow_only": 10,
+   "emergency_stops": 0,
+   "hold_refreshes": 1121
+  },
+  "replay_recorder": {
+   "steps": 1030,
+   "errors": 0,
+   "last_error": null,
+   "last_step_ms": 0.291336,
+   "started": true,
+   "events": 608,
+   "dropped": 0
+  }
+ },
+ "memory": {
+  "written": 0,
+  "dropped": 0,
+  "qsize": 0,
+  "semantic_keys": 0,
+  "episodes": 0,
+  "ASYNC": true
+ }
+}
