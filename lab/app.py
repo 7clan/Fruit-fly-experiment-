@@ -221,6 +221,7 @@ def main(argv=None) -> int:
     ap.add_argument("--seconds", type=float, default=10.0)
     ap.add_argument("--chunk-ms", type=float, default=50.0)
     ap.add_argument("--brain-hz", type=float, default=10.0)
+    ap.add_argument("--heavy-hz", type=float, default=8.0)
     ap.add_argument("--brain-codegen", choices=["numpy", "cython"], default=None,
                     help="canonical runtime codegen target for measured comparison")
     ap.add_argument("--dashboard", action="store_true")
@@ -242,7 +243,8 @@ def main(argv=None) -> int:
 
     lab = DigitalFlyLab(capture_kind=args.capture,
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
-                        brain_hz=args.brain_hz, dashboard=args.dashboard,
+                        brain_hz=args.brain_hz, heavy_hz=args.heavy_hz,
+                        dashboard=args.dashboard,
                         brain_codegen=args.brain_codegen)
     lab.start()
     try:
