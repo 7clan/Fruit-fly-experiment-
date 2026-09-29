@@ -207,20 +207,19 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
                 capture_control.stop()
                 return
             try:
-                # Native mapped frame lifetime ends after callback, so we
-                # need one owned BGR array.  Avoid NumPy .copy() on the
-                # non-contiguous BGRA[:,:,:3] view; OpenCV performs the
-                # BGRA->BGR copy/conversion in optimized native code.
-                import cv2
-                img = cv2.cvtColor(
-                    frame.frame_buffer, cv2.COLOR_BGRA2BGR)
+                # Native mapped frame lifetime ends after callback, so one
+                # owned copy is required. Keep the native BGRA layout here
+                # instead of doing BGRA->BGR conversion on the capture
+                # callback. Consumers that require BGR convert off the
+                # capture-critical path.
+                img = frame.frame_buffer.copy()
                 self._frame_id += 1
                 self.publish_frame(
                     self._frame_id,
                     int(frame.width),
                     int(frame.height),
                     data_ref=img,
-                    fmt="bgr",
+                    fmt="bgra",
                     copy_count=1,
                     extra={"window_title": title, "window_hwnd": hwnd},
                 )
