@@ -157,6 +157,15 @@ class CanonicalBrainSubprocessRuntime:
         self._pop_sizes = dict(self._rpc({"op": "pop_sizes"}))
         return dict(self._pop_sizes)
 
+    def force_terminate(self) -> None:
+        """Abort an in-flight child chunk during application shutdown."""
+        proc = self._proc
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.terminate()
+            except Exception:
+                pass
+
     def close(self) -> None:
         proc = self._proc
         if proc is None:
