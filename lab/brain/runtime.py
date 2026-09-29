@@ -215,11 +215,13 @@ class CanonicalBrianRuntime:
     SUPPORTED_BACKENDS = ("numpy", "cpp")
 
     def __init__(self, seed: int = 20260929, chunk_ms: float = 50.0,
-                 backend: str = "numpy", quiet: bool = True):
+                 backend: str = "numpy", quiet: bool = True,
+                 codegen_target: str | None = None):
         self.seed = int(seed)
         self.chunk_ms = float(chunk_ms)
         self.backend = backend
         self.quiet = quiet
+        self.codegen_target = codegen_target
         self._brain = None
         self._iface_channels = None
         self._readout_pops = None
@@ -254,6 +256,12 @@ class CanonicalBrianRuntime:
     def init_once(self) -> None:
         """Build the canonical network ONCE (expensive: ~10 s + ~3 GB)."""
         import sys
+        import brian2 as b2
+        if self.codegen_target is not None:
+            if self.codegen_target not in ("numpy", "cython"):
+                raise ValueError(
+                    f"unsupported runtime codegen target {self.codegen_target!r}")
+            b2.prefs.codegen.target = self.codegen_target
         sys.path.insert(0, str(BRAIN_DIR / "scripts"))
         import d7_runtime as rt  # the validated machinery, unmodified
 
