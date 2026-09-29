@@ -7,6 +7,7 @@ Windows capture/dashboard process. stdin/stdout are a tiny RPC transport.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import sys
 import traceback
@@ -39,22 +40,29 @@ def main(argv=None) -> int:
             req = json.loads(raw)
             op = req.get("op")
             if op == "init":
-                runtime.warm_import()
-                runtime.init_once()
-                _reply({"ok": True, "result": {"pop_sizes": runtime.pop_sizes()}})
+                with contextlib.redirect_stdout(sys.stderr):
+                    runtime.warm_import()
+                    runtime.init_once()
+                    result = {"pop_sizes": runtime.pop_sizes()}
+                _reply({"ok": True, "result": result})
             elif op == "prewarm":
-                runtime.prewarm(int(req.get("chunks", 2)))
+                with contextlib.redirect_stdout(sys.stderr):
+                    runtime.prewarm(int(req.get("chunks", 2)))
                 _reply({"ok": True, "result": {}})
             elif op == "advance":
-                rec = runtime.advance_chunk(
-                    dict(req.get("rates") or {}),
-                    chunk_ms=float(req.get("chunk_ms", args.chunk_ms)),
-                )
+                with contextlib.redirect_stdout(sys.stderr):
+                    rec = runtime.advance_chunk(
+                        dict(req.get("rates") or {}),
+                        chunk_ms=float(req.get("chunk_ms", args.chunk_ms)),
+                    )
                 _reply({"ok": True, "result": dict(rec)})
             elif op == "pop_sizes":
-                _reply({"ok": True, "result": runtime.pop_sizes()})
+                with contextlib.redirect_stdout(sys.stderr):
+                    result = runtime.pop_sizes()
+                _reply({"ok": True, "result": result})
             elif op == "close":
-                runtime.close()
+                with contextlib.redirect_stdout(sys.stderr):
+                    runtime.close()
                 _reply({"ok": True, "result": {}})
                 return 0
             else:
