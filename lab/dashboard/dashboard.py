@@ -373,7 +373,13 @@ class OpenCVDashboardRenderer:
                       (150, 150, 150), scale=0.38)
             return
         vals = list(self._history)
-        step = max(2, int(w / max(1, len(vals))))
+        # Fixed-width bars keep the first few chunks readable. Previously
+        # thickness scaled with spacing, producing huge circles when only a
+        # handful of slow canonical chunks had completed.
+        bar_w = 7
+        gap = 3
+        capacity = max(1, w // (bar_w + gap))
+        shown = vals[-capacity:]
         colors = {
             "STOP": (150, 150, 150),
             "TURN_LEFT": (220, 180, 80),
@@ -382,14 +388,15 @@ class OpenCVDashboardRenderer:
             "RETREAT": (80, 170, 255),
             "ESCAPE": (80, 80, 255),
         }
-        for i, item in enumerate(vals[-max(1, w // step):]):
+        for i, item in enumerate(shown):
             name = item.get("intention") or "?"
             active = self._safe_float(item.get("active"))
-            bar_h = min(h - 18, int(4 + active / 250.0))
-            xx = x + i * step
-            cv2.line(
-                canvas, (xx, y + h - 4), (xx, y + h - 4 - bar_h),
-                colors.get(name, (180, 180, 180)), max(1, step - 1))
+            bar_h = min(h - 22, max(3, int(3 + active / 4.0)))
+            xx = x + 4 + i * (bar_w + gap)
+            yy = y + h - 4
+            cv2.rectangle(
+                canvas, (xx, yy - bar_h), (xx + bar_w, yy),
+                colors.get(name, (180, 180, 180)), -1)
         self._put(canvas, x + 8, y + 17,
                   "WHOLE-BRAIN ACTIVITY HISTORY (active neurons/chunk)",
                   (175, 175, 175), scale=0.34)
