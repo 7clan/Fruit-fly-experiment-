@@ -88,9 +88,17 @@ class HeavyVisionWorker(Worker):
         img = payload.get("data_ref")
         if img is None:
             return
-        # region-hash cache: skip OCR when the frame region is unchanged
-        fh = hashlib.blake2b(bytes(bytearray(img.tobytes()[:4096])),
-                             digest_size=8).hexdigest()
+        # Region-hash cache: sample a small contiguous top-left patch.
+        # Do NOT call img.tobytes() on the whole 1920x1030 frame merely to
+        # keep the first 4 KB; that creates a multi-megabyte copy every OCR
+        # tick and starves the canonical brain on the 2-core Windows laptop.
+        if getattr(img, "ndim", 0) >= 2:
+            patch = img[:32, :32]
+            fh = hashlib.blake2b(
+                memoryview(patch.copy()).cast("B"), digest_size=8
+            ).hexdigest()
+        else:
+            fh = hashlib.blake2b(bytes(img), digest_size=8).hexdigest()
         if fh == self._last_hash:
             self._cache_hits += 1
             return
