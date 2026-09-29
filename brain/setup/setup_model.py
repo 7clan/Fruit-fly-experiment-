@@ -54,7 +54,13 @@ def cmd_clone(args):
         return
     MODEL_DIR.parent.mkdir(parents=True, exist_ok=True)
     print(f"[clone] cloning {REPO_URL} ...")
-    run(["git", "clone", REPO_URL, str(MODEL_DIR)])
+    # Preserve the repository's exact bytes on every platform.  In
+    # particular, Git for Windows commonly enables core.autocrlf, which
+    # rewrites LF text files to CRLF on checkout and causes the byte-level
+    # SHA-256 manifest verification below to fail even though HEAD is pinned.
+    run(["git", "clone", "-c", "core.autocrlf=false",
+         REPO_URL, str(MODEL_DIR)])
+    run(["git", "-C", str(MODEL_DIR), "config", "core.autocrlf", "false"])
     run(["git", "-C", str(MODEL_DIR), "checkout", PINNED_COMMIT])
     print(f"[clone] checked out pinned commit {PINNED_COMMIT}")
 
