@@ -402,7 +402,7 @@ def write_report(report: dict, path: Path) -> Path:
                       "in this measurement — report actual values, do not "
                       "fake faster timestamps (FINAL_ARCHITECTURE §3)."]
 
-    path.write_text("\n".join(lines) + "\n")
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
     return path
 
 
@@ -419,5 +419,8 @@ def run_all(with_canonical: bool = True, seconds: float = 5.0) -> dict:
         report["pipeline"],
         report["canonical"] if report["canonical"].get("available") else None)
     LIVE_SETTINGS_PATH.parent.mkdir(parents=True, exist_ok=True)
-    LIVE_SETTINGS_PATH.write_text(json.dumps(report["live_settings"], indent=1))
+    LIVE_SETTINGS_PATH.write_text(
+        json.dumps(report["live_settings"], indent=1),
+        encoding="utf-8",
+    )
     return report
