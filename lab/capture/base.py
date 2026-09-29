@@ -179,7 +179,7 @@ def windows_capture_available() -> bool:
     if platform.system() != "Windows":
         return False
     try:
-        import winsdk  # noqa: F401
+        import windows_capture  # noqa: F401
         return True
     except Exception:
         return False
@@ -195,9 +195,10 @@ def create_windows_capture(bus: Bus, channel: str = "capture.frames",
     """
     if not windows_capture_available():
         raise CaptureError(
-            "Windows.Graphics.Capture unavailable (platform=%s, winsdk=%s); "
-            "use SyntheticCapture for non-Windows development"
-            % (platform.system(), "present" if platform.system() == "Windows" else "n/a"))
+            "Windows.Graphics.Capture unavailable (platform=%s, "
+            "windows-capture dependency missing); use SyntheticCapture "
+            "for non-Windows development"
+            % platform.system())
     from .windows_graphics_capture import WindowsGraphicsCaptureAdapter
     return WindowsGraphicsCaptureAdapter(bus, channel=channel,
                                          window_title_re=window_title_re)
