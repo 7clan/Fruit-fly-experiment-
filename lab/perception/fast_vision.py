@@ -40,12 +40,14 @@ class FastVisionWorker(Worker):
     TOPIC_EVT = "perception.fast.events"
 
     def __init__(self, bus: Bus, target_hz: float = 24.0,
-                 frames_channel: str = "capture.frames"):
+                 frames_channel: str = "capture.frames",
+                 max_detect_width: int = 640):
         super().__init__(bus, target_hz=target_hz)
         self.frames: StreamChannel = bus.stream(frames_channel, maxsize=4)
         self.obs_state: StateChannel = bus.state(self.TOPIC_OBS)
         self.events: StreamChannel = bus.stream(self.TOPIC_EVT, maxsize=64)
         self.detector = HeuristicFastVision()
+        self.max_detect_width = int(max_detect_width)
 
     def on_start(self) -> None:
         self.detector.warmup()
@@ -58,8 +60,26 @@ class FastVisionWorker(Worker):
         img = payload.get("data_ref")
         if img is None:
             return
+        # Full-resolution 1920x1030 frames are unnecessarily expensive
+        # for the current fast detector on the target 2-core laptop. Resize
+        # once in native OpenCV code before the repeated full-frame masks.
+        # Geometry remains normalized, so downstream bearings/distances keep
+        # the same coordinate semantics.
+        detect_img = img
+        resized_for_detect = False
+        if (self.max_detect_width > 0 and img.shape[1] > self.max_detect_width):
+            import cv2
+            scale = self.max_detect_width / float(img.shape[1])
+            detect_img = cv2.resize(
+                img,
+                (self.max_detect_width,
+                 max(1, int(round(img.shape[0] * scale)))),
+                interpolation=cv2.INTER_AREA,
+            )
+            resized_for_detect = True
+
         t0 = self.clock.now_ns()
-        det = self.detector.detect(img)
+        det = self.detector.detect(detect_img)
         detect_ms = self.clock.elapsed_ms(t0)
         obs = WorldObservation(
             ts_ns=self.clock.now_ns(),
@@ -74,7 +94,10 @@ class FastVisionWorker(Worker):
             ui=UIState(**det["ui"]),
             abilities=[AbilityAvailability(**a) for a in det["abilities"]],
             notes={"detect_ms": round(detect_ms, 3),
-                   "detector": self.detector.name},
+                   "detector": self.detector.name,
+                   "source_shape": list(img.shape),
+                   "detect_shape": list(detect_img.shape),
+                   "resized_for_detect": resized_for_detect},
         )
         self.obs_state.write(obs.to_dict(), ts_ns=obs.ts_ns)
         # replay event (bounded stream; dropped under pressure by design)
