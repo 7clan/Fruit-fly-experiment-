@@ -133,9 +133,12 @@ class BrainWorker(Worker):
             rec: BrainChunkRecord = self.runtime.advance_chunk(
                 d8_rates, chunk_ms=self.chunk_ms)
         except CanonicalBrainTransportError:
-            # Transport loss is fatal for this session. Do not restart the
-            # 138k-neuron brain repeatedly or spam the report with the same
-            # error every worker tick.
+            # During normal shutdown the parent may terminate the isolated
+            # child while a very slow canonical chunk is still in flight.
+            # That is expected cleanup, not a run error.
+            if self.stop_event.is_set():
+                return
+            # An unexpected transport loss during the live session is fatal.
             self.stop_event.set()
             raise
         intention = self.decoder.decode(rec)
