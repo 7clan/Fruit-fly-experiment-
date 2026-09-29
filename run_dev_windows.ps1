@@ -16,10 +16,22 @@ Set-Location $root
 if (-not (Test-Path ".venv")) { throw "Run .\setup_windows.ps1 first" }
 
 $runtime = "mock"
+$python = ".\.venv\Scripts\python.exe"
+$chunkMs = 50
+$brainHz = 10.0
+
 if ($Canonical) {
     $runtime = "canonical"
-    Write-Host "Canonical brain: init-once ~10 s + ~3 GB RAM; chunked stepping." -ForegroundColor Yellow
+    $python = ".\brain\.venv\Scripts\python.exe"
+    if (-not (Test-Path $python)) { throw "Brain venv missing; run .\setup_windows.ps1 first" }
+
+    if (Test-Path "config\live_settings.json") {
+        $live = Get-Content "config\live_settings.json" -Raw | ConvertFrom-Json
+        if ($live.brain_chunk_ms) { $chunkMs = [int]$live.brain_chunk_ms }
+        if ($live.brain_hz) { $brainHz = [double]$live.brain_hz }
+    }
+    Write-Host ("Canonical brain: measured settings chunk={0} ms, target={1} Hz; PASSIVE/SHADOW only." -f $chunkMs, $brainHz) -ForegroundColor Yellow
 }
 
-& .\.venv\Scripts\python.exe -m lab.app --runtime $runtime --seconds $Seconds --dashboard
+& $python -m lab.app --runtime $runtime --seconds $Seconds --chunk-ms $chunkMs --brain-hz $brainHz --dashboard
 exit $LASTEXITCODE
