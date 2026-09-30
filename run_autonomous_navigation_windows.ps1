@@ -19,12 +19,12 @@ $env:NUMEXPR_NUM_THREADS = "1"
 Write-Host "== AUTONOMOUS QUEST-WAYPOINT NAVIGATION ==" -ForegroundColor Cyan
 Write-Host "Do not steer the character. The fly will turn/approach by itself." -ForegroundColor Yellow
 Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor Yellow
-Write-Host "F12 = EMERGENCY STOP. This run auto-stops after 180 seconds." -ForegroundColor Red
+Write-Host "F12 = EMERGENCY STOP. This run auto-stops after 90 seconds." -ForegroundColor Red
 
 & $mainPython -m lab.app `
     --runtime canonical `
     --capture windows `
-    --seconds 180 `
+    --seconds 90 `
     --capture-fps 4 `
     --chunk-ms 50 `
     --brain-codegen cython `
