@@ -86,3 +86,25 @@ class WindowsInputBackend:
         for code in list(self._down):
             self.key_up(code)
         self._down.clear()
+
+
+def focus_window(hwnd: int) -> bool:
+    """Bring the authorized target game window to the foreground."""
+    try:
+        hwnd = int(hwnd)
+        if hwnd <= 0:
+            return False
+        SW_RESTORE = 9
+        _user32.ShowWindow(wt.HWND(hwnd), SW_RESTORE)
+        return bool(_user32.SetForegroundWindow(wt.HWND(hwnd)))
+    except Exception:
+        return False
+
+
+def f12_pressed() -> bool:
+    """Global emergency-stop poll usable even while the game has focus."""
+    VK_F12 = 0x7B
+    try:
+        return bool(_user32.GetAsyncKeyState(VK_F12) & 0x8000)
+    except Exception:
+        return False
