@@ -89,6 +89,7 @@ class DigitalFlyLab:
             raise ValueError(f"unknown capture_kind {capture_kind!r}")
         self.memory = MemoryStore(self.session_dir / "memory")
         self.value = ValueTable(self.memory)
+        self.action_meta = self.bus.state("action.meta")
         # workers (order = pipeline flow)
         self.fast_vision = FastVisionWorker(
             self.bus, target_hz=fast_hz,
@@ -181,6 +182,11 @@ class DigitalFlyLab:
             "bus_specs": self.bus.specs(),
         }
         self.replay.write_header(meta)
+        self.action_meta.write({
+            "movement_control_available": self.autonomy_requested,
+            "autonomy": self.executor.autonomy_enabled,
+            "ts_ns": SHARED_CLOCK.now_ns(),
+        })
         self.memory.start()
         self.capture.start()
         for w in self.workers:
@@ -223,9 +229,19 @@ class DigitalFlyLab:
                       flush=True)
                 return
             self.executor.set_autonomy(True, reason=reason)
+            self.action_meta.write({
+                "movement_control_available": True,
+                "autonomy": True,
+                "ts_ns": SHARED_CLOCK.now_ns(),
+            })
             print("[lab] MOVEMENT ENABLED", flush=True)
         else:
             self.executor.set_autonomy(False, reason=reason)
+            self.action_meta.write({
+                "movement_control_available": self.autonomy_requested,
+                "autonomy": False,
+                "ts_ns": SHARED_CLOCK.now_ns(),
+            })
             print("[lab] MOVEMENT DISABLED", flush=True)
 
     def _handle_dashboard_control(self, command: str) -> None:
