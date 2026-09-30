@@ -25,6 +25,7 @@ live would require a new pre-registration. Fail closed.
 
 from __future__ import annotations
 
+import threading
 from typing import Optional
 
 from ..bus import Bus, StateChannel, StreamChannel
@@ -62,6 +63,7 @@ class BrainWorker(Worker):
         self.runtime = runtime if runtime is not None else \
             create_runtime(runtime_kind, chunk_ms=self.chunk_ms)
         self.decoder = None
+        self.ready_event = threading.Event()
         self._decoder_params = decoder_params or {}
         self._prewarm_chunks = prewarm_chunks
         self.current: Optional[dict] = None   # last published output
@@ -77,6 +79,7 @@ class BrainWorker(Worker):
         prewarm_ms = self.clock.elapsed_ms(t1)
         self.decoder = IntentionDecoder(self.runtime.pop_sizes(),
                                         params=self._decoder_params)
+        self.ready_event.set()
         self.stats["init_ms"] = round(init_ms, 1)
         self.stats["prewarm_ms"] = round(prewarm_ms, 1)
         self.stats["runtime"] = self.runtime.runtime_label
