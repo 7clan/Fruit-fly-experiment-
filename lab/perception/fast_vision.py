@@ -53,6 +53,15 @@ class FastVisionWorker(Worker):
         self.max_detect_width = int(max_detect_width)
 
     def on_start(self) -> None:
+        # The target laptop has only two physical CPU cores. OpenCV's
+        # default internal thread pool can otherwise compete aggressively
+        # with the canonical Brian2 subprocess and the game itself.
+        try:
+            import cv2
+            cv2.setNumThreads(1)
+            cv2.setUseOptimized(True)
+        except Exception:
+            pass
         self.detector.warmup()
 
     def step(self) -> None:
