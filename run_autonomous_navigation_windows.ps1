@@ -25,7 +25,7 @@ if ($LASTEXITCODE -ne 0) {
     throw "Windows input layout preflight failed; brain startup aborted."
 }
 
-Write-Host "Dashboard buttons: ENABLE/DISABLE MOVEMENT and END RUN." -ForegroundColor Yellow
+Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor Yellow
 Write-Host "F12 = EMERGENCY STOP. This verification run auto-stops after 45 seconds." -ForegroundColor Red
 
