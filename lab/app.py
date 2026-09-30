@@ -140,13 +140,18 @@ class DigitalFlyLab:
         self.wait_end_reason = None
         self._emergency_thread = None
         self._last_dashboard_snapshot_ts = None
+        self._dashboard_render_errors = 0
         if dashboard:
             if dashboard_renderer == "opencv":
                 # OpenCV HighGUI is substantially more stable on Windows
                 # when imshow/waitKey are pumped by the main thread.
                 self.dashboard_ui = OpenCVDashboardRenderer(
-                    evidence_dir=self.session_dir / "evidence",
-                    control_handler=self._handle_dashboard_control)
+                    evidence_dir=(
+                        None if movement_only
+                        else self.session_dir / "evidence"),
+                    control_handler=self._handle_dashboard_control,
+                    lightweight=movement_only,
+                    preview_interval_s=3.0)
                 renderer = None
             elif dashboard_renderer == "text":
                 renderer = TextDashboardRenderer()
@@ -196,21 +201,42 @@ class DigitalFlyLab:
     def render_dashboard_once(self) -> None:
         if self.dashboard_ui is None or self.dashboard is None:
             return
-        snap_state = self.dashboard.snapshot_state.read()
-        if snap_state is None:
-            return
-        payload = snap_state.payload
-        snap_ts = int(payload["ts_ns"])
-        if snap_ts == self._last_dashboard_snapshot_ts:
-            # Still pump HighGUI events without recomposing the full panel.
-            try:
+        try:
+            snap_state = self.dashboard.snapshot_state.read()
+            if snap_state is None:
+                return
+            payload = snap_state.payload
+            snap_ts = int(payload["ts_ns"])
+            if snap_ts == self._last_dashboard_snapshot_ts:
+                # Pump HighGUI events without recomposing the full panel.
                 self.dashboard_ui._cv2.waitKey(1)
-            except Exception:
-                pass
-            return
-        self._last_dashboard_snapshot_ts = snap_ts
-        snap = Snapshot(snap_ts, dict(payload["columns"]))
-        self.dashboard_ui.render(snap, self.capture.latest.read())
+                return
+            self._last_dashboard_snapshot_ts = snap_ts
+            snap = Snapshot(snap_ts, dict(payload["columns"]))
+            self.dashboard_ui.render(snap, self.capture.latest.read())
+            self._dashboard_render_errors = 0
+        except Exception as exc:
+            # The dashboard is observational only. A HighGUI/render failure
+            # must never stop the fly, brain, replay, or input safety thread.
+            self._dashboard_render_errors += 1
+            if self._dashboard_render_errors <= 3:
+                print(
+                    f"[lab] dashboard render warning "
+                    f"{self._dashboard_render_errors}/3: {exc!r}",
+                    flush=True,
+                )
+            if self._dashboard_render_errors >= 3:
+                print(
+                    "[lab] dashboard disabled after repeated render errors; "
+                    "control continues (F8/F9/F10/F11/F12 still work)",
+                    flush=True,
+                )
+                try:
+                    self.dashboard_ui._cv2.destroyWindow(
+                        self.dashboard_ui.window_name)
+                except Exception:
+                    pass
+                self.dashboard_ui = None
 
     def _set_navigation_enabled(self, enabled: bool,
                                 reason: str = "dashboard") -> None:
@@ -284,14 +310,14 @@ class DigitalFlyLab:
         if float(seconds) <= 0:
             while not self.abort_requested.is_set():
                 self.render_dashboard_once()
-                time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
+                time.sleep(0.05)
             self.wait_end_reason = self.abort_reason or "abort"
             return
         deadline_ns = SHARED_CLOCK.now_ns() + int(float(seconds) * 1e9)
         while (SHARED_CLOCK.now_ns() < deadline_ns
                and not self.abort_requested.is_set()):
             self.render_dashboard_once()
-            time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
+            time.sleep(0.05)
         self.wait_end_reason = (
             self.abort_reason or "abort"
             if self.abort_requested.is_set()
@@ -301,7 +327,7 @@ class DigitalFlyLab:
         """Focus the game, arm F12, then enable movement input."""
         if not self.autonomy_requested:
             return
-        from .action.windows_input import focus_window, f12_pressed
+        from .action.windows_input import focus_window, function_key_pressed
         target = getattr(self.capture, "_target", None) or {}
         hwnd = int(target.get("handle") or 0)
         if hwnd <= 0:
@@ -311,19 +337,65 @@ class DigitalFlyLab:
                 "cannot arm navigation: failed to focus authorized game window")
 
         def watch():
-            was_down = False
+            # Dashboard-independent controls:
+            # F8 enable, F9 disable, F10 refocus, F11 release, F12 emergency.
+            prev = {n: False for n in range(8, 13)}
+            obs_state = self.bus.state("world.observation")
+            last_health = None
             while not self.abort_requested.is_set():
-                down = bool(f12_pressed())
-                if down and not was_down:
-                    self.executor.emergency_stop(reason="global_f12")
-                    self.abort_reason = "global_f12"
-                    self.abort_requested.set()
-                    break
-                was_down = down
+                for n in range(8, 13):
+                    down = bool(function_key_pressed(n))
+                    if down and not prev[n]:
+                        if n == 8:
+                            self._handle_dashboard_control("enable_movement")
+                        elif n == 9:
+                            self._handle_dashboard_control("disable_movement")
+                        elif n == 10:
+                            self._handle_dashboard_control("refocus_game")
+                        elif n == 11:
+                            self._handle_dashboard_control("release_keys")
+                        elif n == 12:
+                            self.executor.emergency_stop(reason="global_f12")
+                            self.abort_reason = "global_f12"
+                            self.abort_requested.set()
+                            break
+                    prev[n] = down
+
+                # Movement-only safety exception: if a clear health drop is
+                # observed, release movement immediately instead of walking
+                # deeper into combat. This does not choose a movement key.
+                env = obs_state.read()
+                if env is not None:
+                    player = (env.payload or {}).get("player") or {}
+                    health = player.get("health")
+                    units = player.get("health_units")
+                    try:
+                        health = float(health)
+                    except (TypeError, ValueError):
+                        health = None
+                    if health is not None and units == "fraction":
+                        if (last_health is not None
+                                and last_health - health >= 0.06
+                                and self.executor.autonomy_enabled):
+                            self._set_navigation_enabled(
+                                False, reason="damage_safety_pause")
+                            self.action_meta.write({
+                                "movement_control_available": True,
+                                "autonomy": False,
+                                "last_safety_event": "damage_pause",
+                                "ts_ns": SHARED_CLOCK.now_ns(),
+                            })
+                            print(
+                                f"[lab] DAMAGE SAFETY PAUSE: health "
+                                f"{last_health:.2f}->{health:.2f}; "
+                                "movement disabled",
+                                flush=True,
+                            )
+                        last_health = health
                 time.sleep(0.05)
 
         self._emergency_thread = threading.Thread(
-            target=watch, name="global_f12_stop", daemon=True)
+            target=watch, name="global_navigation_controls", daemon=True)
         self._emergency_thread.start()
         # Dashboard-controlled runs start safely paused. The user explicitly
         # clicks ENABLE MOVEMENT; that click re-focuses Roblox before input.
