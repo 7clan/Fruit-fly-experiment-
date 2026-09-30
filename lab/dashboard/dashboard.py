@@ -185,7 +185,7 @@ class OpenCVDashboardRenderer:
 
     def __init__(self, window_name: str = "DigitalFlyLab",
                  width: int = 1440, height: int = 810,
-                 evidence_dir=None):
+                 evidence_dir=None, control_handler=None):
         try:
             import cv2  # noqa: F401
         except Exception as e:
@@ -197,6 +197,10 @@ class OpenCVDashboardRenderer:
         self._history = deque(maxlen=90)
         self._last_chunk_id = None
         self._evidence_dir = evidence_dir
+        self._control_handler = control_handler
+        self._mouse_ready = False
+        self._toggle_rect = None
+        self._end_rect = None
         if self._evidence_dir is not None:
             from pathlib import Path
             self._evidence_dir = Path(self._evidence_dir)
@@ -204,9 +208,43 @@ class OpenCVDashboardRenderer:
 
     def render(self, snap: Snapshot, mirror_env=None) -> None:
         cv2 = self._cv2
+        if not self._mouse_ready:
+            cv2.namedWindow(self.window_name, cv2.WINDOW_AUTOSIZE)
+            cv2.setMouseCallback(self.window_name, self._on_mouse)
+            self._mouse_ready = True
         canvas = self._compose(snap, mirror_env)
         cv2.imshow(self.window_name, canvas)
         cv2.waitKey(1)
+
+    @staticmethod
+    def _inside(rect, x, y) -> bool:
+        if rect is None:
+            return False
+        x1, y1, x2, y2 = rect
+        return x1 <= x <= x2 and y1 <= y <= y2
+
+    def _on_mouse(self, event, x, y, _flags, _param) -> None:
+        if event != self._cv2.EVENT_LBUTTONUP or self._control_handler is None:
+            return
+        try:
+            if self._inside(self._toggle_rect, x, y):
+                self._control_handler("toggle_movement")
+            elif self._inside(self._end_rect, x, y):
+                self._control_handler("end_run")
+        except Exception:
+            # UI controls must never crash the live loop.
+            pass
+
+    def _button(self, canvas, rect, label, fill, text_color=(245, 245, 245)):
+        cv2 = self._cv2
+        x1, y1, x2, y2 = rect
+        cv2.rectangle(canvas, (x1, y1), (x2, y2), fill, -1)
+        cv2.rectangle(canvas, (x1, y1), (x2, y2), (210, 210, 210), 1)
+        (tw, th), _ = cv2.getTextSize(
+            label, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
+        tx = x1 + max(6, (x2 - x1 - tw) // 2)
+        ty = y1 + max(th + 4, (y2 - y1 + th) // 2)
+        self._put(canvas, tx, ty, label, text_color, scale=0.42, thickness=1)
 
     @staticmethod
     def _safe_float(v, default=0.0):
@@ -580,24 +618,36 @@ class OpenCVDashboardRenderer:
         player = obs.get("player") or {}
         target = obs.get("target") or {}
         self._put(
-            canvas, x0, 715,
+            canvas, x0, 705,
             f"ENGINEERED PERCEPTION: target={target.get('type')}  "
             f"unknown={notes.get('humanoid_track_count', 0)}  "
             f"quest={notes.get('quest_npc_track_count', 0)}  "
             f"hostile?={notes.get('hostile_candidate_count', 0)}",
             (120, 180, 240), scale=0.34)
         self._put(
-            canvas, x0, 736,
+            canvas, x0, 726,
             f"health={player.get('health')} stamina={player.get('stamina')}  "
             f"goal={(goal.get('goal') or {}).get('label')}",
             (120, 180, 240), scale=0.34)
+
+        active = bool(act.get("autonomy"))
+        state_text = "MOVEMENT: ENABLED" if active else "MOVEMENT: DISABLED"
+        state_color = (100, 230, 100) if active else (120, 180, 255)
+        self._put(canvas, x0, 750, state_text, state_color,
+                  scale=0.43, thickness=1)
+
+        self._toggle_rect = (x0, 762, x0 + 205, 800)
+        self._end_rect = (x0 + 220, 762, x0 + 390, 800)
+        if active:
+            self._button(canvas, self._toggle_rect, "DISABLE MOVEMENT",
+                         (60, 60, 190))
+        else:
+            self._button(canvas, self._toggle_rect, "ENABLE MOVEMENT",
+                         (55, 145, 55))
+        self._button(canvas, self._end_rect, "END RUN", (85, 85, 85))
         self._put(
-            canvas, x0, 764,
-            f"ACTION SYSTEM: autonomy={act.get('autonomy')} "
-            f"ability={act.get('ability_id') or '-'}",
-            (240, 180, 120), scale=0.34)
-        self._put(canvas, x0, 790,
-                  "PASSIVE / SHADOW — neural decisions visible, no game input",
-                  (110, 110, 255), scale=0.38)
+            canvas, x0 + 405, 786,
+            "F12 = EMERGENCY STOP",
+            (120, 120, 255), scale=0.34)
         return canvas
 
