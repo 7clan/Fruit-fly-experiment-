@@ -489,8 +489,12 @@ class GPOHeuristicFastVision:
                             float(det.get("confidence", 0.0)), 0.78)
                     merged = True
                     break
+            # Unmatched red markers are intentionally discarded.
+            # A red pixel/diamond by itself is not enough to invent an enemy:
+            # it must coincide with an independently detected non-player
+            # humanoid proposal. This removes observed self/HUD false hostiles.
             if not merged:
-                out.append(anchor)
+                continue
 
         return out
 
