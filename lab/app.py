@@ -312,6 +312,7 @@ class DigitalFlyLab:
                 f"brain_chunks={self.brain.stats['steps']} "
                 f"runtime={self.brain.runtime.runtime_label} "
                 f"intention={intention} "
+                f"inputs={self.executor.stats.get('inputs_emitted', 0)} "
                 f"errors={sum(w.stats['errors'] for w in self.workers)}")
 
     def write_report_json(self) -> Path:
