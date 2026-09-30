@@ -422,11 +422,11 @@ class OpenCVDashboardRenderer:
 
         self._activity_node(
             canvas, *positions["target_left"], "sens L",
-            rates.get("_sens_left", 0.0), max_rate=250.0,
+            rates.get("_sens_left", 0.0), max_rate=150.0,
             color=(170, 210, 100))
         self._activity_node(
             canvas, *positions["target_right"], "sens R",
-            rates.get("_sens_right", 0.0), max_rate=250.0,
+            rates.get("_sens_right", 0.0), max_rate=150.0,
             color=(170, 210, 100))
         self._activity_node(
             canvas, *positions["looming"], "loom",
@@ -568,10 +568,10 @@ class OpenCVDashboardRenderer:
 
         sensory = brain.get("sensory_rates_hz") or {}
         self._bar(canvas, x0, 126, 170, "D8 target_left Hz",
-                  sensory.get("target_left", 0.0), 250.0,
+                  sensory.get("target_left", 0.0), 150.0,
                   color=(170, 210, 100))
         self._bar(canvas, x0 + 190, 126, 170, "D8 target_right Hz",
-                  sensory.get("target_right", 0.0), 250.0,
+                  sensory.get("target_right", 0.0), 150.0,
                   color=(170, 210, 100))
         self._bar(canvas, x0 + 380, 126, min(160, panel_w - 380),
                   "D8 looming Hz", sensory.get("looming", 0.0), 150.0,
