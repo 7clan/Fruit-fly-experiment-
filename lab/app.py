@@ -66,6 +66,7 @@ class DigitalFlyLab:
                  fast_hz: float = 24.0, heavy_hz: float = 8.0,
                  executor_hz: float = 40.0, planner_hz: float = 1.0,
                  dashboard_hz: float = 20.0, capture_fps: float = 30.0,
+                 fast_detect_width: int = 640,
                  runtime=None, brain_codegen: str | None = None,
                  brain_transport: str = "auto"):
         self.bus = Bus(mode=mode)
@@ -85,7 +86,9 @@ class DigitalFlyLab:
         self.memory = MemoryStore(self.session_dir / "memory")
         self.value = ValueTable(self.memory)
         # workers (order = pipeline flow)
-        self.fast_vision = FastVisionWorker(self.bus, target_hz=fast_hz)
+        self.fast_vision = FastVisionWorker(
+            self.bus, target_hz=fast_hz,
+            max_detect_width=int(fast_detect_width))
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
@@ -113,6 +116,8 @@ class DigitalFlyLab:
                                       autonomy_enabled=autonomy)
         self.replay = ReplayRecorder(self.bus, self.session_dir)
         self.dashboard_ui = None
+        self.assessment_started_ns = None
+        self.assessment_ended_ns = None
         if dashboard:
             if dashboard_renderer == "opencv":
                 # OpenCV HighGUI is substantially more stable on Windows
@@ -227,6 +232,17 @@ class DigitalFlyLab:
             "bus": self.bus.metrics(),
             "workers": {w.name: dict(w.stats) for w in self.workers},
             "memory": self.memory.stats(),
+            "assessment": {
+                "started_ns": self.assessment_started_ns,
+                "ended_ns": self.assessment_ended_ns,
+                "elapsed_s": (
+                    round((self.assessment_ended_ns - self.assessment_started_ns)
+                          / 1e9, 3)
+                    if self.assessment_started_ns is not None
+                    and self.assessment_ended_ns is not None
+                    else None
+                ),
+            },
         }
         return out
 
@@ -288,6 +304,8 @@ def main(argv=None) -> int:
     ap.add_argument("--dashboard-ui", action="store_true",
                     help="show the OpenCV live fly-brain dashboard window")
     ap.add_argument("--dashboard-hz", type=float, default=5.0)
+    ap.add_argument("--fast-detect-width", type=int, default=640,
+                    help="max width for fast CV detector; geometry stays normalized")
     ap.add_argument("--autonomy", action="store_true",
                     help="DANGER: enables input emission (gated in app policy)")
     args = ap.parse_args(argv)
@@ -309,6 +327,7 @@ def main(argv=None) -> int:
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
                         brain_hz=args.brain_hz, fast_hz=args.fast_hz,
                         heavy_hz=args.heavy_hz,
+                        fast_detect_width=args.fast_detect_width,
                         dashboard=(args.dashboard or args.dashboard_ui),
                         dashboard_renderer=("opencv" if args.dashboard_ui else "text"),
                         dashboard_hz=args.dashboard_hz,
@@ -329,11 +348,14 @@ def main(argv=None) -> int:
                    f"starting {args.seconds}s timed smoke test"),
                 flush=True,
             )
+        lab.assessment_started_ns = SHARED_CLOCK.now_ns()
         if isinstance(lab.capture, SyntheticCapture):
             lab.drive_synthetic(seconds=args.seconds, fps=30.0)
         else:
             lab.wait_live(args.seconds)
+        lab.assessment_ended_ns = SHARED_CLOCK.now_ns()
     except KeyboardInterrupt:
+        lab.assessment_ended_ns = SHARED_CLOCK.now_ns()
         pass
     finally:
         # First Ctrl+C requests shutdown. Ignore additional Ctrl+C presses
@@ -346,6 +368,10 @@ def main(argv=None) -> int:
         print("[lab] stopping; please wait for cleanup/report...", flush=True)
         rep = lab.stop()
     print(lab.status_line())
+    if (lab.assessment_started_ns is not None
+            and lab.assessment_ended_ns is not None):
+        print(f"[lab] post_ready_run_s="
+              f"{(lab.assessment_ended_ns-lab.assessment_started_ns)/1e9:.1f}")
     p = lab.write_report_json()
     bundle = shutil.make_archive(
         str(lab.session_dir), "zip",
