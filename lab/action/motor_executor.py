@@ -177,13 +177,15 @@ class MotorExecutor(Worker):
 
     def __init__(self, bus: Bus, target_hz: float = 40.0,
                  backend: Optional[InputBackend] = None,
-                 autonomy_enabled: bool = False):
+                 autonomy_enabled: bool = False,
+                 movement_only: bool = False):
         super().__init__(bus, target_hz=target_hz)
         self.brain_out: StateChannel = bus.state(self.TOPIC_IN)
         self.action_state: StateChannel = bus.state(self.TOPIC_ACTION)
         self.inputs: StreamChannel = bus.stream(self.TOPIC_INPUT, maxsize=256)
         self.backend = backend or SafeNoopBackend()
         self.autonomy_enabled = bool(autonomy_enabled)   # GATED (see module doc)
+        self.movement_only = bool(movement_only)
         self._held: dict[str, float] = {}   # code -> hold-until ns
         self._lock = threading.Lock()
         self.action_lock_until_ns = 0
@@ -263,12 +265,30 @@ class MotorExecutor(Worker):
                     bindings=[], hold_s=0.2,
                     notes={"resolver": ra.resolver_config,
                            "score": ra.score})
-        # basic movement binding map (Gate-6 set; validated subset)
+        # First active Gate-6 run is deliberately movement-only.
+        # RETREAT/ESCAPE/combat-like intentions fail closed to STOP.
+        if self.movement_only:
+            binding_map = {
+                "STOP": ([], 0.0),
+                "TURN_LEFT": (["key:A"], 0.12),
+                "TURN_RIGHT": (["key:D"], 0.12),
+                "APPROACH": (["key:W"], 0.30),
+            }
+            bindings, hold_s = binding_map.get(
+                intention.name, ([], 0.0))
+            effective = intention.name if intention.name in binding_map else "STOP"
+            return ConcreteAction(
+                intention=effective, ability_id="",
+                bindings=bindings, hold_s=hold_s,
+                notes={"source": "gate6_movement_only",
+                       "brain_intention": intention.name})
+
+        # Passive/shadow development path retains the broader map.
         binding_map = {
             "STOP": ([], 0.0),
             "TURN_LEFT": (["key:A"], 0.12),
             "TURN_RIGHT": (["key:D"], 0.12),
-            "APPROACH": (["key:W"], 0.30),   # held W — extended by repeats
+            "APPROACH": (["key:W"], 0.30),
             "RETREAT": (["key:S"], 0.20),
             "ESCAPE": (["key:SPACE"], 0.10),
         }
