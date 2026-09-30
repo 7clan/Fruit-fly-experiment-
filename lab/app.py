@@ -30,7 +30,8 @@ import time
 from pathlib import Path
 
 from . import __version__
-from .action.motor_executor import MotorExecutor, SafeNoopBackend
+from .action.motor_executor import (
+    MotorExecutor, SafeNoopBackend, create_windows_movement_only_backend)
 from .brain.worker import BrainWorker
 from .brain.runtime import CanonicalBrianRuntime
 from .brain.subprocess_runtime import CanonicalBrainSubprocessRuntime
@@ -60,6 +61,7 @@ class DigitalFlyLab:
                  session_dir: Path | None = None,
                  mode: BusMode = BusMode.THREADED,
                  autonomy: bool = False,
+                 movement_only: bool = False,
                  dashboard: bool = True,
                  dashboard_renderer: str = "text",
                  brain_hz: float = 10.0,
@@ -111,9 +113,15 @@ class DigitalFlyLab:
         self.brain = BrainWorker(self.bus, target_hz=brain_hz,
                                  runtime=runtime, runtime_kind=runtime_kind,
                                  chunk_ms=chunk_ms)
-        self.executor = MotorExecutor(self.bus, target_hz=executor_hz,
-                                      backend=SafeNoopBackend(),
-                                      autonomy_enabled=autonomy)
+        if autonomy and movement_only:
+            backend = create_windows_movement_only_backend()
+        else:
+            backend = SafeNoopBackend()
+        self.executor = MotorExecutor(
+            self.bus, target_hz=executor_hz,
+            backend=backend,
+            autonomy_enabled=autonomy,
+            movement_only=movement_only)
         self.replay = ReplayRecorder(self.bus, self.session_dir)
         self.dashboard_ui = None
         self.assessment_started_ns = None
@@ -307,13 +315,17 @@ def main(argv=None) -> int:
     ap.add_argument("--fast-detect-width", type=int, default=640,
                     help="max width for fast CV detector; geometry stays normalized")
     ap.add_argument("--autonomy", action="store_true",
-                    help="DANGER: enables input emission (gated in app policy)")
+                    help="generic autonomy remains blocked; use movement gate launcher")
+    ap.add_argument("--movement-only-autonomy", action="store_true",
+                    help="Gate-6 only: arm hard-filtered W/A/D movement backend")
     args = ap.parse_args(argv)
 
     if args.autonomy:
         raise SystemExit(
-            "autonomy cannot be enabled from the dev CLI — it requires a "
-            "passed gate (6+); run the Windows app, which enforces this")
+            "generic autonomy is blocked; use the dedicated movement-only "
+            "Gate-6 launcher")
+    if args.movement_only_autonomy and args.capture != "windows":
+        raise SystemExit("movement-only autonomy requires Windows capture")
 
     if args.self_test:
         res = self_test(runtime_kind=args.runtime)
@@ -324,6 +336,8 @@ def main(argv=None) -> int:
 
     lab = DigitalFlyLab(capture_kind=args.capture,
                         capture_fps=args.capture_fps,
+                        autonomy=bool(args.movement_only_autonomy),
+                        movement_only=bool(args.movement_only_autonomy),
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
                         brain_hz=args.brain_hz, fast_hz=args.fast_hz,
                         heavy_hz=args.heavy_hz,
@@ -343,9 +357,13 @@ def main(argv=None) -> int:
             print(
                 f"[lab] canonical brain READY: init={lab.brain.stats.get('init_ms')} ms "
                 f"prewarm={lab.brain.stats.get('prewarm_ms')} ms; "
-                + ("starting persistent passive run (Ctrl+C to stop)"
+                + (("starting persistent movement-only run (Ctrl+C to stop)"
+                    if args.movement_only_autonomy else
+                    "starting persistent passive run (Ctrl+C to stop)")
                    if args.seconds <= 0 else
-                   f"starting {args.seconds}s timed smoke test"),
+                   (f"starting {args.seconds}s movement-only test"
+                    if args.movement_only_autonomy else
+                    f"starting {args.seconds}s timed smoke test")),
                 flush=True,
             )
         lab.assessment_started_ns = SHARED_CLOCK.now_ns()
