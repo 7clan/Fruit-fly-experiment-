@@ -347,17 +347,20 @@ class GPOHeuristicFastVision:
         # texture and avoids depending on a hedge-prone humanoid proposal.
         hostile_anchors = []
         marker_roi = np.zeros_like(red)
-        my0, my1 = int(0.12 * h), int(0.50 * h)
-        mx0, mx1 = int(0.14 * w), int(0.93 * w)
+        my0, my1 = int(0.24 * h), int(0.45 * h)
+        mx0, mx1 = int(0.10 * w), int(0.93 * w)
         marker_roi[my0:my1, mx0:mx1] = red[my0:my1, mx0:mx1]
         nred, _rlab, rstats, rcents = cv2.connectedComponentsWithStats(
             marker_roi)
         area_scale = max(1.0, (w / 640.0) ** 2)
         for ri in range(1, nred):
             rx, ry, rw, rh, rarea = rstats[ri]
-            if not (2 * area_scale <= rarea <= 24 * area_scale):
+            # At the live detector width (640 px), observed Bandit diamonds
+            # are tiny 2x2-ish components. Larger red components are usually
+            # HUD bars, damage text, roofs, clothing, or shop scenery.
+            if not (2 * area_scale <= rarea <= 5 * area_scale):
                 continue
-            if rw > max(8, int(0.018 * w)) or rh > max(9, int(0.028 * h)):
+            if rw > max(3, int(0.005 * w)) or rh > max(3, int(0.009 * h)):
                 continue
             rcx, rcy = map(float, rcents[ri])
             # The red diamond/name marker sits above the body. Build a
@@ -427,24 +430,6 @@ class GPOHeuristicFastVision:
                           + min(texture / 180.0, 0.18)))
             if near_quest:
                 confidence = max(confidence, 0.76)
-
-            # Hostile evidence: a compact red marker/name indicator directly
-            # above the candidate. This is deliberately not promoted to
-            # EnemyState yet; the next passive run validates it.
-            if kind != "quest_npc":
-                bw = max(2, ix2 - ix1)
-                bh = max(2, iy2 - iy1)
-                rx1 = max(0, int(cx - 0.75 * bw))
-                rx2 = min(w, int(cx + 0.75 * bw))
-                ry1 = max(0, int(y1 - 0.55 * bh))
-                ry2 = min(h, int(y1 + 0.10 * bh))
-                rpatch = red[ry1:ry2, rx1:rx2]
-                if rpatch.size:
-                    nred = int(np.count_nonzero(rpatch))
-                    red_frac = nred / float(rpatch.size)
-                    if nred >= 3 and red_frac >= 0.008:
-                        kind = "hostile_candidate"
-                        confidence = max(confidence, 0.70)
 
             out.append({
                 "bbox": [x1 / w, y1 / h, x2 / w, y2 / h],
