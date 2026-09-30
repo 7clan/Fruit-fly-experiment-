@@ -595,6 +595,54 @@ class GPOHeuristicFastVision:
                 "distance": None, "confidence": 0.0,
             }
 
+        # Recommended-quest waypoint: GPO shows a bright green circular
+        # destination marker (with distance text) and red path arrows.
+        # The green circle is a strong navigation cue and is preferred over
+        # the local yellow QUEST marker when present. It is still only a
+        # sensory target: it does NOT choose a key or bypass the fly brain.
+        green = cv2.inRange(
+            hsv, np.array([45, 160, 150], dtype=np.uint8),
+            np.array([85, 255, 255], dtype=np.uint8))
+        waypoint_roi = np.zeros_like(green)
+        wy0, wy1 = int(0.20 * h), int(0.72 * h)
+        wx0, wx1 = int(0.05 * w), int(0.985 * w)
+        waypoint_roi[wy0:wy1, wx0:wx1] = green[wy0:wy1, wx0:wx1]
+        ng, _glab, gstats, gcents = cv2.connectedComponentsWithStats(
+            waypoint_roi)
+        waypoint_candidates = []
+        min_green_area = max(6, int(w * h * 0.00004))
+        max_green_area = max(80, int(w * h * 0.0012))
+        for gi in range(1, ng):
+            gx, gy, gw, gh, garea = gstats[gi]
+            if not (min_green_area <= garea <= max_green_area):
+                continue
+            aspect = gw / max(float(gh), 1.0)
+            if not (0.65 <= aspect <= 1.45):
+                continue
+            if gw < 3 or gh < 3:
+                continue
+            gcx, gcy = map(float, gcents[gi])
+            compact = 1.0 - min(1.0, abs(aspect - 1.0))
+            waypoint_candidates.append(
+                (float(garea) * (0.7 + 0.3 * compact), gcx, gcy,
+                 int(garea), int(gw), int(gh)))
+
+        waypoint_found = False
+        waypoint_xy = None
+        if waypoint_candidates:
+            _score, tx, ty, _ga, _gw, _gh = max(waypoint_candidates)
+            bearing = self._bearing(px, py, tx, ty, w, h)
+            screen_d = math.hypot((tx - px) / w, (ty - py) / h)
+            proximity = max(0.0, min(1.0, 1.0 - screen_d / 0.70))
+            target = {
+                "type": "recommended_quest_waypoint",
+                "direction": float(bearing),
+                "distance": float(proximity),
+                "confidence": 0.92,
+            }
+            waypoint_found = True
+            waypoint_xy = (float(tx), float(ty))
+
         red = (
             cv2.inRange(hsv, np.array([0, 120, 100], dtype=np.uint8),
                         np.array([10, 255, 255], dtype=np.uint8))
@@ -638,6 +686,8 @@ class GPOHeuristicFastVision:
             "_notes": {
                 "player_mode": player_mode,
                 "quest_marker_detected": target_found,
+                "recommended_waypoint_detected": waypoint_found,
+                "recommended_waypoint_xy": waypoint_xy,
                 "health_bar_detected": health is not None,
                 "stamina_bar_detected": stamina is not None,
                 "entity_tracks": stable_tracks,
