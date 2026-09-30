@@ -138,12 +138,14 @@ class DigitalFlyLab:
         self.abort_reason = None
         self.wait_end_reason = None
         self._emergency_thread = None
+        self._last_dashboard_snapshot_ts = None
         if dashboard:
             if dashboard_renderer == "opencv":
                 # OpenCV HighGUI is substantially more stable on Windows
                 # when imshow/waitKey are pumped by the main thread.
                 self.dashboard_ui = OpenCVDashboardRenderer(
-                    evidence_dir=self.session_dir / "evidence")
+                    evidence_dir=self.session_dir / "evidence",
+                    control_handler=self._handle_dashboard_control)
                 renderer = None
             elif dashboard_renderer == "text":
                 renderer = TextDashboardRenderer()
@@ -192,8 +194,49 @@ class DigitalFlyLab:
         if snap_state is None:
             return
         payload = snap_state.payload
-        snap = Snapshot(int(payload["ts_ns"]), dict(payload["columns"]))
+        snap_ts = int(payload["ts_ns"])
+        if snap_ts == self._last_dashboard_snapshot_ts:
+            # Still pump HighGUI events without recomposing the full panel.
+            try:
+                self.dashboard_ui._cv2.waitKey(1)
+            except Exception:
+                pass
+            return
+        self._last_dashboard_snapshot_ts = snap_ts
+        snap = Snapshot(snap_ts, dict(payload["columns"]))
         self.dashboard_ui.render(snap, self.capture.latest.read())
+
+    def _set_navigation_enabled(self, enabled: bool,
+                                reason: str = "dashboard") -> None:
+        if not self.autonomy_requested:
+            return
+        if enabled:
+            if not self.brain.ready_event.is_set():
+                print("[lab] movement remains disabled until brain READY",
+                      flush=True)
+                return
+            from .action.windows_input import focus_window
+            target = getattr(self.capture, "_target", None) or {}
+            hwnd = int(target.get("handle") or 0)
+            if hwnd <= 0 or not focus_window(hwnd):
+                print("[lab] movement not enabled: could not focus Roblox",
+                      flush=True)
+                return
+            self.executor.set_autonomy(True, reason=reason)
+            print("[lab] MOVEMENT ENABLED", flush=True)
+        else:
+            self.executor.set_autonomy(False, reason=reason)
+            print("[lab] MOVEMENT DISABLED", flush=True)
+
+    def _handle_dashboard_control(self, command: str) -> None:
+        if command == "toggle_movement":
+            self._set_navigation_enabled(
+                not self.executor.autonomy_enabled,
+                reason="dashboard_toggle")
+        elif command == "end_run":
+            self._set_navigation_enabled(False, reason="dashboard_end")
+            self.abort_reason = "dashboard_end"
+            self.abort_requested.set()
 
     def wait_live(self, seconds: float) -> None:
         self.wait_end_reason = None
@@ -241,7 +284,8 @@ class DigitalFlyLab:
         self._emergency_thread = threading.Thread(
             target=watch, name="global_f12_stop", daemon=True)
         self._emergency_thread.start()
-        self.executor.set_autonomy(True, reason="brain_ready_game_focused")
+        self._set_navigation_enabled(
+            True, reason="brain_ready_game_focused")
 
     def wait_for_brain_ready(self, timeout_s: float = 180.0) -> bool:
         """Wait for the brain worker's explicit init/prewarm-ready event."""
