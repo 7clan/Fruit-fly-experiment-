@@ -284,8 +284,13 @@ class DigitalFlyLab:
         self._emergency_thread = threading.Thread(
             target=watch, name="global_f12_stop", daemon=True)
         self._emergency_thread.start()
-        self._set_navigation_enabled(
-            True, reason="brain_ready_game_focused")
+        # Dashboard-controlled runs start safely paused. The user explicitly
+        # clicks ENABLE MOVEMENT; that click re-focuses Roblox before input.
+        if self.dashboard_ui is None:
+            self._set_navigation_enabled(
+                True, reason="brain_ready_game_focused")
+        else:
+            self.executor.set_autonomy(False, reason="dashboard_start_paused")
 
     def wait_for_brain_ready(self, timeout_s: float = 180.0) -> bool:
         """Wait for the brain worker's explicit init/prewarm-ready event."""
@@ -464,8 +469,13 @@ def main(argv=None) -> int:
             )
         if args.movement_only_autonomy:
             lab.arm_windows_navigation()
-            print("[lab] navigation armed; Roblox focused; F12 = EMERGENCY STOP",
-                  flush=True)
+            if lab.dashboard_ui is not None:
+                print("[lab] navigation controls ready; MOVEMENT DISABLED — "
+                      "click ENABLE MOVEMENT in DigitalFlyLab; F12 = EMERGENCY STOP",
+                      flush=True)
+            else:
+                print("[lab] navigation armed; Roblox focused; F12 = EMERGENCY STOP",
+                      flush=True)
         lab.assessment_started_ns = SHARED_CLOCK.now_ns()
         if isinstance(lab.capture, SyntheticCapture):
             lab.drive_synthetic(seconds=args.seconds, fps=30.0)
