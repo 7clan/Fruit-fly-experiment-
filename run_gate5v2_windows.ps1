@@ -22,6 +22,7 @@ if ($LASTEXITCODE -ne 0 -or $transportCheck.Trim() -ne "subprocess_pipe") {
 
 Write-Host "== Gate 5 v2 PASSIVE assessment ==" -ForegroundColor Cyan
 Write-Host "120 seconds starts only after canonical brain READY." -ForegroundColor Yellow
+Write-Host "DO NOT press Ctrl+C unless you want to abort; this assessment stops by itself." -ForegroundColor Red
 Write-Host "Show quest NPC, Bandits, and ordinary scenery. No autonomous input." -ForegroundColor Yellow
 
 & $mainPython -m lab.app `
