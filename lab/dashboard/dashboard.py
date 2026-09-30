@@ -241,11 +241,17 @@ class OpenCVDashboardRenderer:
         x1, y1, x2, y2 = rect
         cv2.rectangle(canvas, (x1, y1), (x2, y2), fill, -1)
         cv2.rectangle(canvas, (x1, y1), (x2, y2), (210, 210, 210), 1)
+        scale = 0.42
         (tw, th), _ = cv2.getTextSize(
-            label, cv2.FONT_HERSHEY_SIMPLEX, 0.42, 1)
-        tx = x1 + max(6, (x2 - x1 - tw) // 2)
+            label, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
+        max_w = max(12, x2 - x1 - 10)
+        if tw > max_w:
+            scale = max(0.26, scale * max_w / max(tw, 1))
+            (tw, th), _ = cv2.getTextSize(
+                label, cv2.FONT_HERSHEY_SIMPLEX, scale, 1)
+        tx = x1 + max(4, (x2 - x1 - tw) // 2)
         ty = y1 + max(th + 4, (y2 - y1 + th) // 2)
-        self._put(canvas, tx, ty, label, text_color, scale=0.42, thickness=1)
+        self._put(canvas, tx, ty, label, text_color, scale=scale, thickness=1)
 
     @staticmethod
     def _safe_float(v, default=0.0):
