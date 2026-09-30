@@ -30,20 +30,28 @@ MOUSEEVENTF_MOVE = 0x0001
 _user32 = ctypes.WinDLL("user32", use_last_error=True)
 
 
+_ULONG_PTR = ctypes.c_size_t
+
+
 class _KEYBDINPUT(ctypes.Structure):
     _fields_ = [("wVk", wt.WORD), ("wScan", wt.WORD), ("dwFlags", wt.DWORD),
-                ("time", wt.DWORD), ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong))]
+                ("time", wt.DWORD), ("dwExtraInfo", _ULONG_PTR)]
 
 
 class _MOUSEINPUT(ctypes.Structure):
     _fields_ = [("dx", wt.LONG), ("dy", wt.LONG), ("dwFlags", wt.DWORD),
-                ("time", wt.DWORD), ("dwExtraInfo", ctypes.POINTER(ctypes.c_ulong))]
+                ("time", wt.DWORD), ("dwExtraInfo", _ULONG_PTR)]
 
 
 class _INPUT(ctypes.Structure):
     class _U(ctypes.Union):
         _fields_ = [("ki", _KEYBDINPUT), ("mi", _MOUSEINPUT)]
     _fields_ = [("type", wt.DWORD), ("union", _U)]
+
+_user32.SendInput.argtypes = [
+    wt.UINT, ctypes.POINTER(_INPUT), ctypes.c_int
+]
+_user32.SendInput.restype = wt.UINT
 
 
 _SCAN = {  # virtual key -> scan code (subset used by the basic movement map)
@@ -58,34 +66,66 @@ class WindowsInputBackend:
 
     def __init__(self):
         self._down: set[str] = set()
+        self.attempts = 0
+        self.successes = 0
+        self.failures = 0
+        self.last_error = None
+
+    def _send(self, inp: _INPUT, label: str) -> None:
+        ctypes.set_last_error(0)
+        self.attempts += 1
+        sent = int(_user32.SendInput(
+            1, ctypes.byref(inp), ctypes.sizeof(_INPUT)))
+        if sent != 1:
+            self.failures += 1
+            err = int(ctypes.get_last_error())
+            self.last_error = (
+                f"{label}: SendInput inserted {sent}/1 events; "
+                f"GetLastError={err}")
+            raise OSError(err or 1, self.last_error)
+        self.successes += 1
+        self.last_error = None
 
     def key_down(self, code: str) -> None:
         sc = _SCAN.get(code.upper())
         if sc is None:
-            return
+            raise ValueError(f"unsupported scan-code key {code!r}")
         inp = _INPUT(type=INPUT_KEYBOARD)
-        inp.union.ki = _KEYBDINPUT(0, sc, KEYEVENTF_SCANCODE)
-        _user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(_INPUT))
+        inp.union.ki = _KEYBDINPUT(0, sc, KEYEVENTF_SCANCODE, 0, 0)
+        self._send(inp, f"key_down:{code.upper()}")
         self._down.add(code.upper())
 
     def key_up(self, code: str) -> None:
         sc = _SCAN.get(code.upper())
         if sc is None:
-            return
+            raise ValueError(f"unsupported scan-code key {code!r}")
         inp = _INPUT(type=INPUT_KEYBOARD)
-        inp.union.ki = _KEYBDINPUT(0, sc, KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP)
-        _user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(_INPUT))
+        inp.union.ki = _KEYBDINPUT(
+            0, sc, KEYEVENTF_SCANCODE | KEYEVENTF_KEYUP, 0, 0)
+        self._send(inp, f"key_up:{code.upper()}")
         self._down.discard(code.upper())
 
     def mouse_move(self, dx: int, dy: int) -> None:
         inp = _INPUT(type=INPUT_MOUSE)
-        inp.union.mi = _MOUSEINPUT(int(dx), int(dy), MOUSEEVENTF_MOVE)
-        _user32.SendInput(1, ctypes.byref(inp), ctypes.sizeof(_INPUT))
+        inp.union.mi = _MOUSEINPUT(
+            int(dx), int(dy), MOUSEEVENTF_MOVE, 0, 0)
+        self._send(inp, f"mouse_move:{int(dx)},{int(dy)}")
 
     def release_all(self) -> None:
         for code in list(self._down):
             self.key_up(code)
         self._down.clear()
+
+    def backend_health(self) -> dict:
+        return {
+            "backend": self.name,
+            "ok": self.failures == 0,
+            "sendinput_attempts": self.attempts,
+            "sendinput_successes": self.successes,
+            "sendinput_failures": self.failures,
+            "last_error": self.last_error,
+            "held_keys": sorted(self._down),
+        }
 
 
 def focus_window(hwnd: int) -> bool:
