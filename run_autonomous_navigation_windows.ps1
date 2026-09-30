@@ -27,12 +27,12 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Dashboard buttons: ENABLE/DISABLE MOVEMENT and END RUN." -ForegroundColor Yellow
 Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor Yellow
-Write-Host "F12 = EMERGENCY STOP. This run auto-stops after 90 seconds." -ForegroundColor Red
+Write-Host "F12 = EMERGENCY STOP. This verification run auto-stops after 45 seconds." -ForegroundColor Red
 
 & $mainPython -m lab.app `
     --runtime canonical `
     --capture windows `
-    --seconds 90 `
+    --seconds 45 `
     --capture-fps 4 `
     --chunk-ms 50 `
     --brain-codegen cython `
