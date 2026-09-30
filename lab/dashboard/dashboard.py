@@ -116,6 +116,8 @@ class TextDashboardRenderer:
         ch = d.get("fly.channels") or {}
         goal = d.get("helper.goal") or {}
         act = d.get("action.selected") or {}
+        brain_meta = d.get("brain.meta") or {}
+        action_meta = d.get("action.meta") or {}
         obs = d.get("world.observation") or {}
         intention = (brain.get("intention") or {})
         fly_col = [
@@ -630,21 +632,49 @@ class OpenCVDashboardRenderer:
             f"goal={(goal.get('goal') or {}).get('label')}",
             (120, 180, 240), scale=0.34)
 
-        active = bool(act.get("autonomy"))
-        state_text = "MOVEMENT: ENABLED" if active else "MOVEMENT: DISABLED"
-        state_color = (100, 230, 100) if active else (120, 180, 255)
-        self._put(canvas, x0, 750, state_text, state_color,
-                  scale=0.43, thickness=1)
+        active = bool(
+            act.get("autonomy", action_meta.get("autonomy", False)))
+        ready = bool(brain_meta.get("ready", False))
+        controls_available = bool(
+            action_meta.get("movement_control_available", False))
 
-        self._toggle_rect = (x0, 762, x0 + 205, 800)
         self._end_rect = (x0 + 220, 762, x0 + 390, 800)
-        if active:
-            self._button(canvas, self._toggle_rect, "DISABLE MOVEMENT",
-                         (60, 60, 190))
-        else:
-            self._button(canvas, self._toggle_rect, "ENABLE MOVEMENT",
-                         (55, 145, 55))
         self._button(canvas, self._end_rect, "END RUN", (85, 85, 85))
+
+        if not controls_available:
+            self._toggle_rect = None
+            self._put(canvas, x0, 750, "MOVEMENT: PASSIVE MODE",
+                      (150, 150, 150), scale=0.43, thickness=1)
+            self._button(
+                canvas, (x0, 762, x0 + 205, 800),
+                "MOVEMENT LOCKED", (70, 70, 70),
+                text_color=(170, 170, 170))
+        elif not ready:
+            self._toggle_rect = None
+            self._put(canvas, x0, 750,
+                      "MOVEMENT: LOCKED — BRAIN NOT READY",
+                      (80, 190, 255), scale=0.43, thickness=1)
+            self._button(
+                canvas, (x0, 762, x0 + 205, 800),
+                "WAIT FOR BRAIN READY", (70, 70, 70),
+                text_color=(190, 190, 190))
+        else:
+            self._toggle_rect = (x0, 762, x0 + 205, 800)
+            state_text = (
+                "MOVEMENT: ENABLED" if active else "MOVEMENT: DISABLED")
+            state_color = (
+                (100, 230, 100) if active else (120, 180, 255))
+            self._put(canvas, x0, 750, state_text, state_color,
+                      scale=0.43, thickness=1)
+            if active:
+                self._button(
+                    canvas, self._toggle_rect, "DISABLE MOVEMENT",
+                    (60, 60, 190))
+            else:
+                self._button(
+                    canvas, self._toggle_rect, "ENABLE MOVEMENT",
+                    (55, 145, 55))
+
         self._put(
             canvas, x0 + 405, 786,
             "F12 = EMERGENCY STOP",
