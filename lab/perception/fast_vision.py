@@ -604,28 +604,47 @@ class GPOHeuristicFastVision:
             hsv, np.array([45, 160, 150], dtype=np.uint8),
             np.array([85, 255, 255], dtype=np.uint8))
         waypoint_roi = np.zeros_like(green)
-        wy0, wy1 = int(0.20 * h), int(0.72 * h)
-        wx0, wx1 = int(0.05 * w), int(0.985 * w)
+        # Observed GPO marker: bright green circle with green distance text
+        # directly below it. Keep the HUD/ability edges out of this search.
+        wy0, wy1 = int(0.10 * h), int(0.68 * h)
+        wx0, wx1 = int(0.08 * w), int(0.92 * w)
         waypoint_roi[wy0:wy1, wx0:wx1] = green[wy0:wy1, wx0:wx1]
         ng, _glab, gstats, gcents = cv2.connectedComponentsWithStats(
             waypoint_roi)
         waypoint_candidates = []
-        min_green_area = max(6, int(w * h * 0.00004))
-        max_green_area = max(80, int(w * h * 0.0012))
+        min_green_area = max(5, int(w * h * 0.000035))
+        max_green_area = max(90, int(w * h * 0.0012))
         for gi in range(1, ng):
             gx, gy, gw, gh, garea = gstats[gi]
             if not (min_green_area <= garea <= max_green_area):
                 continue
             aspect = gw / max(float(gh), 1.0)
-            if not (0.65 <= aspect <= 1.45):
+            if not (0.70 <= aspect <= 1.35):
                 continue
             if gw < 3 or gh < 3:
                 continue
+
+            # The real waypoint has green distance text (e.g. "179m") a
+            # short distance below the circular marker. Require some green
+            # support there so isolated world/UI green squares are rejected.
+            sx0 = max(0, gx - 2 * gw)
+            sx1 = min(w, gx + 3 * gw)
+            sy0 = min(h, gy + gh)
+            sy1 = min(h, gy + gh + max(3 * gh, int(0.065 * h)))
+            support = int(np.count_nonzero(green[sy0:sy1, sx0:sx1]))
+            min_support = max(3, int(garea * 0.10))
+            if support < min_support:
+                continue
+
             gcx, gcy = map(float, gcents[gi])
             compact = 1.0 - min(1.0, abs(aspect - 1.0))
+            # Prefer the circle+text pair and slightly prefer central cues.
+            centrality = max(0.25, 1.0 - abs(gcx / max(w, 1) - 0.5))
+            score = (float(garea) * (0.7 + 0.3 * compact)
+                     * (1.0 + min(1.5, support / max(float(garea), 1.0)))
+                     * centrality)
             waypoint_candidates.append(
-                (float(garea) * (0.7 + 0.3 * compact), gcx, gcy,
-                 int(garea), int(gw), int(gh)))
+                (score, gcx, gcy, int(garea), int(gw), int(gh)))
 
         waypoint_found = False
         waypoint_xy = None
