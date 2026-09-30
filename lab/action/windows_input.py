@@ -158,10 +158,18 @@ def focus_window(hwnd: int) -> bool:
         return False
 
 
-def f12_pressed() -> bool:
-    """Global emergency-stop poll usable even while the game has focus."""
-    VK_F12 = 0x7B
+def function_key_pressed(number: int) -> bool:
+    """Poll F1..F12 globally, independent of dashboard responsiveness."""
+    number = int(number)
+    if not 1 <= number <= 12:
+        return False
+    # VK_F1=0x70 ... VK_F12=0x7B
+    vk = 0x6F + number
     try:
-        return bool(_user32.GetAsyncKeyState(VK_F12) & 0x8000)
+        return bool(_user32.GetAsyncKeyState(vk) & 0x8000)
     except Exception:
         return False
+
+
+def f12_pressed() -> bool:
+    return function_key_pressed(12)
