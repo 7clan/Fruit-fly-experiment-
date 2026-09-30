@@ -278,16 +278,22 @@ class MotorExecutor(Worker):
             # slow canonical brain cadence on the target laptop.
             if intention.name == "TURN_LEFT":
                 return ConcreteAction(
-                    intention="TURN_LEFT", ability_id="", bindings=[],
-                    hold_s=0.0, mouse_dx=-80, mouse_dy=0,
+                    intention="TURN_LEFT", ability_id="",
+                    bindings=["key:W"], hold_s=1.5,
+                    mouse_dx=-80, mouse_dy=0,
                     notes={"source": "gate6_navigation",
-                           "brain_intention": intention.name})
+                           "brain_intention": intention.name,
+                           "locomotor_interpretation":
+                               "P9 turn includes forward walking"})
             if intention.name == "TURN_RIGHT":
                 return ConcreteAction(
-                    intention="TURN_RIGHT", ability_id="", bindings=[],
-                    hold_s=0.0, mouse_dx=80, mouse_dy=0,
+                    intention="TURN_RIGHT", ability_id="",
+                    bindings=["key:W"], hold_s=1.5,
+                    mouse_dx=80, mouse_dy=0,
                     notes={"source": "gate6_navigation",
-                           "brain_intention": intention.name})
+                           "brain_intention": intention.name,
+                           "locomotor_interpretation":
+                               "P9 turn includes forward walking"})
             if intention.name == "APPROACH":
                 return ConcreteAction(
                     intention="APPROACH", ability_id="",
@@ -328,23 +334,35 @@ class MotorExecutor(Worker):
             same_action = sig == self._last_sig
             if same_action and action.bindings:
                 # HOLD REFRESH: repeated intention extends held keys without
-                # re-triggering (spec §19: no brain recompute for held W)
+                # re-triggering W. If the same biological turn decision is
+                # emitted again on a NEW brain chunk, re-issue only the
+                # bounded mouse steering component.
                 for b in action.bindings:
                     if b.startswith("key:"):
                         code = b[4:]
                         self._held[code] = now_ns + int(action.hold_s * 1e9)
-                self._last_sig = sig
-                self._last_hold_refresh_ns = now_ns
-                self.stats["hold_refreshes"] += 1
-                return
+                if action.mouse_dx or action.mouse_dy:
+                    if not shadow:
+                        self.backend.mouse_move(
+                            action.mouse_dx, action.mouse_dy)
+                    self._last_sig = sig
+                    self._last_hold_refresh_ns = now_ns
+                    self.stats["hold_refreshes"] += 1
+                    # Continue so the mouse movement is replay-logged below.
+                else:
+                    self._last_sig = sig
+                    self._last_hold_refresh_ns = now_ns
+                    self.stats["hold_refreshes"] += 1
+                    return
             if not shadow and now_ns < self.action_lock_until_ns:
                 return
-            for b in action.bindings:
-                if b.startswith("key:"):
-                    code = b[4:]
-                    if not shadow:
-                        self.backend.key_down(code)
-                    self._held[code] = now_ns + int(action.hold_s * 1e9)
+            if not same_action:
+                for b in action.bindings:
+                    if b.startswith("key:"):
+                        code = b[4:]
+                        if not shadow:
+                            self.backend.key_down(code)
+                        self._held[code] = now_ns + int(action.hold_s * 1e9)
             if action.mouse_dx or action.mouse_dy:
                 if not shadow:
                     self.backend.mouse_move(action.mouse_dx, action.mouse_dy)
