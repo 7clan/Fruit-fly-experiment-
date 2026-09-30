@@ -30,10 +30,16 @@ import math
 from ..schemas import FlyChannels, WorldObservation
 
 # ---- frozen parameters (decoder-config "fly-channels-v1") ------------------
-CONFIG_ID = "fly-channels-v2-center-bilateral"
+CONFIG_ID = "fly-channels-v3-d8-exact"
 
-_HALF_FIELD_DEG = 90.0     # bearing magnitude at which a side channel peaks
-_CENTER_HALF_WIDTH_DEG = 22.5   # |bearing| below this counts as center
+# EXACT live mirror of the frozen D8 VisualSensoryEncoder calibration.
+# D8 used r_target=150 Hz, theta0=15 deg, theta_w=30 deg. The live bearing
+# convention is +right (D8 arena geometry used +left), so the side formulas
+# are mirrored below while preserving the same LC9 channel meaning.
+_D8_TARGET_HZ = 150.0
+_D8_THETA0_DEG = 15.0
+_D8_THETA_W_DEG = 30.0
+_D8_BEARING_CLAMP_DEG = 90.0
 _LOW_HEALTH_FRACTION = 0.25
 _THREAT_RANGE_NEAR = 0.55   # normalized distance at/inside which threat ramps
 _ATTACK_RANGE_NEAR = 0.45   # normalized distance inside which attack is viable
@@ -47,27 +53,40 @@ def _bearing_deg(direction: float | None) -> float | None:
 
 
 def lateral_weights(bearing_deg: float | None) -> tuple[float, float, float]:
-    """Triangular left/right/center weights from relative bearing (deg).
+    """Frozen D8 target tuning, normalized to [0,1].
 
-    Matches D8 triangular tuning: full-peak at ±90°, linear ramp from 0°,
-    center window ±22.5°. Unknown bearing → all zeros.
+    Live screen bearing uses POSITIVE = target to the RIGHT. The D8
+    artificial arena used the opposite sign convention, so the formulas
+    are mirrored while preserving the same LC9 channel meaning:
+
+      left  = clamp((theta0 - b) / theta_w)
+      right = clamp((theta0 + b) / theta_w)
+
+    With theta0=15 and theta_w=30:
+      b=0 deg   -> left=0.5, right=0.5
+      b=-15 deg -> left=1.0, right=0.0
+      b=+15 deg -> left=0.0, right=1.0
+
+    Beyond +/-15 deg the appropriate side remains saturated, exactly as in
+    the D10 closed-loop reference schedule. center is display/context
+    metadata only; it is NOT added a second time to LC9 rates.
     """
     if bearing_deg is None:
         return 0.0, 0.0, 0.0
-    b = abs(bearing_deg) % 360.0
-    if b > 180.0:
-        b = 360.0 - b
-    sign = 1.0 if bearing_deg >= 0 else -1.0     # + : right, - : left
-    center = max(0.0, 1.0 - b / _CENTER_HALF_WIDTH_DEG) if b <= _CENTER_HALF_WIDTH_DEG else 0.0
-    if b <= _CENTER_HALF_WIDTH_DEG:
-        # inside center window: split residual to both side channels
-        side = 1.0 - center
-        left = right = 0.5 * side
-    else:
-        side = min(1.0, (b - _CENTER_HALF_WIDTH_DEG)
-                   / (_HALF_FIELD_DEG - _CENTER_HALF_WIDTH_DEG))
-        left = side if sign < 0 else 0.0
-        right = side if sign > 0 else 0.0
+    b = float(bearing_deg)
+    while b > 180.0:
+        b -= 360.0
+    while b <= -180.0:
+        b += 360.0
+    b = max(-_D8_BEARING_CLAMP_DEG,
+            min(_D8_BEARING_CLAMP_DEG, b))
+
+    left = max(0.0, min(
+        1.0, (_D8_THETA0_DEG - b) / _D8_THETA_W_DEG))
+    right = max(0.0, min(
+        1.0, (_D8_THETA0_DEG + b) / _D8_THETA_W_DEG))
+    center = max(
+        0.0, 1.0 - abs(b) / max(_D8_THETA0_DEG, 1e-9))
     return left, right, center
 
 
@@ -137,9 +156,9 @@ def to_sensory_rates(channels: FlyChannels) -> dict[str, float]:
     """Map fly channels → D8 sensory-interface Poisson rates (Hz).
 
     This is the bridge to the VERIFIED biological sensory interface:
-      target_left/right → lateralized LC9 samples (D8 rung-1 calibration:
-      peak 72 Hz contra-lateral sample; here 0..72 Hz linear in signal;
-      v2 represents TARGET_CENTER as equal bilateral left/right drive)
+      target_left/right → lateralized LC9 samples using the frozen D8
+      calibration exactly (0..150 Hz; theta0=15 deg, theta_w=30 deg).
+      A centered target is represented by 75 Hz on each side, matching D10.)
       threat_intensity   → looming sample (LPLC2+LC4, Gate-2 150 Hz drive
                             scale; 0..150 Hz linear)
 
@@ -156,15 +175,14 @@ def to_sensory_rates(channels: FlyChannels) -> dict[str, float]:
     is the compact live-side equivalent and is labeled as such (any live/
     reference divergence must be benchmarked, never silently equated).
     """
-    # v2 live-encoder correction: a target straight ahead must not vanish
-    # just because the verified D8 interface has only left/right LC9 entry
-    # populations. Represent TARGET_CENTER as equal bilateral visual drive.
-    # This changes only the engineered sensory encoding, not the biological
-    # network, synapses, thresholds, or D8 population identities.
-    left_signal = min(1.0, channels.target_left + channels.target_center)
-    right_signal = min(1.0, channels.target_right + channels.target_center)
+    # Exact frozen D8 live-side map. Earlier live code accidentally used
+    # 72 Hz as the sensory ceiling (72 Hz was actually an observed P9-right
+    # response in calibration) and therefore under-drove LC9 by >2x.
+    # target_left/right already contain the D8 triangular side gains.
     return {
-        "target_left_hz": 72.0 * left_signal,
-        "target_right_hz": 72.0 * right_signal,
+        "target_left_hz": _D8_TARGET_HZ * max(
+            0.0, min(1.0, channels.target_left)),
+        "target_right_hz": _D8_TARGET_HZ * max(
+            0.0, min(1.0, channels.target_right)),
         "looming_hz": 150.0 * channels.threat_intensity,
     }
