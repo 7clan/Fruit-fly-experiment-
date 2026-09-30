@@ -201,8 +201,7 @@ class OpenCVDashboardRenderer:
         self._evidence_dir = evidence_dir
         self._control_handler = control_handler
         self._mouse_ready = False
-        self._toggle_rect = None
-        self._end_rect = None
+        self._button_rects = {}
         if self._evidence_dir is not None:
             from pathlib import Path
             self._evidence_dir = Path(self._evidence_dir)
@@ -229,10 +228,10 @@ class OpenCVDashboardRenderer:
         if event != self._cv2.EVENT_LBUTTONUP or self._control_handler is None:
             return
         try:
-            if self._inside(self._toggle_rect, x, y):
-                self._control_handler("toggle_movement")
-            elif self._inside(self._end_rect, x, y):
-                self._control_handler("end_run")
+            for command, rect in list(self._button_rects.items()):
+                if self._inside(rect, x, y):
+                    self._control_handler(command)
+                    break
         except Exception:
             # UI controls must never crash the live loop.
             pass
@@ -653,53 +652,62 @@ class OpenCVDashboardRenderer:
         controls_available = bool(
             action_meta.get("movement_control_available", False))
 
-        self._end_rect = (x0 + 220, 762, x0 + 390, 800)
-        self._button(canvas, self._end_rect, "END RUN", (85, 85, 85))
-
         if not controls_available:
-            self._toggle_rect = None
-            self._put(canvas, x0, 750, "MOVEMENT: PASSIVE MODE",
-                      (150, 150, 150), scale=0.43, thickness=1)
-            self._button(
-                canvas, (x0, 762, x0 + 205, 800),
-                "MOVEMENT LOCKED", (70, 70, 70),
-                text_color=(170, 170, 170))
+            state_text = "MOVEMENT: PASSIVE MODE"
+            state_color = (150, 150, 150)
         elif not ready:
-            self._toggle_rect = None
-            self._put(canvas, x0, 750,
-                      "MOVEMENT: LOCKED — BRAIN NOT READY",
-                      (80, 190, 255), scale=0.43, thickness=1)
-            self._button(
-                canvas, (x0, 762, x0 + 205, 800),
-                "WAIT FOR BRAIN READY", (70, 70, 70),
-                text_color=(190, 190, 190))
+            state_text = "MOVEMENT: LOCKED — BRAIN NOT READY"
+            state_color = (80, 190, 255)
         else:
-            self._toggle_rect = (x0, 762, x0 + 205, 800)
-            state_text = (
-                "MOVEMENT: ENABLED" if active else "MOVEMENT: DISABLED")
-            state_color = (
-                (100, 230, 100) if active else (120, 180, 255))
-            self._put(canvas, x0, 750, state_text, state_color,
-                      scale=0.43, thickness=1)
-            if active:
-                self._button(
-                    canvas, self._toggle_rect, "DISABLE MOVEMENT",
-                    (60, 60, 190))
+            state_text = ("MOVEMENT: ENABLED" if active
+                          else "MOVEMENT: DISABLED")
+            state_color = ((100, 230, 100) if active
+                           else (120, 180, 255))
+        self._put(canvas, x0, 748, state_text, state_color,
+                  scale=0.41, thickness=1)
+
+        # Explicit controls instead of a single toggle. These are all
+        # safety/run controls; none injects an unapproved game action.
+        labels = [
+            ("enable_movement", "ENABLE", (55, 145, 55)),
+            ("disable_movement", "DISABLE", (60, 60, 190)),
+            ("refocus_game", "REFOCUS", (110, 95, 55)),
+            ("release_keys", "RELEASE KEYS", (115, 75, 45)),
+            ("end_run", "END RUN", (85, 85, 85)),
+            ("emergency_stop", "EMERGENCY STOP", (55, 55, 185)),
+        ]
+        self._button_rects = {}
+        bx = x0
+        by = 760
+        bw = 88
+        gap = 6
+        for idx, (command, label, color) in enumerate(labels):
+            rect = (bx + idx * (bw + gap), by,
+                    bx + idx * (bw + gap) + bw, 800)
+            enabled = True
+            if command == "enable_movement":
+                enabled = bool(controls_available and ready and not active)
+            elif command == "disable_movement":
+                enabled = bool(controls_available and active)
+            elif command in ("release_keys", "refocus_game"):
+                enabled = bool(controls_available and ready)
+            if enabled:
+                self._button_rects[command] = rect
+                self._button(canvas, rect, label, color)
             else:
-                self._button(
-                    canvas, self._toggle_rect, "ENABLE MOVEMENT",
-                    (55, 145, 55))
+                self._button(canvas, rect, label, (65, 65, 65),
+                             text_color=(150, 150, 150))
 
         bh = act.get("backend_health") or {}
         self._put(
-            canvas, x0 + 405, 770,
+            canvas, x0 + 405, 742,
             f"SendInput ok={bh.get('sendinput_successes', 0)} "
             f"fail={bh.get('sendinput_failures', 0)}",
             (160, 190, 160) if not bh.get("sendinput_failures")
-            else (100, 100, 255), scale=0.31)
+            else (100, 100, 255), scale=0.29)
         self._put(
-            canvas, x0 + 405, 790,
+            canvas, x0 + 405, 758,
             "F12 = EMERGENCY STOP",
-            (120, 120, 255), scale=0.34)
+            (120, 120, 255), scale=0.29)
         return canvas
 
