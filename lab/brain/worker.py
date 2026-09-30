@@ -58,6 +58,7 @@ class BrainWorker(Worker):
                 "model-side iteration, not this worker")
         self.channels_in: StateChannel = bus.state(self.TOPIC_IN)
         self.out: StateChannel = bus.state(self.TOPIC_OUT)
+        self.meta: StateChannel = bus.state("brain.meta")
         self.events: StreamChannel = bus.stream(self.TOPIC_EVT, maxsize=128)
         self.chunk_ms = float(chunk_ms)
         self.runtime = runtime if runtime is not None else \
@@ -71,6 +72,12 @@ class BrainWorker(Worker):
 
     # -- lifecycle ------------------------------------------------------------
     def on_start(self) -> None:
+        self.meta.write({
+            "ready": False,
+            "phase": "initializing",
+            "runtime": self.runtime.runtime_label,
+            "ts_ns": self.clock.now_ns(),
+        })
         t0 = self.clock.now_ns()
         self.runtime.init_once()
         init_ms = self.clock.elapsed_ms(t0)
@@ -80,6 +87,14 @@ class BrainWorker(Worker):
         self.decoder = IntentionDecoder(self.runtime.pop_sizes(),
                                         params=self._decoder_params)
         self.ready_event.set()
+        self.meta.write({
+            "ready": True,
+            "phase": "ready",
+            "runtime": self.runtime.runtime_label,
+            "transport": getattr(
+                self.runtime, "transport_label", "inprocess"),
+            "ts_ns": self.clock.now_ns(),
+        })
         self.stats["init_ms"] = round(init_ms, 1)
         self.stats["prewarm_ms"] = round(prewarm_ms, 1)
         self.stats["runtime"] = self.runtime.runtime_label
