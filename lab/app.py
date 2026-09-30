@@ -42,6 +42,7 @@ from .capture.base import (CaptureAdapter, SyntheticCapture,
 from .clock import SHARED_CLOCK
 from .dashboard.dashboard import (
     DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
+from .evidence import EvidenceRecorder
 from .perception.channel_encoder import FlyChannelEncoder
 from .perception.fast_vision import FastVisionWorker
 from .perception.heavy_vision import HeavyVisionWorker
@@ -127,6 +128,9 @@ class DigitalFlyLab:
             autonomy_enabled=False if self.autonomy_requested else autonomy,
             movement_only=movement_only)
         self.replay = ReplayRecorder(self.bus, self.session_dir)
+        self.evidence = (
+            EvidenceRecorder(self.bus, self.session_dir, target_hz=4.0)
+            if movement_only else None)
         self.dashboard_ui = None
         self.assessment_started_ns = None
         self.assessment_ended_ns = None
@@ -152,7 +156,8 @@ class DigitalFlyLab:
             self.dashboard = None
         self.workers = [self.fast_vision, self.heavy_vision, self.planner,
                         self.encoder, self.brain, self.executor,
-                        self.replay] + ([self.dashboard] if self.dashboard else [])
+                        self.replay] + ([self.evidence] if self.evidence else []) + (
+                            [self.dashboard] if self.dashboard else [])
 
     # -- lifecycle ------------------------------------------------------------
     def start(self) -> dict:
