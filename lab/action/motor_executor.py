@@ -331,33 +331,33 @@ class MotorExecutor(Worker):
         with self._lock:
             same_action = sig == self._last_sig
             if same_action and action.bindings:
-                # HOLD REFRESH: repeated intention extends held keys without
-                # re-triggering W. If the same biological turn decision is
-                # emitted again on a NEW brain chunk, re-issue only the
-                # bounded mouse steering component.
+                # HOLD REFRESH: a repeated biological intention extends held
+                # keys. If a key expired since the previous brain chunk, it
+                # is physically pressed again and that real output is logged.
+                repressed = []
                 for b in action.bindings:
                     if b.startswith("key:"):
                         code = b[4:]
-                        # The slow canonical brain may not emit the next
-                        # decision until long after the previous W pulse was
-                        # released. A repeated biological intention must
-                        # therefore press W again if it is no longer held.
                         if code not in self._held and not shadow:
                             self.backend.key_down(code)
+                            repressed.append(code)
                         self._held[code] = now_ns + int(action.hold_s * 1e9)
-                if action.mouse_dx or action.mouse_dy:
-                    if not shadow:
-                        self.backend.mouse_move(
-                            action.mouse_dx, action.mouse_dy)
-                    self._last_sig = sig
-                    self._last_hold_refresh_ns = now_ns
-                    self.stats["hold_refreshes"] += 1
-                    # Continue so the mouse movement is replay-logged below.
-                else:
-                    self._last_sig = sig
-                    self._last_hold_refresh_ns = now_ns
-                    self.stats["hold_refreshes"] += 1
-                    return
+                self._last_sig = sig
+                self._last_hold_refresh_ns = now_ns
+                self.stats["hold_refreshes"] += 1
+                if repressed:
+                    self.inputs.publish({
+                        "kind": "input_refresh",
+                        "ts_ns": now_ns,
+                        "shadow": False,
+                        "intention": action.intention,
+                        "bindings": [f"key:{k}" for k in repressed],
+                        "hold_s": action.hold_s,
+                    }, ts_ns=now_ns)
+                    self.stats["inputs_emitted"] += 1
+                # No mouse steering exists in Gate-6F. A held-key refresh is
+                # complete here.
+                return
             if not shadow and now_ns < self.action_lock_until_ns:
                 return
             if not same_action:
