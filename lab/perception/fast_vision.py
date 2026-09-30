@@ -607,7 +607,11 @@ class GPOHeuristicFastVision:
         # Observed GPO marker: bright green circle with green distance text
         # directly below it. Keep the HUD/ability edges out of this search.
         wy0, wy1 = int(0.10 * h), int(0.68 * h)
-        wx0, wx1 = int(0.08 * w), int(0.92 * w)
+        # The real GPO waypoint can legitimately sit almost on the
+        # right edge of the gameplay view (confirmed from live screenshots).
+        # Keep the text-support requirement below as the false-positive gate
+        # instead of cropping away valid edge waypoints.
+        wx0, wx1 = int(0.08 * w), int(0.995 * w)
         waypoint_roi[wy0:wy1, wx0:wx1] = green[wy0:wy1, wx0:wx1]
         ng, _glab, gstats, gcents = cv2.connectedComponentsWithStats(
             waypoint_roi)
