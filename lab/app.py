@@ -245,10 +245,35 @@ class DigitalFlyLab:
             print("[lab] MOVEMENT DISABLED", flush=True)
 
     def _handle_dashboard_control(self, command: str) -> None:
-        if command == "toggle_movement":
+        if command == "enable_movement":
             self._set_navigation_enabled(
-                not self.executor.autonomy_enabled,
-                reason="dashboard_toggle")
+                True, reason="dashboard_enable")
+        elif command == "disable_movement":
+            self._set_navigation_enabled(
+                False, reason="dashboard_disable")
+        elif command == "refocus_game":
+            from .action.windows_input import focus_window
+            target = getattr(self.capture, "_target", None) or {}
+            hwnd = int(target.get("handle") or 0)
+            ok = bool(hwnd > 0 and focus_window(hwnd))
+            print(
+                "[lab] Roblox refocused" if ok
+                else "[lab] Roblox refocus FAILED",
+                flush=True,
+            )
+        elif command == "release_keys":
+            # One-shot release without ending the run. Autonomy remains in
+            # its current enabled/disabled state; a later NEW brain decision
+            # may issue movement again if movement is still enabled.
+            self.executor.emergency_stop(reason="dashboard_release_keys")
+            print("[lab] all held movement keys released", flush=True)
+        elif command == "emergency_stop":
+            self._set_navigation_enabled(
+                False, reason="dashboard_emergency_stop")
+            self.abort_reason = "dashboard_emergency_stop"
+            self.abort_requested.set()
+            print("[lab] EMERGENCY STOP — movement disabled; ending run",
+                  flush=True)
         elif command == "end_run":
             self._set_navigation_enabled(False, reason="dashboard_end")
             self.abort_reason = "dashboard_end"
