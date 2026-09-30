@@ -114,20 +114,25 @@ class DigitalFlyLab:
         self.brain = BrainWorker(self.bus, target_hz=brain_hz,
                                  runtime=runtime, runtime_kind=runtime_kind,
                                  chunk_ms=chunk_ms)
-        if autonomy and movement_only:
+        self.autonomy_requested = bool(autonomy and movement_only)
+        if self.autonomy_requested:
             backend = create_windows_movement_only_backend()
         else:
             backend = SafeNoopBackend()
         self.executor = MotorExecutor(
             self.bus, target_hz=executor_hz,
             backend=backend,
-            autonomy_enabled=autonomy,
+            # Never emit active input during init/prewarm. Movement autonomy
+            # is armed only after brain READY and game-focus succeeds.
+            autonomy_enabled=False if self.autonomy_requested else autonomy,
             movement_only=movement_only)
         self.replay = ReplayRecorder(self.bus, self.session_dir)
         self.dashboard_ui = None
         self.assessment_started_ns = None
         self.assessment_ended_ns = None
         self.abort_requested = threading.Event()
+        self.abort_reason = None
+        self.wait_end_reason = None
         self._emergency_thread = None
         if dashboard:
             if dashboard_renderer == "opencv":
@@ -159,7 +164,10 @@ class DigitalFlyLab:
             warm()
         meta = {
             "app": "DigitalFlyLab", "version": __version__,
-            "mode": "PASSIVE" if not self.executor.autonomy_enabled else "ACTIVE",
+            "mode": ("ACTIVE_REQUESTED_DISARMED"
+                     if self.autonomy_requested
+                     else ("PASSIVE" if not self.executor.autonomy_enabled
+                           else "ACTIVE")),
             "runtime": self.brain.runtime.runtime_label,
             "chunk_ms": self.brain.chunk_ms,
             "started_wall_ns": SHARED_CLOCK.wall_time_ns(),
@@ -183,29 +191,35 @@ class DigitalFlyLab:
         self.dashboard_ui.render(snap, self.capture.latest.read())
 
     def wait_live(self, seconds: float) -> None:
+        self.wait_end_reason = None
         if float(seconds) <= 0:
             while not self.abort_requested.is_set():
                 self.render_dashboard_once()
                 time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
+            self.wait_end_reason = self.abort_reason or "abort"
             return
-        deadline = time.monotonic() + float(seconds)
-        while (time.monotonic() < deadline
+        deadline_ns = SHARED_CLOCK.now_ns() + int(float(seconds) * 1e9)
+        while (SHARED_CLOCK.now_ns() < deadline_ns
                and not self.abort_requested.is_set()):
             self.render_dashboard_once()
             time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
+        self.wait_end_reason = (
+            self.abort_reason or "abort"
+            if self.abort_requested.is_set()
+            else "deadline")
 
     def arm_windows_navigation(self) -> None:
-        """Focus the captured game window and arm global F12 abort."""
-        if not self.executor.autonomy_enabled:
+        """Focus the game, arm F12, then enable movement input."""
+        if not self.autonomy_requested:
             return
-        try:
-            from .action.windows_input import focus_window, f12_pressed
-        except Exception:
-            return
+        from .action.windows_input import focus_window, f12_pressed
         target = getattr(self.capture, "_target", None) or {}
         hwnd = int(target.get("handle") or 0)
-        if hwnd:
-            focus_window(hwnd)
+        if hwnd <= 0:
+            raise RuntimeError("cannot arm navigation: captured HWND missing")
+        if not focus_window(hwnd):
+            raise RuntimeError(
+                "cannot arm navigation: failed to focus authorized game window")
 
         def watch():
             was_down = False
@@ -213,6 +227,7 @@ class DigitalFlyLab:
                 down = bool(f12_pressed())
                 if down and not was_down:
                     self.executor.emergency_stop(reason="global_f12")
+                    self.abort_reason = "global_f12"
                     self.abort_requested.set()
                     break
                 was_down = down
@@ -221,24 +236,18 @@ class DigitalFlyLab:
         self._emergency_thread = threading.Thread(
             target=watch, name="global_f12_stop", daemon=True)
         self._emergency_thread.start()
+        self.executor.set_autonomy(True, reason="brain_ready_game_focused")
 
     def wait_for_brain_ready(self, timeout_s: float = 180.0) -> bool:
-        """Wait for the brain worker's one-time initialization/prewarm.
-
-        Canonical whole-brain construction can take tens of seconds on a
-        laptop. Timed smoke-test duration must begin AFTER this completes;
-        otherwise a nominal 30 s test can end with zero brain chunks even
-        though initialization is still progressing normally.
-        """
-        deadline = time.monotonic() + float(timeout_s)
-        while time.monotonic() < deadline:
+        """Wait for the brain worker's explicit init/prewarm-ready event."""
+        deadline_ns = SHARED_CLOCK.now_ns() + int(float(timeout_s) * 1e9)
+        while SHARED_CLOCK.now_ns() < deadline_ns:
             self.render_dashboard_once()
-            if self.brain.decoder is not None:
+            if self.brain.ready_event.wait(timeout=0.1):
                 return True
             th = getattr(self.brain, "_thread", None)
             if th is not None and not th.is_alive():
                 return False
-            time.sleep(0.1)
         return False
 
     def stop(self) -> dict:
@@ -275,6 +284,10 @@ class DigitalFlyLab:
             "memory": self.memory.stats(),
             "assessment": {
                 "started_ns": self.assessment_started_ns,
+                "wait_end_reason": self.wait_end_reason,
+                "abort_reason": self.abort_reason,
+                "autonomy_requested": self.autonomy_requested,
+                "autonomy_armed": self.executor.autonomy_enabled,
                 "ended_ns": self.assessment_ended_ns,
                 "elapsed_s": (
                     round((self.assessment_ended_ns - self.assessment_started_ns)
@@ -426,7 +439,8 @@ def main(argv=None) -> int:
     if (lab.assessment_started_ns is not None
             and lab.assessment_ended_ns is not None):
         print(f"[lab] post_ready_run_s="
-              f"{(lab.assessment_ended_ns-lab.assessment_started_ns)/1e9:.1f}")
+              f"{(lab.assessment_ended_ns-lab.assessment_started_ns)/1e9:.1f} "
+              f"end_reason={lab.wait_end_reason}")
     p = lab.write_report_json()
     bundle = shutil.make_archive(
         str(lab.session_dir), "zip",
