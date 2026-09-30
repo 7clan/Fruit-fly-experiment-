@@ -352,6 +352,7 @@ class DigitalFlyLab:
             "bus": self.bus.metrics(),
             "workers": {w.name: dict(w.stats) for w in self.workers},
             "memory": self.memory.stats(),
+            "input_backend": self.executor.backend.backend_health(),
             "assessment": {
                 "started_ns": self.assessment_started_ns,
                 "wait_end_reason": self.wait_end_reason,
@@ -378,6 +379,8 @@ class DigitalFlyLab:
                 f"runtime={self.brain.runtime.runtime_label} "
                 f"intention={intention} "
                 f"inputs={self.executor.stats.get('inputs_emitted', 0)} "
+                f"send_ok={self.executor.backend.backend_health().get('sendinput_successes', 0)} "
+                f"send_fail={self.executor.backend.backend_health().get('sendinput_failures', 0)} "
                 f"errors={sum(w.stats['errors'] for w in self.workers)}")
 
     def write_report_json(self) -> Path:
