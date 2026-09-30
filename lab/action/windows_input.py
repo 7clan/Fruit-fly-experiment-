@@ -39,14 +39,29 @@ class _KEYBDINPUT(ctypes.Structure):
 
 
 class _MOUSEINPUT(ctypes.Structure):
-    _fields_ = [("dx", wt.LONG), ("dy", wt.LONG), ("dwFlags", wt.DWORD),
+    _fields_ = [("dx", wt.LONG), ("dy", wt.LONG),
+                ("mouseData", wt.DWORD), ("dwFlags", wt.DWORD),
                 ("time", wt.DWORD), ("dwExtraInfo", _ULONG_PTR)]
+
+
+class _HARDWAREINPUT(ctypes.Structure):
+    _fields_ = [("uMsg", wt.DWORD),
+                ("wParamL", wt.WORD), ("wParamH", wt.WORD)]
 
 
 class _INPUT(ctypes.Structure):
     class _U(ctypes.Union):
-        _fields_ = [("ki", _KEYBDINPUT), ("mi", _MOUSEINPUT)]
+        _fields_ = [("mi", _MOUSEINPUT), ("ki", _KEYBDINPUT),
+                    ("hi", _HARDWAREINPUT)]
     _fields_ = [("type", wt.DWORD), ("union", _U)]
+
+
+_EXPECTED_INPUT_SIZE = 40 if ctypes.sizeof(ctypes.c_void_p) == 8 else 28
+if ctypes.sizeof(_INPUT) != _EXPECTED_INPUT_SIZE:
+    raise RuntimeError(
+        f"Win32 INPUT ctypes layout mismatch: got {ctypes.sizeof(_INPUT)} "
+        f"bytes, expected {_EXPECTED_INPUT_SIZE}")
+
 
 _user32.SendInput.argtypes = [
     wt.UINT, ctypes.POINTER(_INPUT), ctypes.c_int
@@ -108,7 +123,7 @@ class WindowsInputBackend:
     def mouse_move(self, dx: int, dy: int) -> None:
         inp = _INPUT(type=INPUT_MOUSE)
         inp.union.mi = _MOUSEINPUT(
-            int(dx), int(dy), MOUSEEVENTF_MOVE, 0, 0)
+            int(dx), int(dy), 0, MOUSEEVENTF_MOVE, 0, 0)
         self._send(inp, f"mouse_move:{int(dx)},{int(dy)}")
 
     def release_all(self) -> None:
@@ -125,6 +140,8 @@ class WindowsInputBackend:
             "sendinput_failures": self.failures,
             "last_error": self.last_error,
             "held_keys": sorted(self._down),
+            "input_struct_size": ctypes.sizeof(_INPUT),
+            "input_struct_expected": _EXPECTED_INPUT_SIZE,
         }
 
 
