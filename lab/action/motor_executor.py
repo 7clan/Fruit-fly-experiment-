@@ -100,6 +100,44 @@ def create_windows_input_backend() -> InputBackend:
     return WindowsInputBackend()
 
 
+class MovementOnlyBackend(InputBackend):
+    """Hard safety wrapper for the first Gate-6 active-input run.
+
+    Only W/A/D key events are forwarded. All mouse movement and every other
+    key are dropped, even if an upstream bug requests them.
+    """
+    name = "windows_movement_only"
+
+    ALLOWED = {"W", "A", "D"}
+
+    def __init__(self, inner: InputBackend):
+        self.inner = inner
+
+    def key_down(self, code: str) -> None:
+        if code.upper() in self.ALLOWED:
+            self.inner.key_down(code)
+
+    def key_up(self, code: str) -> None:
+        if code.upper() in self.ALLOWED:
+            self.inner.key_up(code)
+
+    def mouse_move(self, dx: int, dy: int) -> None:
+        return
+
+    def release_all(self) -> None:
+        self.inner.release_all()
+
+    def backend_health(self) -> dict:
+        h = dict(self.inner.backend_health())
+        h["backend"] = self.name
+        h["allowed_keys"] = sorted(self.ALLOWED)
+        return h
+
+
+def create_windows_movement_only_backend() -> InputBackend:
+    return MovementOnlyBackend(create_windows_input_backend())
+
+
 # ---------------------------------------------------------------------------
 # concrete action schema (input binding expansion)
 # ---------------------------------------------------------------------------
