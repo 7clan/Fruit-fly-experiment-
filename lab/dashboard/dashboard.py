@@ -677,8 +677,15 @@ class OpenCVDashboardRenderer:
                     canvas, self._toggle_rect, "ENABLE MOVEMENT",
                     (55, 145, 55))
 
+        bh = act.get("backend_health") or {}
         self._put(
-            canvas, x0 + 405, 786,
+            canvas, x0 + 405, 770,
+            f"SendInput ok={bh.get('sendinput_successes', 0)} "
+            f"fail={bh.get('sendinput_failures', 0)}",
+            (160, 190, 160) if not bh.get("sendinput_failures")
+            else (100, 100, 255), scale=0.31)
+        self._put(
+            canvas, x0 + 405, 790,
             "F12 = EMERGENCY STOP",
             (120, 120, 255), scale=0.34)
         return canvas
