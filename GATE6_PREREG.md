@@ -1,11 +1,17 @@
-# GATE 6 — PRE-REGISTRATION (movement-only autonomy)
+# GATE 6A — PRE-REGISTRATION (movement-only autonomy)
 
 **Status:** FROZEN before first active-input run.
 Date: 2026-09-30
 
-Gate 6 is an engineering test of basic movement only. It does not authorize
+Gate 6A is an engineering test of basic movement only. It does not authorize
 combat, attacks, blocking, interaction keys, abilities, quest completion, or
 unattended long-duration play.
+
+Gate-5 v2 established the live capture/brain/replay path and zero-input safety,
+but hostile-role recognition remains incomplete. Gate 6A is therefore isolated
+from that unresolved classifier: hostile labels are NOT used to select or
+permit movement. Passing Gate 6A does not retroactively turn Gate-5 v2 into a
+full perception PASS and does not authorize combat.
 
 ## Question
 
