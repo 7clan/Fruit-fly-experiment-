@@ -28,6 +28,7 @@ DashboardWorker, which reads bus state channels at 10–30 Hz.
 from __future__ import annotations
 
 from collections import deque
+import time
 
 from ..bus import Bus, StateChannel
 from ..worker import Worker
@@ -187,7 +188,9 @@ class OpenCVDashboardRenderer:
 
     def __init__(self, window_name: str = "DigitalFlyLab",
                  width: int = 1440, height: int = 810,
-                 evidence_dir=None, control_handler=None):
+                 evidence_dir=None, control_handler=None,
+                 lightweight: bool = False,
+                 preview_interval_s: float = 3.0):
         try:
             import cv2  # noqa: F401
         except Exception as e:
@@ -200,6 +203,10 @@ class OpenCVDashboardRenderer:
         self._last_chunk_id = None
         self._evidence_dir = evidence_dir
         self._control_handler = control_handler
+        self.lightweight = bool(lightweight)
+        self.preview_interval_s = max(0.25, float(preview_interval_s))
+        self._preview_cache = None
+        self._preview_updated_at = 0.0
         self._mouse_ready = False
         self._button_rects = {}
         if self._evidence_dir is not None:
@@ -361,10 +368,28 @@ class OpenCVDashboardRenderer:
         if img.ndim == 3 and img.shape[2] == 4:
             img = cv2.cvtColor(img, cv2.COLOR_BGRA2BGR)
         h, w = img.shape[:2]
-        scale = min(game_w / w, self.height / h)
+        preview_w = min(game_w, 480) if self.lightweight else game_w
+        scale = min(preview_w / w, self.height / h)
         out_w, out_h = int(w * scale), int(h * scale)
-        mirror = cv2.resize(img, (out_w, out_h))
+
+        now = time.monotonic()
+        refresh = (
+            self._preview_cache is None
+            or not self.lightweight
+            or (now - self._preview_updated_at) >= self.preview_interval_s
+            or self._preview_cache.shape[:2] != (out_h, out_w)
+        )
+        if refresh:
+            self._preview_cache = cv2.resize(
+                img, (out_w, out_h), interpolation=cv2.INTER_AREA)
+            self._preview_updated_at = now
+        mirror = self._preview_cache
         canvas[0:out_h, 0:out_w] = mirror
+        if self.lightweight:
+            self._put(
+                canvas, 14, out_h + 24,
+                "LOW-LOAD PREVIEW (control does not depend on dashboard FPS)",
+                (150, 150, 150), scale=0.34)
 
         notes = (obs or {}).get("notes") or {}
         # Show the exact navigation cue selected by fast vision so the
@@ -400,7 +425,9 @@ class OpenCVDashboardRenderer:
                 canvas, p1[0], max(14, p1[1] - 5),
                 f"T{tr.get('track_id')} {kind}", color, scale=0.32)
 
-        cv2.rectangle(canvas, (0, 0), (game_w - 1, self.height - 1),
+        border_w = out_w if self.lightweight else game_w
+        border_h = out_h if self.lightweight else self.height
+        cv2.rectangle(canvas, (0, 0), (border_w - 1, border_h - 1),
                       (65, 65, 65), 1)
         self._put(canvas, 14, self.height - 16,
                   "GAME / PERCEPTION VIEW  [ENGINEERED CV]",
