@@ -362,6 +362,19 @@ class OpenCVDashboardRenderer:
         canvas[0:out_h, 0:out_w] = mirror
 
         notes = (obs or {}).get("notes") or {}
+        # Show the exact navigation cue selected by fast vision so the
+        # user can verify that the fly is following the real GPO waypoint.
+        wp = notes.get("recommended_waypoint_xy")
+        dshape = notes.get("detect_shape")
+        if (wp and dshape and len(dshape) >= 2
+                and float(dshape[1]) > 0 and float(dshape[0]) > 0):
+            px = int(float(wp[0]) / float(dshape[1]) * out_w)
+            py = int(float(wp[1]) / float(dshape[0]) * out_h)
+            cv2.circle(canvas, (px, py), 16, (0, 255, 0), 2)
+            self._put(
+                canvas, max(4, px - 74), max(16, py - 20),
+                "NAV WAYPOINT", (0, 255, 0), scale=0.34)
+
         tracks = notes.get("entity_tracks") or []
         for tr in tracks:
             box = tr.get("bbox") or []
