@@ -1,4 +1,5 @@
 name: Windows navigation smoke
+# validates current navigation/dashboard safety stack
 
 on:
   push:
