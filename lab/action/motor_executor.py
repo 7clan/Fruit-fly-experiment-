@@ -103,12 +103,13 @@ def create_windows_input_backend() -> InputBackend:
 class MovementOnlyBackend(InputBackend):
     """Hard safety wrapper for the first Gate-6 active-input run.
 
-    Only W/A/D key events are forwarded. All mouse movement and every other
-    key are dropped, even if an upstream bug requests them.
+    Only W keyboard events and bounded horizontal relative mouse movement
+    are forwarded. Mouse buttons and every other key are impossible here,
+    even if an upstream bug requests them.
     """
-    name = "windows_movement_only"
+    name = "windows_navigation_only"
 
-    ALLOWED = {"W", "A", "D"}
+    ALLOWED = {"W"}
 
     def __init__(self, inner: InputBackend):
         self.inner = inner
@@ -122,7 +123,11 @@ class MovementOnlyBackend(InputBackend):
             self.inner.key_up(code)
 
     def mouse_move(self, dx: int, dy: int) -> None:
-        return
+        # Horizontal camera steering only. Vertical motion is forced to zero
+        # and per-decision turn magnitude is bounded.
+        dx = max(-120, min(120, int(dx)))
+        if dx:
+            self.inner.mouse_move(dx, 0)
 
     def release_all(self) -> None:
         self.inner.release_all()
@@ -268,19 +273,30 @@ class MotorExecutor(Worker):
         # First active Gate-6 run is deliberately movement-only.
         # RETREAT/ESCAPE/combat-like intentions fail closed to STOP.
         if self.movement_only:
-            binding_map = {
-                "STOP": ([], 0.0),
-                "TURN_LEFT": (["key:A"], 0.12),
-                "TURN_RIGHT": (["key:D"], 0.12),
-                "APPROACH": (["key:W"], 0.30),
-            }
-            bindings, hold_s = binding_map.get(
-                intention.name, ([], 0.0))
-            effective = intention.name if intention.name in binding_map else "STOP"
+            # TURN means camera/heading correction, not strafing. APPROACH is
+            # a modest forward pulse long enough to be visible despite the
+            # slow canonical brain cadence on the target laptop.
+            if intention.name == "TURN_LEFT":
+                return ConcreteAction(
+                    intention="TURN_LEFT", ability_id="", bindings=[],
+                    hold_s=0.0, mouse_dx=-80, mouse_dy=0,
+                    notes={"source": "gate6_navigation",
+                           "brain_intention": intention.name})
+            if intention.name == "TURN_RIGHT":
+                return ConcreteAction(
+                    intention="TURN_RIGHT", ability_id="", bindings=[],
+                    hold_s=0.0, mouse_dx=80, mouse_dy=0,
+                    notes={"source": "gate6_navigation",
+                           "brain_intention": intention.name})
+            if intention.name == "APPROACH":
+                return ConcreteAction(
+                    intention="APPROACH", ability_id="",
+                    bindings=["key:W"], hold_s=1.25,
+                    notes={"source": "gate6_navigation",
+                           "brain_intention": intention.name})
             return ConcreteAction(
-                intention=effective, ability_id="",
-                bindings=bindings, hold_s=hold_s,
-                notes={"source": "gate6_movement_only",
+                intention="STOP", ability_id="", bindings=[], hold_s=0.0,
+                notes={"source": "gate6_navigation_failsafe",
                        "brain_intention": intention.name})
 
         # Passive/shadow development path retains the broader map.
@@ -301,7 +317,8 @@ class MotorExecutor(Worker):
     def _execute(self, action: ConcreteAction, now_ns: int,
                  new_brain_decision: bool = True) -> None:
         shadow = not self.autonomy_enabled
-        sig = (action.intention, action.ability_id, tuple(action.bindings))
+        sig = (action.intention, action.ability_id, tuple(action.bindings),
+               int(action.mouse_dx), int(action.mouse_dy))
         # State channels are polled much faster than the canonical brain.
         # Re-reading the same brain.output is NOT a repeated biological
         # decision and must not refresh a key forever.
@@ -328,10 +345,14 @@ class MotorExecutor(Worker):
                     if not shadow:
                         self.backend.key_down(code)
                     self._held[code] = now_ns + int(action.hold_s * 1e9)
-                # mouse bindings handled by ability-specific notes (Gate 7+)
-            if not shadow and action.bindings:
-                # simple action lock while a binding is held
-                self.action_lock_until_ns = now_ns + int(action.hold_s * 1e9 * 0.5)
+            if action.mouse_dx or action.mouse_dy:
+                if not shadow:
+                    self.backend.mouse_move(action.mouse_dx, action.mouse_dy)
+            if not shadow and (action.bindings
+                               or action.mouse_dx or action.mouse_dy):
+                # simple action lock while a movement command is active
+                self.action_lock_until_ns = now_ns + int(
+                    max(action.hold_s, 0.12) * 1e9 * 0.5)
             self._last_sig = sig
             self._last_hold_refresh_ns = now_ns
         ev = {
@@ -343,7 +364,7 @@ class MotorExecutor(Worker):
         self.inputs.publish(ev, ts_ns=now_ns)
         if shadow:
             self.stats["shadow_only"] += 1
-        else:
+        elif action.bindings or action.mouse_dx or action.mouse_dy:
             self.stats["inputs_emitted"] += 1
         self._pending_release(ev, action)
 
