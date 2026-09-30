@@ -17,7 +17,7 @@ $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
 Write-Host "== AUTONOMOUS QUEST-WAYPOINT NAVIGATION ==" -ForegroundColor Cyan
-Write-Host "Do not steer the character. The fly will turn/approach by itself." -ForegroundColor Yellow
+Write-Host "Dashboard buttons: ENABLE/DISABLE MOVEMENT and END RUN." -ForegroundColor Yellow
 Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor Yellow
 Write-Host "F12 = EMERGENCY STOP. This run auto-stops after 90 seconds." -ForegroundColor Red
 
@@ -32,6 +32,8 @@ Write-Host "F12 = EMERGENCY STOP. This run auto-stops after 90 seconds." -Foregr
     --fast-hz 4 `
     --heavy-hz 0.25 `
     --fast-detect-width 480 `
+    --dashboard-ui `
+    --dashboard-hz 1 `
     --movement-only-autonomy
 
 exit $LASTEXITCODE
