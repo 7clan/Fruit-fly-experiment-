@@ -103,13 +103,12 @@ def create_windows_input_backend() -> InputBackend:
 class MovementOnlyBackend(InputBackend):
     """Hard safety wrapper for the first Gate-6 active-input run.
 
-    Only W keyboard events and bounded horizontal relative mouse movement
-    are forwarded. Mouse buttons and every other key are impossible here,
-    even if an upstream bug requests them.
+    Only W/A/D movement keys are forwarded. Mouse input and every other key
+    are impossible here, even if an upstream bug requests them.
     """
-    name = "windows_navigation_only"
+    name = "windows_navigation_keys_only"
 
-    ALLOWED = {"W"}
+    ALLOWED = {"W", "A", "D"}
 
     def __init__(self, inner: InputBackend):
         self.inner = inner
@@ -123,11 +122,9 @@ class MovementOnlyBackend(InputBackend):
             self.inner.key_up(code)
 
     def mouse_move(self, dx: int, dy: int) -> None:
-        # Horizontal camera steering only. Vertical motion is forced to zero
-        # and per-decision turn magnitude is bounded.
-        dx = max(-120, min(120, int(dx)))
-        if dx:
-            self.inner.mouse_move(dx, 0)
+        # Gate-6 navigation no longer depends on Roblox mouse-capture state.
+        # Steering is W+A / W+D only.
+        return
 
     def release_all(self) -> None:
         self.inner.release_all()
@@ -280,26 +277,26 @@ class MotorExecutor(Worker):
             if intention.name == "TURN_LEFT":
                 return ConcreteAction(
                     intention="TURN_LEFT", ability_id="",
-                    bindings=["key:W"], hold_s=1.5,
-                    mouse_dx=-80, mouse_dy=0,
-                    notes={"source": "gate6_navigation",
+                    bindings=["key:W", "key:A"], hold_s=2.5,
+                    mouse_dx=0, mouse_dy=0,
+                    notes={"source": "gate6_navigation_keys",
                            "brain_intention": intention.name,
                            "locomotor_interpretation":
-                               "P9 turn includes forward walking"})
+                               "P9 turn -> forward plus ipsiversive steering"})
             if intention.name == "TURN_RIGHT":
                 return ConcreteAction(
                     intention="TURN_RIGHT", ability_id="",
-                    bindings=["key:W"], hold_s=1.5,
-                    mouse_dx=80, mouse_dy=0,
-                    notes={"source": "gate6_navigation",
+                    bindings=["key:W", "key:D"], hold_s=2.5,
+                    mouse_dx=0, mouse_dy=0,
+                    notes={"source": "gate6_navigation_keys",
                            "brain_intention": intention.name,
                            "locomotor_interpretation":
-                               "P9 turn includes forward walking"})
+                               "P9 turn -> forward plus ipsiversive steering"})
             if intention.name == "APPROACH":
                 return ConcreteAction(
                     intention="APPROACH", ability_id="",
-                    bindings=["key:W"], hold_s=1.25,
-                    notes={"source": "gate6_navigation",
+                    bindings=["key:W"], hold_s=2.5,
+                    notes={"source": "gate6_navigation_keys",
                            "brain_intention": intention.name})
             return ConcreteAction(
                 intention="STOP", ability_id="", bindings=[], hold_s=0.0,
