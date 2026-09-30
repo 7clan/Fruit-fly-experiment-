@@ -249,7 +249,7 @@ class OpenCVDashboardRenderer:
         self._put(canvas, x + 24, y + 4, f"{label} {rate:.1f} Hz",
                   (215, 215, 215), scale=0.36)
 
-    def _save_evidence_frame(self, mirror_env, chunk_id):
+    def _save_evidence_frame(self, mirror_env, chunk_id, obs=None):
         """Save one raw game frame per completed brain chunk.
 
         This is deliberately low-rate (the canonical brain is slow), so it
@@ -267,6 +267,39 @@ class OpenCVDashboardRenderer:
             path = self._evidence_dir / f"brain_chunk_{int(chunk_id):06d}.jpg"
             self._cv2.imwrite(
                 str(path), img,
+                [int(self._cv2.IMWRITE_JPEG_QUALITY), 82])
+
+            # Also persist a review copy with the exact perception tracks
+            # visible. Raw evidence remains untouched above.
+            annotated = img.copy()
+            notes = (obs or {}).get("notes") or {}
+            for tr in notes.get("entity_tracks") or []:
+                box = tr.get("bbox") or []
+                if len(box) != 4:
+                    continue
+                h, w = annotated.shape[:2]
+                x1, y1, x2, y2 = box
+                p1 = (int(x1 * w), int(y1 * h))
+                p2 = (int(x2 * w), int(y2 * h))
+                kind = str(tr.get("kind", "unknown"))
+                if kind == "quest_npc":
+                    color = (0, 220, 255)
+                elif kind == "hostile_candidate":
+                    color = (80, 80, 255)
+                else:
+                    color = (255, 180, 70)
+                self._cv2.rectangle(annotated, p1, p2, color, 2)
+                self._cv2.putText(
+                    annotated,
+                    f"T{tr.get('track_id')} {kind}",
+                    (p1[0], max(16, p1[1] - 5)),
+                    self._cv2.FONT_HERSHEY_SIMPLEX, 0.45, color, 1,
+                    self._cv2.LINE_AA,
+                )
+            annotated_path = self._evidence_dir / (
+                f"brain_chunk_{int(chunk_id):06d}_annotated.jpg")
+            self._cv2.imwrite(
+                str(annotated_path), annotated,
                 [int(self._cv2.IMWRITE_JPEG_QUALITY), 82])
         except Exception:
             # Evidence capture must never affect the live pipeline.
@@ -460,7 +493,7 @@ class OpenCVDashboardRenderer:
                 "active": brain.get("n_active_new", 0),
                 "spikes": brain.get("n_spikes_new", 0),
             })
-            self._save_evidence_frame(mirror_env, chunk_id)
+            self._save_evidence_frame(mirror_env, chunk_id, obs)
 
         self._put(canvas, x0, 28, "DIGITAL DROSOPHILA — LIVE NEURAL ACTIVITY",
                   (120, 230, 120), scale=0.54, thickness=1)
