@@ -26,6 +26,7 @@ import argparse
 import json
 import signal
 import shutil
+import threading
 import time
 from pathlib import Path
 
@@ -126,6 +127,8 @@ class DigitalFlyLab:
         self.dashboard_ui = None
         self.assessment_started_ns = None
         self.assessment_ended_ns = None
+        self.abort_requested = threading.Event()
+        self._emergency_thread = None
         if dashboard:
             if dashboard_renderer == "opencv":
                 # OpenCV HighGUI is substantially more stable on Windows
@@ -181,13 +184,43 @@ class DigitalFlyLab:
 
     def wait_live(self, seconds: float) -> None:
         if float(seconds) <= 0:
-            while True:
+            while not self.abort_requested.is_set():
                 self.render_dashboard_once()
                 time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
+            return
         deadline = time.monotonic() + float(seconds)
-        while time.monotonic() < deadline:
+        while (time.monotonic() < deadline
+               and not self.abort_requested.is_set()):
             self.render_dashboard_once()
             time.sleep(0.02 if self.dashboard_ui is not None else 0.05)
+
+    def arm_windows_navigation(self) -> None:
+        """Focus the captured game window and arm global F12 abort."""
+        if not self.executor.autonomy_enabled:
+            return
+        try:
+            from .action.windows_input import focus_window, f12_pressed
+        except Exception:
+            return
+        target = getattr(self.capture, "_target", None) or {}
+        hwnd = int(target.get("handle") or 0)
+        if hwnd:
+            focus_window(hwnd)
+
+        def watch():
+            was_down = False
+            while not self.abort_requested.is_set():
+                down = bool(f12_pressed())
+                if down and not was_down:
+                    self.executor.emergency_stop(reason="global_f12")
+                    self.abort_requested.set()
+                    break
+                was_down = down
+                time.sleep(0.05)
+
+        self._emergency_thread = threading.Thread(
+            target=watch, name="global_f12_stop", daemon=True)
+        self._emergency_thread.start()
 
     def wait_for_brain_ready(self, timeout_s: float = 180.0) -> bool:
         """Wait for the brain worker's one-time initialization/prewarm.
@@ -357,7 +390,7 @@ def main(argv=None) -> int:
             print(
                 f"[lab] canonical brain READY: init={lab.brain.stats.get('init_ms')} ms "
                 f"prewarm={lab.brain.stats.get('prewarm_ms')} ms; "
-                + (("starting persistent movement-only run (Ctrl+C to stop)"
+                + (("starting persistent movement-only run (F12/Ctrl+C to stop)"
                     if args.movement_only_autonomy else
                     "starting persistent passive run (Ctrl+C to stop)")
                    if args.seconds <= 0 else
@@ -366,6 +399,10 @@ def main(argv=None) -> int:
                     f"starting {args.seconds}s timed smoke test")),
                 flush=True,
             )
+        if args.movement_only_autonomy:
+            lab.arm_windows_navigation()
+            print("[lab] navigation armed; Roblox focused; F12 = EMERGENCY STOP",
+                  flush=True)
         lab.assessment_started_ns = SHARED_CLOCK.now_ns()
         if isinstance(lab.capture, SyntheticCapture):
             lab.drive_synthetic(seconds=args.seconds, fps=30.0)
