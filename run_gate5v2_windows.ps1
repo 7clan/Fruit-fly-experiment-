@@ -5,6 +5,13 @@ $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
 Set-Location $root
 
+# Avoid nested native thread pools fighting the canonical brain on the
+# target two-core laptop. This changes engineering throughput only.
+$env:OMP_NUM_THREADS = "1"
+$env:OPENBLAS_NUM_THREADS = "1"
+$env:MKL_NUM_THREADS = "1"
+$env:NUMEXPR_NUM_THREADS = "1"
+
 $mainPython = ".\.venv\Scripts\python.exe"
 $brainPython = ".\brain\.venv\Scripts\python.exe"
 
@@ -23,18 +30,19 @@ if ($LASTEXITCODE -ne 0 -or $transportCheck.Trim() -ne "subprocess_pipe") {
 Write-Host "== Gate 5 v2 PASSIVE assessment ==" -ForegroundColor Cyan
 Write-Host "120 seconds starts only after canonical brain READY." -ForegroundColor Yellow
 Write-Host "DO NOT press Ctrl+C unless you want to abort; this assessment stops by itself." -ForegroundColor Red
-Write-Host "Low-load mode: dashboard 1 Hz, heavy vision 0.5 Hz. Show quest NPC, Bandits, and ordinary scenery." -ForegroundColor Yellow
+Write-Host "Low-load mode: capture/fast CV 4 Hz, 480px detector, dashboard 1 Hz. Show quest NPC, Bandits, and scenery." -ForegroundColor Yellow
 
 & $mainPython -m lab.app `
     --runtime canonical `
     --capture windows `
     --seconds 120 `
-    --capture-fps 5 `
+    --capture-fps 4 `
     --chunk-ms 50 `
     --brain-codegen cython `
     --brain-transport subprocess `
-    --fast-hz 5 `
-    --heavy-hz 0.5 `
+    --fast-hz 4 `
+    --heavy-hz 0.25 `
+    --fast-detect-width 480 `
     --dashboard-ui `
     --dashboard-hz 1
 
