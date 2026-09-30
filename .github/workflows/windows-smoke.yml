@@ -1,0 +1,27 @@
+name: Windows navigation smoke
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  windows-smoke:
+    runs-on: windows-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Install lightweight test dependencies
+        run: python -m pip install --upgrade pip numpy opencv-python pytest PyYAML
+      - name: Neural interface and navigation unit tests
+        run: >-
+          python -m pytest -q
+          tests/test_live_d8_interface.py
+          tests/test_live_intent_decoder.py
+          tests/test_navigation_mapping.py
+          tests/test_windows_navigation_backend.py
+      - name: Synthetic full-pipeline smoke
+        run: python -m lab.app --self-test
