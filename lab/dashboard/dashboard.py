@@ -516,6 +516,8 @@ class OpenCVDashboardRenderer:
         ch = d.get("fly.channels") or {}
         goal = d.get("helper.goal") or {}
         act = d.get("action.selected") or {}
+        brain_meta = d.get("brain.meta") or {}
+        action_meta = d.get("action.meta") or {}
 
         game_w = int(self.width * 0.56)
         self._draw_game(canvas, mirror_env, obs, game_w)
