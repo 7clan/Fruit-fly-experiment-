@@ -30,7 +30,7 @@ import math
 from ..schemas import FlyChannels, WorldObservation
 
 # ---- frozen parameters (decoder-config "fly-channels-v1") ------------------
-CONFIG_ID = "fly-channels-v1"
+CONFIG_ID = "fly-channels-v2-center-bilateral"
 
 _HALF_FIELD_DEG = 90.0     # bearing magnitude at which a side channel peaks
 _CENTER_HALF_WIDTH_DEG = 22.5   # |bearing| below this counts as center
@@ -138,7 +138,8 @@ def to_sensory_rates(channels: FlyChannels) -> dict[str, float]:
 
     This is the bridge to the VERIFIED biological sensory interface:
       target_left/right → lateralized LC9 samples (D8 rung-1 calibration:
-      peak 72 Hz contra-lateral sample; here 0..72 Hz linear in signal)
+      peak 72 Hz contra-lateral sample; here 0..72 Hz linear in signal;
+      v2 represents TARGET_CENTER as equal bilateral left/right drive)
       threat_intensity   → looming sample (LPLC2+LC4, Gate-2 150 Hz drive
                             scale; 0..150 Hz linear)
 
@@ -155,8 +156,15 @@ def to_sensory_rates(channels: FlyChannels) -> dict[str, float]:
     is the compact live-side equivalent and is labeled as such (any live/
     reference divergence must be benchmarked, never silently equated).
     """
+    # v2 live-encoder correction: a target straight ahead must not vanish
+    # just because the verified D8 interface has only left/right LC9 entry
+    # populations. Represent TARGET_CENTER as equal bilateral visual drive.
+    # This changes only the engineered sensory encoding, not the biological
+    # network, synapses, thresholds, or D8 population identities.
+    left_signal = min(1.0, channels.target_left + channels.target_center)
+    right_signal = min(1.0, channels.target_right + channels.target_center)
     return {
-        "target_left_hz": 72.0 * channels.target_left,
-        "target_right_hz": 72.0 * channels.target_right,
+        "target_left_hz": 72.0 * left_signal,
+        "target_right_hz": 72.0 * right_signal,
         "looming_hz": 150.0 * channels.threat_intensity,
     }
