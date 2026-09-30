@@ -340,6 +340,12 @@ class MotorExecutor(Worker):
                 for b in action.bindings:
                     if b.startswith("key:"):
                         code = b[4:]
+                        # The slow canonical brain may not emit the next
+                        # decision until long after the previous W pulse was
+                        # released. A repeated biological intention must
+                        # therefore press W again if it is no longer held.
+                        if code not in self._held and not shadow:
+                            self.backend.key_down(code)
                         self._held[code] = now_ns + int(action.hold_s * 1e9)
                 if action.mouse_dx or action.mouse_dy:
                     if not shadow:
