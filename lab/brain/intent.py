@@ -36,7 +36,7 @@ from typing import Optional
 
 from ..schemas import Intention
 
-CONFIG_ID = "intent-decoder-v1"
+CONFIG_ID = "intent-decoder-v2-d9-exact"
 EMITTABLE = ("STOP", "TURN_LEFT", "TURN_RIGHT", "APPROACH", "RETREAT",
              "ESCAPE")
 
@@ -108,8 +108,13 @@ class IntentionDecoder:
             self.window_ms -= old_ms
 
         rates = self._rates()
-        gf = max(rates.get("GF_left", 0.0), rates.get("GF_right", 0.0))
-        mdn = self._pop_mean(rates, ("MDN_bilateral", "MDN_left", "MDN_right"))
+        # Mirror the frozen D9 decoder exactly. RETREAT is driven by the
+        # validated MDN_bilateral slot; lateral MDN readouts are diagnostic
+        # only and must not steal priority from a valid P9 turn command.
+        gf_l = rates.get("GF_left", 0.0)
+        gf_r = rates.get("GF_right", 0.0)
+        gf = 0.5 * (gf_l + gf_r)
+        mdn = rates.get("MDN_bilateral", 0.0)
         walk = self._pop_mean(rates, WALK_POPS)
         stop = self._pop_mean(rates, STOP_POPS)
         p9l, p9r = rates.get("P9_left", 0.0), rates.get("P9_right", 0.0)
