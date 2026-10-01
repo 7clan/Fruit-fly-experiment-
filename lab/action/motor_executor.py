@@ -465,7 +465,8 @@ class MotorExecutor(Worker):
                 # No mouse steering exists in Gate-6F. A held-key refresh is
                 # complete here.
                 return
-            if not shadow and now_ns < self.action_lock_until_ns:
+            if (not shadow and now_ns < self.action_lock_until_ns
+                    and not self.movement_only):
                 return
             if not same_action:
                 desired = {
