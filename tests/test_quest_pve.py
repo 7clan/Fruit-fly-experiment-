@@ -38,22 +38,29 @@ class _FakeInput:
         return {"ok": True}
 
 
-def test_questing_backend_is_hard_allowlisted():
+def test_questing_backend_is_hard_allowlisted_to_known_gpo_action_surface():
     fake = _FakeInput()
     b = QuestingBackend(fake)
-    for key in ["W", "A", "S", "D", "SPACE", "CTRL", "Q",
-                "F", "T", "E", "R", "B", "V", "M", "J"]:
+    requested = [
+        "W", "A", "S", "D", "SPACE", "CTRL", "SHIFT", "Q",
+        "F", "T", "E", "R", "Z", "X", "C", "V", "B", "N",
+        "G", "J", "P", "M", "1", "5", "0",
+        # unsupported scan-code aliases must still be dropped
+        "DELETE", "HOME",
+    ]
+    for key in requested:
         b.key_down(key)
     b.mouse_button_down("left")
     b.mouse_button_down("right")
     b.mouse_move(120, 99)
 
     allowed = {e[1] for e in fake.events if e[0] == "key_down"}
-    assert allowed == {"W", "A", "S", "D", "SPACE", "CTRL",
-                       "Q", "F", "T", "E", "R"}
+    assert {"W", "A", "S", "D", "SPACE", "CTRL", "Q", "F", "T",
+            "E", "R", "Z", "X", "C", "N", "G", "J", "1", "5", "0"} <= allowed
+    assert "DELETE" not in allowed and "HOME" not in allowed
     assert ("mouse_down", "left") in fake.events
     assert ("mouse_down", "right") not in fake.events
-    # Camera yaw is bounded by QuestingBackend.
+    # Camera yaw is bounded and routed through RMB drag internally.
     assert ("camera", 90, 35) in fake.events
 
 
