@@ -53,7 +53,11 @@ class CaptureAdapter(ABC):
     def __init__(self, bus: Bus, channel: str = "capture.frames"):
         self.bus = bus
         self.channel_name = channel
-        self.frames: StreamChannel = bus.stream(channel, maxsize=4)
+        # Legacy event stream kept for compatibility, but only one frame is
+        # retained. All live consumers use the non-destructive latest state.
+        # Keeping four 1080p frames alive wastes tens of MB on the 8 GB
+        # target laptop with no benefit.
+        self.frames: StreamChannel = bus.stream(channel, maxsize=1)
         # Non-destructive latest-frame snapshot for multiple readers.
         # A queue cannot be shared by vision/dashboard as a broadcast:
         # one consumer would drain frames away from the others.
