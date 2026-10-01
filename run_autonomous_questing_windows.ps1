@@ -16,7 +16,7 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-$modelSpec = "ggml-org/SmolVLM2-256M-Video-Instruct-GGUF:Q8_0"
+$modelSpec = "ggml-org/SmolVLM2-256M-Video-Instruct-GGUF:Q4_K_M"
 $modelAlias = "smolvlm2-256m"
 $port = 18080
 $baseUrl = "http://127.0.0.1:$port"
@@ -69,7 +69,7 @@ if (-not $serverExe) {
 }
 
 Write-Host "Fly brain owns turn/approach/retreat navigation." -ForegroundColor Green
-Write-Host "LOCAL AI: SmolVLM2-256M Q8_0 via llama.cpp; no Gemini/API key." -ForegroundColor Green
+Write-Host "LOCAL AI: SmolVLM2-256M Q4_K_M via llama.cpp; no Gemini/API key." -ForegroundColor Green
 Write-Host "Local AI runs only on semantic events / slow intervals, not every frame." -ForegroundColor Yellow
 Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
 Write-Host "Local AI may reason about quests, obstacles, combat, visible shops, equipment and ships using the offline GPO playbook." -ForegroundColor Yellow
