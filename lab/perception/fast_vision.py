@@ -42,15 +42,18 @@ class FastVisionWorker(Worker):
 
     def __init__(self, bus: Bus, target_hz: float = 24.0,
                  frames_channel: str = "capture.frames",
-                 max_detect_width: int = 640):
+                 max_detect_width: int = 640,
+                 role_detection: bool = True):
         super().__init__(bus, target_hz=target_hz)
         self.frames: StateChannel = bus.state(frames_channel + ".latest")
         self._last_frame_id = None
         self.obs_state: StateChannel = bus.state(self.TOPIC_OBS)
         self.events: StreamChannel = bus.stream(self.TOPIC_EVT, maxsize=64)
         self.detector = HeuristicFastVision()
-        self.gpo_detector = GPOHeuristicFastVision()
+        self.gpo_detector = GPOHeuristicFastVision(
+            role_detection=role_detection)
         self.max_detect_width = int(max_detect_width)
+        self.role_detection = bool(role_detection)
 
     def on_start(self) -> None:
         # The target laptop has only two physical CPU cores. OpenCV's
@@ -240,9 +243,10 @@ class GPOHeuristicFastVision:
 
     name = "gpo_heuristic_v2"
 
-    def __init__(self):
+    def __init__(self, role_detection: bool = True):
         # Conservative association: false positives are more dangerous than
         # missed detections for the first autonomous movement gate.
+        self.role_detection = bool(role_detection)
         self._tracker = SimpleTrackletTracker(max_misses=3, center_gate=0.055)
 
     def warmup(self) -> None:
@@ -686,13 +690,22 @@ class GPOHeuristicFastVision:
             "health_units": "fraction" if health is not None else "unknown",
         }
 
-        proposals = self._humanoid_proposals(
-            img, player_xy=(px, py), quest_xy=quest_xy)
-        entity_tracks = self._tracker.update(proposals)
-        stable_tracks = [
-            t for t in entity_tracks
-            if t["hits"] >= 3 and t["misses"] == 0
-        ]
+        if self.role_detection:
+            proposals = self._humanoid_proposals(
+                img, player_xy=(px, py), quest_xy=quest_xy)
+            entity_tracks = self._tracker.update(proposals)
+            stable_tracks = [
+                t for t in entity_tracks
+                if t["hits"] >= 3 and t["misses"] == 0
+            ]
+            role_mode = "role_evidence_v1_not_yet_promoted"
+        else:
+            # Navigation-light profile: skip Canny/Sobel/box-filter humanoid
+            # proposals entirely. Waypoint + HUD sensing remain active.
+            # Combat/quest-role recognition is re-enabled by the Gate-7
+            # profile, not silently approximated here.
+            stable_tracks = []
+            role_mode = "disabled_navigation_light"
 
         ui = {
             "loading": False,
@@ -723,7 +736,8 @@ class GPOHeuristicFastVision:
                 "hostile_candidate_count": sum(
                     1 for t in stable_tracks
                     if t["kind"] == "hostile_candidate"),
-                "enemy_detector": "role_evidence_v1_not_yet_promoted",
+                "enemy_detector": role_mode,
+                "role_detection_enabled": self.role_detection,
             },
         }
 
