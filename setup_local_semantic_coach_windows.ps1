@@ -9,7 +9,7 @@ Set-Location $root
 $mainPython = ".\.venv\Scripts\python.exe"
 if (-not (Test-Path $mainPython)) { throw "Main venv missing" }
 
-$modelSpec = "ggml-org/SmolVLM2-256M-Video-Instruct-GGUF:Q8_0"
+$modelSpec = "ggml-org/SmolVLM2-256M-Video-Instruct-GGUF:Q4_K_M"
 $modelAlias = "smolvlm2-256m"
 $port = 18080
 $baseUrl = "http://127.0.0.1:$port"
@@ -43,7 +43,7 @@ function Test-Health {
 }
 
 Write-Host "== LOCAL SEMANTIC COACH SETUP ==" -ForegroundColor Cyan
-Write-Host "Model: SmolVLM2-256M-Video-Instruct Q8_0" -ForegroundColor Yellow
+Write-Host "Model: SmolVLM2-256M-Video-Instruct Q4_K_M" -ForegroundColor Yellow
 Write-Host "Runtime: llama.cpp, CPU-only, 1 inference thread during gameplay" -ForegroundColor Yellow
 Write-Host "No Gemini/API key is required." -ForegroundColor Green
 Write-Host "First setup downloads the small model and vision projector." -ForegroundColor DarkYellow
