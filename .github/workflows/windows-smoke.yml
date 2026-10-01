@@ -32,6 +32,11 @@ jobs:
             "$PWD\run_autonomous_questing_windows.ps1",
             [ref]$null, [ref]$errors) | Out-Null
           if ($errors) { $errors | Format-List; exit 1 }
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\setup_semantic_coach_windows.ps1",
+            [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
       - name: Neural interface and navigation unit tests
         run: >-
           python -m pytest -q
@@ -45,5 +50,6 @@ jobs:
           tests/test_gpo_action_surface.py
           tests/test_quest_pve.py
           tests/test_gpo_controls.py
+          tests/test_semantic_coach.py
       - name: Synthetic full-pipeline smoke
         run: python -m lab.app --self-test
