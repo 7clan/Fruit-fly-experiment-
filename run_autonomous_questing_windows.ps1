@@ -30,7 +30,7 @@ Write-Host "Quest helper: yellow QUEST = interact, green tracker = travel, red q
 Write-Host "Camera assist: bounded recenter on visible quest/enemy tracker; fly still owns locomotor direction." -ForegroundColor Yellow
 Write-Host "Obstacle recovery: jump, climb, bounded camera search; far APPROACH may double-W sprint." -ForegroundColor Yellow
 Write-Host "Starter PvE: F block, Q evade, M1, E Gut Punch, R Ground Smash; broader skill keys are catalogued but context-gated." -ForegroundColor Yellow
-Write-Host "Keep the observed default Melee loadout equipped for this Gate-7A run." -ForegroundColor Yellow
+Write-Host "Keep the observed default Melee loadout equipped for this Gate-7B run." -ForegroundColor Yellow
 Write-Host "Defense learning is ENGINEERED ValueTable learning, not biological MB learning." -ForegroundColor DarkYellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
