@@ -35,6 +35,9 @@ def main(argv=None) -> int:
         chunk_ms=args.chunk_ms,
         codegen_target=args.codegen,
         quiet=True,
+        # Live control needs exact population/whole-brain counts, not every
+        # individual spike timestamp. Avoid storing the full event stream.
+        record_full_spikes=False,
     )
 
     try:
