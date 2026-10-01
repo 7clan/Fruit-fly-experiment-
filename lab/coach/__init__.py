@@ -6,5 +6,6 @@ raw keyboard scan codes.
 """
 
 from .semantic_coach import SemanticCoachWorker
+from .local_smolvlm import LocalSmolVLMCoachWorker
 
-__all__ = ["SemanticCoachWorker"]
+__all__ = ["SemanticCoachWorker", "LocalSmolVLMCoachWorker"]
