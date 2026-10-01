@@ -33,14 +33,14 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
         target_hz: float = 0.5,
         model: str | None = None,
         base_url: str | None = None,
-        timeout_s: float = 120.0,
+        timeout_s: float = 180.0,
     ):
         super().__init__(
             bus,
             target_hz=target_hz,
             model=model or DEFAULT_LOCAL_MODEL,
-            min_call_interval_s=18.0,
-            unchanged_refresh_s=60.0,
+            min_call_interval_s=30.0,
+            unchanged_refresh_s=90.0,
             timeout_s=timeout_s,
             api_key="local-no-key",
         )
@@ -137,13 +137,13 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
             import cv2
             img = frame
             h, w = img.shape[:2]
-            if w > 512:
-                scale = 512.0 / float(w)
+            if w > 384:
+                scale = 384.0 / float(w)
                 img = cv2.resize(
-                    img, (512, max(1, int(h * scale))),
+                    img, (384, max(1, int(h * scale))),
                     interpolation=cv2.INTER_AREA)
             ok, enc = cv2.imencode(
-                ".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 52])
+                ".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 48])
             if not ok:
                 return None, 0.0
             return (
@@ -168,17 +168,19 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
             if c.get("control_id")
         ]
         compact_state = {
-            "world": _compact(obs, 1900),
-            "quest": _compact(quest, 700),
+            "world": _compact(obs, 1050),
+            "quest": _compact(quest, 450),
             "fly_intention": (brain.get("intention") or {}).get("name"),
             "loadout": action_meta.get("gpo_loadout"),
-            "profile": _compact(self.profile, 1200),
-            "controls": controls,
-            "previous_plan": _compact(previous_plan, 500),
+            "profile": _compact(self.profile, 550),
+            "controls": controls[:18],
+            "previous_plan": _compact(previous_plan, 260),
         }
         situation_text = json.dumps(compact_state, default=str)
-        knowledge = self._relevant_playbook(situation_text)
-        skill_cards = render_skill_cards(situation_text, max_cards=5)
+        # Tiny-model strategy: procedural skill cards carry the action recipe.
+        # Only a very small playbook excerpt is included as background.
+        knowledge = self._relevant_playbook(situation_text)[:2200]
+        skill_cards = render_skill_cards(situation_text, max_cards=3)
         skills = ", ".join(sorted(ALLOWED_SKILLS))
 
         return f"""You are a SMALL LOCAL VISUAL COACH for Grand Piece Online.
@@ -240,9 +242,8 @@ Return ONLY compact JSON:
         body = {
             "model": self.model,
             "messages": [{"role": "user", "content": content}],
-            "temperature": 0.1,
-            "max_tokens": 360,
-            "response_format": {"type": "json_object"},
+            "temperature": 0.0,
+            "max_tokens": 160,
         }
         endpoint = self.base_url + "/chat/completions"
 
@@ -262,14 +263,7 @@ Return ONLY compact JSON:
                     req, timeout=self.timeout_s) as resp:
                 return json.loads(resp.read().decode("utf-8"))
 
-        try:
-            payload = send(body)
-        except urllib.error.HTTPError as exc:
-            if int(getattr(exc, "code", 0)) != 400:
-                raise
-            fallback = dict(body)
-            fallback.pop("response_format", None)
-            payload = send(fallback)
+        payload = send(body)
 
         choices = payload.get("choices") or []
         if not choices:
