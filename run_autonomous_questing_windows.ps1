@@ -68,9 +68,9 @@ if (-not $serverExe) {
     throw "llama-server unavailable after local coach setup."
 }
 
-Write-Host "Fly brain owns turn/approach/retreat navigation." -ForegroundColor Green
+Write-Host "Fly brain contributes approach/retreat/escape; local AI selects skills and fresh CV servo handles time-critical target steering." -ForegroundColor Green
 Write-Host "LOCAL AI: SmolVLM2-256M Q4_K_M via llama.cpp; no Gemini/API key." -ForegroundColor Green
-Write-Host "Local AI runs only on semantic events / slow intervals, not every frame." -ForegroundColor Yellow
+Write-Host "Local AI now performs real text skill-selection on scene changes/~30s; expensive image reasoning remains rare." -ForegroundColor Yellow
 Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
 Write-Host "Local AI may reason about quests, obstacles, combat, visible shops, equipment and ships using the offline GPO playbook." -ForegroundColor Yellow
 Write-Host "CPU policy: llama.cpp uses 2 low-priority CPU threads in short bursts; zero GPU layers." -ForegroundColor Yellow
@@ -143,7 +143,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Local coach READY: $modelAlias" -ForegroundColor Green
-Write-Host "Low-power profile: capture/CV 3 Hz, x2 downsample, local AI event-gated ~18s minimum." -ForegroundColor Yellow
+Write-Host "Low-power profile: capture/CV 3 Hz, x2 downsample, AI skill calls scene-gated/~30s, visual reasoning rare." -ForegroundColor Yellow
 
 $exitCode = 1
 try {
