@@ -392,14 +392,26 @@ class QuestCombatSupervisor(Worker):
             return False
 
         target_type = str(target.get("type") or "none")
-        if target_type not in {
-                "recommended_quest_waypoint", "quest_marker",
-                "quest_enemy_marker"}:
-            return False
+        card = str(plan.get("skill_card") or "")
         try:
-            target_conf = float(target.get("confidence", 0.0))
-            direction = float(target.get("direction"))
-            proximity = float(target.get("distance"))
+            if (card == "quest_accept" and yellow_quest
+                    and yellow_proximity is not None
+                    and yellow_direction is not None):
+                # Red NPC diamonds can coexist with the yellow quest giver.
+                # Follow the semantic goal, not whichever color detector wrote
+                # the primary target last.
+                target_type = "quest_marker"
+                target_conf = 0.90
+                direction = float(yellow_direction)
+                proximity = float(yellow_proximity)
+            else:
+                if target_type not in {
+                        "recommended_quest_waypoint", "quest_marker",
+                        "quest_enemy_marker"}:
+                    return False
+                target_conf = float(target.get("confidence", 0.0))
+                direction = float(target.get("direction"))
+                proximity = float(target.get("distance"))
         except (TypeError, ValueError):
             return False
         if target_conf < 0.60:
@@ -563,7 +575,7 @@ class QuestCombatSupervisor(Worker):
                 self._last_interact_ns = now
                 self.stats["quest_interacts"] += 1
 
-        elif target_type == "quest_enemy_marker":
+        elif target_type == "quest_enemy_marker" and not yellow_quest:
             if proximity is not None and proximity >= 0.70:
                 self._phase = "combat"
                 # Regular block cycling gives the slow whole-brain loop a
