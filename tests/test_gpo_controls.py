@@ -15,7 +15,8 @@ def test_core_gpo_control_catalog_contains_all_generic_families():
         "move_forward", "move_backward", "move_left", "move_right",
         "jump", "sprint", "dash_forward", "dash_backward",
         "dash_left", "dash_right", "climb_or_dive", "geppo",
-        "basic_attack", "block", "perfect_block", "reload",
+        "basic_attack", "m1_string", "uptilt_air_combo",
+        "block", "perfect_block", "reload",
         "interact", "carry_downed", "grip_downed", "sit_ship",
         "menu", "buso_haki", "observation_haki", "evasive_contextual",
     }
