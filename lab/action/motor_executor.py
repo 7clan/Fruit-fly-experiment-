@@ -468,12 +468,26 @@ class MotorExecutor(Worker):
             if not shadow and now_ns < self.action_lock_until_ns:
                 return
             if not same_action:
-                for b in action.bindings:
-                    if b.startswith("key:"):
-                        code = b[4:]
+                desired = {
+                    b[4:] for b in action.bindings if b.startswith("key:")
+                }
+                # A new neural decision replaces the previous movement. STOP
+                # must release immediately, and left/right changes must never
+                # leave the opposite steering key held until its old timeout.
+                for code in list(self._held):
+                    if code not in desired:
                         if not shadow:
-                            self.backend.key_down(code)
-                        self._held[code] = now_ns + int(action.hold_s * 1e9)
+                            self.backend.key_up(code)
+                        del self._held[code]
+                        self.inputs.publish({
+                            "kind": "key_up", "ts_ns": now_ns,
+                            "code": code, "shadow": shadow,
+                            "reason": "new_neural_action",
+                        }, ts_ns=now_ns)
+                for code in desired:
+                    if code not in self._held and not shadow:
+                        self.backend.key_down(code)
+                    self._held[code] = now_ns + int(action.hold_s * 1e9)
             if action.mouse_dx or action.mouse_dy:
                 if not shadow:
                     self.backend.mouse_move(action.mouse_dx, action.mouse_dy)
