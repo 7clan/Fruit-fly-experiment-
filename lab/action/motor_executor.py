@@ -212,7 +212,8 @@ class MotorExecutor(Worker):
         self.backend = backend or SafeNoopBackend()
         self.autonomy_enabled = bool(autonomy_enabled)   # GATED (see module doc)
         self.movement_only = bool(movement_only)
-        self._held: dict[str, float] = {}   # code -> hold-until ns
+        self._held: dict[str, float] = {}   # keyboard code -> hold-until ns
+        self._held_mouse: dict[str, float] = {}  # mouse button -> hold-until ns
         self._lock = threading.Lock()
         self.action_lock_until_ns = 0
         self._last_sig: tuple = ()          # (intention, ability, bindings)
@@ -234,6 +235,7 @@ class MotorExecutor(Worker):
         with self._lock:
             self.backend.release_all()
             self._held.clear()
+            self._held_mouse.clear()
             self.action_lock_until_ns = 0
         self.stats["emergency_stops"] += 1
         self.inputs.publish({
@@ -475,8 +477,15 @@ class MotorExecutor(Worker):
                         code = b[4:]
                         if code not in self._held and not shadow:
                             self.backend.key_down(code)
-                            repressed.append(code)
+                            repressed.append(f"key:{code}")
                         self._held[code] = now_ns + int(action.hold_s * 1e9)
+                    elif b.startswith("mouse:"):
+                        button = b[6:].lower()
+                        if button not in self._held_mouse and not shadow:
+                            self.backend.mouse_button_down(button)
+                            repressed.append(f"mouse:{button}")
+                        self._held_mouse[button] = (
+                            now_ns + int(action.hold_s * 1e9))
                 self._last_sig = sig
                 self._last_hold_refresh_ns = now_ns
                 self.stats["hold_refreshes"] += 1
@@ -486,7 +495,7 @@ class MotorExecutor(Worker):
                         "ts_ns": now_ns,
                         "shadow": False,
                         "intention": action.intention,
-                        "bindings": [f"key:{k}" for k in repressed],
+                        "bindings": repressed,
                         "hold_s": action.hold_s,
                     }, ts_ns=now_ns)
                     self.stats["inputs_emitted"] += 1
@@ -500,9 +509,11 @@ class MotorExecutor(Worker):
                 desired = {
                     b[4:] for b in action.bindings if b.startswith("key:")
                 }
-                # A new neural decision replaces the previous movement. STOP
-                # must release immediately, and left/right changes must never
-                # leave the opposite steering key held until its old timeout.
+                desired_mouse = {
+                    b[6:].lower() for b in action.bindings
+                    if b.startswith("mouse:")
+                }
+                # A new neural decision replaces the previous input state.
                 for code in list(self._held):
                     if code not in desired:
                         if not shadow:
@@ -513,10 +524,25 @@ class MotorExecutor(Worker):
                             "code": code, "shadow": shadow,
                             "reason": "new_neural_action",
                         }, ts_ns=now_ns)
+                for button in list(self._held_mouse):
+                    if button not in desired_mouse:
+                        if not shadow:
+                            self.backend.mouse_button_up(button)
+                        del self._held_mouse[button]
+                        self.inputs.publish({
+                            "kind": "mouse_up", "ts_ns": now_ns,
+                            "button": button, "shadow": shadow,
+                            "reason": "new_neural_action",
+                        }, ts_ns=now_ns)
                 for code in desired:
                     if code not in self._held and not shadow:
                         self.backend.key_down(code)
                     self._held[code] = now_ns + int(action.hold_s * 1e9)
+                for button in desired_mouse:
+                    if button not in self._held_mouse and not shadow:
+                        self.backend.mouse_button_down(button)
+                    self._held_mouse[button] = (
+                        now_ns + int(action.hold_s * 1e9))
             if action.mouse_dx or action.mouse_dy:
                 if not shadow:
                     self.backend.mouse_move(action.mouse_dx, action.mouse_dy)
@@ -549,9 +575,7 @@ class MotorExecutor(Worker):
         with self._lock:
             expired = [c for c, until in self._held.items() if now_ns >= until]
             for code in expired:
-                if not self.autonomy_enabled:
-                    pass  # shadow mode never pressed it down
-                else:
+                if self.autonomy_enabled:
                     self.backend.key_up(code)
                 del self._held[code]
                 self.inputs.publish({
@@ -559,6 +583,27 @@ class MotorExecutor(Worker):
                     "shadow": not self.autonomy_enabled},
                     ts_ns=now_ns)
 
+            expired_mouse = [
+                b for b, until in self._held_mouse.items()
+                if now_ns >= until
+            ]
+            for button in expired_mouse:
+                if self.autonomy_enabled:
+                    self.backend.mouse_button_up(button)
+                del self._held_mouse[button]
+                self.inputs.publish({
+                    "kind": "mouse_up", "ts_ns": now_ns,
+                    "button": button,
+                    "shadow": not self.autonomy_enabled},
+                    ts_ns=now_ns)
+
     def held_keys(self) -> list:
         with self._lock:
             return sorted(self._held.keys())
+
+    def held_inputs(self) -> dict:
+        with self._lock:
+            return {
+                "keys": sorted(self._held.keys()),
+                "mouse_buttons": sorted(self._held_mouse.keys()),
+            }
