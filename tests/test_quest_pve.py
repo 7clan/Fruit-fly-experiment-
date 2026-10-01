@@ -216,3 +216,19 @@ def test_quest_enemy_marker_is_valid_fly_navigation_target():
     }, ts_ns=now)
     action = ex._materialize({}, Intention(name="TURN_RIGHT"))
     assert ex._navigation_veto_reason(action, now) is None
+
+
+def test_red_route_arrow_does_not_become_enemy_marker():
+    import cv2
+
+    img = np.zeros((360, 640, 3), dtype=np.uint8)
+    cv2.rectangle(img, (300, 170), (340, 240), (245, 245, 245), -1)
+    # Thin route arrow similar to the recommended-quest path indicator.
+    pts = np.array([[400, 170], [485, 170], [470, 160],
+                    [500, 175], [470, 190], [485, 178],
+                    [400, 178]], dtype=np.int32)
+    cv2.fillPoly(img, [pts], (0, 0, 255))
+
+    det = GPOHeuristicFastVision(role_detection=False).detect(img)
+    assert det["_notes"]["quest_enemy_marker_detected"] is False
+    assert det["target"]["type"] != "quest_enemy_marker"
