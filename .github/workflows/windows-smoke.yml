@@ -27,6 +27,7 @@ jobs:
           tests/test_navigation_mapping.py
           tests/test_windows_navigation_backend.py
           tests/test_brian_count_monitor.py
+          tests/test_quest_pve.py
           tests/test_gpo_controls.py
       - name: Synthetic full-pipeline smoke
         run: python -m lab.app --self-test
