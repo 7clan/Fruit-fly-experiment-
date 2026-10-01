@@ -35,6 +35,7 @@ MOUSEEVENTF_MIDDLEDOWN = 0x0020
 MOUSEEVENTF_MIDDLEUP = 0x0040
 
 _user32 = ctypes.WinDLL("user32", use_last_error=True)
+_kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
 
 _ULONG_PTR = ctypes.c_size_t
@@ -74,6 +75,30 @@ _user32.SendInput.argtypes = [
     wt.UINT, ctypes.POINTER(_INPUT), ctypes.c_int
 ]
 _user32.SendInput.restype = wt.UINT
+
+_user32.IsWindow.argtypes = [wt.HWND]
+_user32.IsWindow.restype = wt.BOOL
+_user32.GetForegroundWindow.argtypes = []
+_user32.GetForegroundWindow.restype = wt.HWND
+_user32.ShowWindow.argtypes = [wt.HWND, ctypes.c_int]
+_user32.ShowWindow.restype = wt.BOOL
+_user32.SetForegroundWindow.argtypes = [wt.HWND]
+_user32.SetForegroundWindow.restype = wt.BOOL
+_user32.BringWindowToTop.argtypes = [wt.HWND]
+_user32.BringWindowToTop.restype = wt.BOOL
+_user32.GetWindowThreadProcessId.argtypes = [wt.HWND, ctypes.c_void_p]
+_user32.GetWindowThreadProcessId.restype = wt.DWORD
+_user32.AttachThreadInput.argtypes = [wt.DWORD, wt.DWORD, wt.BOOL]
+_user32.AttachThreadInput.restype = wt.BOOL
+_user32.SetWindowPos.argtypes = [
+    wt.HWND, wt.HWND, ctypes.c_int, ctypes.c_int,
+    ctypes.c_int, ctypes.c_int, wt.UINT,
+]
+_user32.SetWindowPos.restype = wt.BOOL
+_user32.SetFocus.argtypes = [wt.HWND]
+_user32.SetFocus.restype = wt.HWND
+_kernel32.GetCurrentThreadId.argtypes = []
+_kernel32.GetCurrentThreadId.restype = wt.DWORD
 
 
 _SCAN = {
@@ -249,7 +274,7 @@ def focus_window(hwnd: int) -> bool:
         # Bounded fallback for foreground-lock situations. Attach only the
         # current and foreground GUI threads and always detach in finally.
         fg = int(_user32.GetForegroundWindow() or 0)
-        cur_tid = int(_user32.GetCurrentThreadId())
+        cur_tid = int(_kernel32.GetCurrentThreadId())
         fg_tid = int(_user32.GetWindowThreadProcessId(
             wt.HWND(fg), None)) if fg else 0
         attached = False
