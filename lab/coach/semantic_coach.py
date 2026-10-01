@@ -47,6 +47,7 @@ ALLOWED_SKILLS = frozenset({
     "USE_HAKI",
     "EQUIP_SLOT",
     "EXEC_CONTROL",
+    "USE_OBSERVED_ABILITY",
     "BUY_ITEM",
     "UI_CLICK",
     "BOARD_SHIP",
@@ -245,6 +246,8 @@ left/right/approach navigation.
 IMPORTANT RULES:
 - Never output a raw keyboard key or scan code.
 - For EXEC_CONTROL choose control_id only from verified_controls.
+- For USE_OBSERVED_ABILITY, the binding AND move label must both be visibly
+  readable on the CURRENT HUD. Never guess a fruit/style/sword ability key.
 - Never attack ordinary players; combat target must be a quest-marked NPC or
   an immediate NPC threat.
 - Never autonomously confirm trades, Robux purchases, account/security UI, or
@@ -270,6 +273,10 @@ Return ONLY a JSON object with exactly these fields:
   "target": "specific visible/known target or none",
   "skill": "ONE OF: {", ".join(sorted(ALLOWED_SKILLS))}",
   "control_id": "verified control id or empty string",
+  "observed_ability": {
+    "binding": "visible HUD key such as E/R/Z/X/C/V/B/N or empty",
+    "label": "visible HUD move name or empty"
+  },
   "ui_click": {{
     "needed": false,
     "x_norm": 0.0,
@@ -428,6 +435,15 @@ Return ONLY a JSON object with exactly these fields:
         if control_id not in valid_ids:
             control_id = ""
 
+        ability = raw.get("observed_ability") or {}
+        binding = str(ability.get("binding") or "").strip().upper()
+        ability_label = str(ability.get("label") or "").strip()[:96]
+        if binding not in {"E", "R", "Z", "X", "C", "V", "B", "N", "Q", "F", "G", "J"}:
+            binding = ""
+        if skill == "USE_OBSERVED_ABILITY" and (
+                not binding or not ability_label or confidence < 0.80):
+            skill = "REOBSERVE"
+
         ui = raw.get("ui_click") or {}
         try:
             x = max(0.0, min(1.0, float(ui.get("x_norm", 0.0))))
@@ -449,6 +465,10 @@ Return ONLY a JSON object with exactly these fields:
             "target": str(raw.get("target") or "none")[:160],
             "skill": skill,
             "control_id": control_id,
+            "observed_ability": {
+                "binding": binding,
+                "label": ability_label,
+            },
             "ui_click": {
                 "needed": ui_needed,
                 "x_norm": round(x, 4),
