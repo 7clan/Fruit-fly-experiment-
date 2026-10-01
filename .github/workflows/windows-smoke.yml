@@ -37,6 +37,16 @@ jobs:
             "$PWD\setup_semantic_coach_windows.ps1",
             [ref]$null, [ref]$errors) | Out-Null
           if ($errors) { $errors | Format-List; exit 1 }
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\setup_local_semantic_coach_windows.ps1",
+            [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\run_autonomous_questing_gemini_windows.ps1",
+            [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
       - name: Neural interface and navigation unit tests
         run: >-
           python -m pytest -q
