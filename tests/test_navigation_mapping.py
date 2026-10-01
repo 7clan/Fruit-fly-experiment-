@@ -29,3 +29,68 @@ def test_approach_is_forward_only_and_combatish_intents_fail_closed():
     assert _action("RETREAT").bindings == []
     assert _action("ESCAPE").bindings == []
     assert _action("STOP").bindings == []
+
+
+def _obs(target_type="recommended_quest_waypoint", direction=0.0,
+         confidence=0.92, ts_ns=1):
+    return {
+        "ts_ns": ts_ns,
+        "target": {
+            "type": target_type,
+            "direction": direction,
+            "distance": 0.5,
+            "confidence": confidence,
+        },
+        "player": {},
+        "enemies": [],
+        "ui": {},
+        "abilities": [],
+    }
+
+
+def test_navigation_safety_veto_blocks_turn_opposite_fresh_target():
+    bus = Bus()
+    ex = MotorExecutor(
+        bus, backend=SafeNoopBackend(), movement_only=True,
+        autonomy_enabled=False)
+    now = ex.clock.now_ns()
+    bus.state("world.observation").write(
+        _obs(direction=0.8, ts_ns=now), ts_ns=now)
+    a = ex._materialize({}, Intention(name="TURN_LEFT"))
+    assert ex._navigation_veto_reason(
+        a, now) == "turn_left_conflicts_with_target_right"
+
+
+def test_navigation_safety_veto_allows_matching_turn():
+    bus = Bus()
+    ex = MotorExecutor(
+        bus, backend=SafeNoopBackend(), movement_only=True,
+        autonomy_enabled=False)
+    now = ex.clock.now_ns()
+    bus.state("world.observation").write(
+        _obs(direction=-0.8, ts_ns=now), ts_ns=now)
+    a = ex._materialize({}, Intention(name="TURN_LEFT"))
+    assert ex._navigation_veto_reason(a, now) is None
+
+
+def test_navigation_safety_veto_fails_closed_when_target_missing():
+    bus = Bus()
+    ex = MotorExecutor(
+        bus, backend=SafeNoopBackend(), movement_only=True,
+        autonomy_enabled=False)
+    now = ex.clock.now_ns()
+    bus.state("world.observation").write(
+        _obs(target_type="none", direction=None, confidence=0.0, ts_ns=now),
+        ts_ns=now)
+    a = ex._materialize({}, Intention(name="APPROACH"))
+    assert ex._navigation_veto_reason(
+        a, now) == "navigation_target_not_visible"
+
+
+def test_approach_hold_adapts_to_slow_canonical_chunk():
+    ex = MotorExecutor(
+        Bus(), backend=SafeNoopBackend(), movement_only=True,
+        autonomy_enabled=False)
+    a = ex._materialize(
+        {"chunk_wall_s": 6.8}, Intention(name="APPROACH"))
+    assert a.hold_s == 5.0
