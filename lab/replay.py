@@ -51,6 +51,8 @@ class ReplayRecorder(Worker):
         for ch in self._subs:
             events.extend(ch.drain())     # drops nothing here; backlog
                                           # above drops at the bus level
+        if not events:
+            return
         events.sort(key=lambda e: e.ts_ns)
         for env in events:
             rec = env.to_dict()
