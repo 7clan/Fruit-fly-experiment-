@@ -196,10 +196,14 @@ class QuestCombatSupervisor(Worker):
         obs = env.payload or {}
         now = self.clock.now_ns()
         target = obs.get("target") or {}
+        notes = obs.get("notes") or {}
         player = obs.get("player") or {}
         target_type = str(target.get("type") or "none")
         proximity = self._f(target.get("distance"))
         direction = self._f(target.get("direction"))
+        yellow_quest = bool(notes.get("quest_marker_detected", False))
+        yellow_proximity = self._f(notes.get("quest_marker_proximity"))
+        yellow_direction = self._f(notes.get("quest_marker_direction"))
         health = self._f(player.get("health"))
         stamina = self._f(player.get("stamina"))
         fly_intention = self._brain_intention()
@@ -260,11 +264,17 @@ class QuestCombatSupervisor(Worker):
                 now, target, health, stamina, fly_intention)
             return
 
-        if target_type == "quest_marker":
+        # Yellow QUEST and the green Recommended Quest circle can be
+        # visible at the same time. Fast vision preserves both cues. The
+        # green circle remains the biological navigation target, while a
+        # sufficiently close/centered yellow cue triggers NPC interaction.
+        if (target_type != "quest_enemy_marker" and yellow_quest
+                and yellow_proximity is not None
+                and yellow_proximity >= 0.72
+                and yellow_direction is not None
+                and abs(yellow_direction) <= 0.45):
             self._phase = "quest_giver"
-            if (proximity is not None and proximity >= 0.72
-                    and direction is not None and abs(direction) <= 0.45
-                    and now - self._last_interact_ns > int(1.6e9)):
+            if now - self._last_interact_ns > int(1.6e9):
                 self._emit(
                     "INTERACT_QUEST", now,
                     reason="yellow_quest_marker_close_and_centered")
