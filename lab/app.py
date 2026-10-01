@@ -70,6 +70,7 @@ class DigitalFlyLab:
                  fast_hz: float = 24.0, heavy_hz: float = 8.0,
                  executor_hz: float = 40.0, planner_hz: float = 1.0,
                  dashboard_hz: float = 20.0, capture_fps: float = 30.0,
+                 capture_downsample: int = 1,
                  fast_detect_width: int = 640,
                  runtime=None, brain_codegen: str | None = None,
                  brain_transport: str = "auto"):
@@ -82,7 +83,8 @@ class DigitalFlyLab:
         elif capture_kind == "windows":
             self.capture = create_windows_capture(
                 self.bus, window_title_re=r"^Roblox$",
-                target_fps=capture_fps)
+                target_fps=capture_fps,
+                downsample=capture_downsample)
         elif capture_kind == "synthetic":
             self.capture = SyntheticCapture(self.bus, fps=capture_fps)
         else:
@@ -545,6 +547,8 @@ def main(argv=None) -> int:
     ap.add_argument("--seconds", type=float, default=10.0,
                     help="run duration; 0 = run until Ctrl+C")
     ap.add_argument("--capture-fps", type=float, default=30.0)
+    ap.add_argument("--capture-downsample", type=int, default=1,
+                    help="Windows capture stride downsample before BGR copy")
     ap.add_argument("--chunk-ms", type=float, default=50.0)
     ap.add_argument("--brain-hz", type=float, default=10.0)
     ap.add_argument("--fast-hz", type=float, default=24.0)
@@ -583,6 +587,7 @@ def main(argv=None) -> int:
 
     lab = DigitalFlyLab(capture_kind=args.capture,
                         capture_fps=args.capture_fps,
+                        capture_downsample=args.capture_downsample,
                         autonomy=bool(args.movement_only_autonomy),
                         movement_only=bool(args.movement_only_autonomy),
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
