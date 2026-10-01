@@ -29,6 +29,7 @@ Write-Host "Fly brain owns turn/approach/retreat navigation." -ForegroundColor G
 Write-Host "Quest helper: yellow QUEST = interact, green tracker = travel, red quest marker = starter PvE." -ForegroundColor Yellow
 Write-Host "Obstacle recovery: jump, climb, bounded camera search." -ForegroundColor Yellow
 Write-Host "Starter PvE gate: F block, Q evade, M1, E Gut Punch, R Ground Smash." -ForegroundColor Yellow
+Write-Host "Keep the observed default Melee loadout equipped for this Gate-7A run." -ForegroundColor Yellow
 Write-Host "Defense learning is ENGINEERED ValueTable learning, not biological MB learning." -ForegroundColor DarkYellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
