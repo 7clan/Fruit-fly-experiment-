@@ -47,6 +47,7 @@ class QuestCombatSupervisor(Worker):
         self._last_sprint_ns = 0
         self._last_block_ns = 0
         self._last_attack_ns = 0
+        self._last_steer_ns = 0
         self._last_e_ns = 0
         self._last_r_ns = 0
         self._target_type = None
@@ -68,6 +69,7 @@ class QuestCombatSupervisor(Worker):
             "defense_updates": 0,
             "coach_commands": 0,
             "coach_plans_seen": 0,
+            "semantic_steers": 0,
         })
 
     def _armed(self) -> bool:
@@ -168,13 +170,16 @@ class QuestCombatSupervisor(Worker):
 
         locomoting = fly_intention in {
             "TURN_LEFT", "TURN_RIGHT", "APPROACH", "RETREAT"}
-        if (locomoting and now_ns - self._last_progress_ns > int(3.5e9)
-                and now_ns - self._last_command_ns > int(1.0e9)):
+        # Do not interpret every stall as a climbable wall. The live evidence
+        # showed 30 blind CLIMB commands while the avatar was simply pinned
+        # against scenery. Use a bounded recovery sequence instead.
+        if (locomoting and now_ns - self._last_progress_ns > int(4.0e9)
+                and now_ns - self._last_command_ns > int(1.1e9)):
             self._last_progress_ns = now_ns
             self._stall_recoveries += 1
-            if self._stall_recoveries >= 3:
-                return "CLIMB"
-            return "JUMP"
+            sequence = ("JUMP", "DASH_LEFT", "DASH_RIGHT", "DASH_BACK")
+            idx = min(self._stall_recoveries - 1, len(sequence) - 1)
+            return sequence[idx]
         return None
 
     def _publish_state(self, now_ns: int, target: dict,
@@ -353,6 +358,77 @@ class QuestCombatSupervisor(Worker):
             self._last_sprint_ns = now_ns
         return True
 
+    def _semantic_navigation_assist(
+            self, now_ns: int, target: dict, fly_intention: str,
+            yellow_quest: bool, yellow_proximity: float | None,
+            yellow_direction: float | None) -> bool:
+        """Keep a selected navigation skill aligned to FRESH visual geometry.
+
+        The canonical whole-brain chunk takes ~6-10 wall-seconds on the target
+        laptop. Its biological output remains part of the experiment, but a
+        stale turn cannot be the only real-time steering signal. The semantic
+        coach chooses the goal; this bounded servo only tracks that already
+        selected visible target using W/A/D, never the mouse/camera.
+        """
+        env = self.coach.read()
+        if env is None:
+            return False
+        plan = env.payload or {}
+        if str(plan.get("skill") or "").upper() != "NAVIGATE_OBJECTIVE":
+            return False
+        try:
+            confidence = float(plan.get("confidence", 0.0))
+            plan_ts = int(plan.get("ts_ns", env.ts_ns))
+        except (TypeError, ValueError):
+            return False
+        if confidence < 0.62 or now_ns - plan_ts > int(65.0e9):
+            return False
+
+        target_type = str(target.get("type") or "none")
+        if target_type not in {
+                "recommended_quest_waypoint", "quest_marker",
+                "quest_enemy_marker"}:
+            return False
+        try:
+            target_conf = float(target.get("confidence", 0.0))
+            direction = float(target.get("direction"))
+            proximity = float(target.get("distance"))
+        except (TypeError, ValueError):
+            return False
+        if target_conf < 0.60:
+            return False
+
+        # Interaction/combat takes over at useful range.
+        if (yellow_quest and yellow_proximity is not None
+                and yellow_direction is not None
+                and yellow_proximity >= 0.68
+                and abs(yellow_direction) <= 0.50):
+            return False
+        if target_type == "quest_enemy_marker" and proximity >= 0.66:
+            return False
+
+        # Preserve urgent biological safety-like outputs.
+        if fly_intention in {"RETREAT", "ESCAPE", "DEFEND"}:
+            return False
+        if now_ns - self._last_steer_ns < int(0.65e9):
+            return False
+
+        self._emit(
+            "STEER_TARGET", now_ns,
+            reason="fresh_visual_servo_for_selected_navigation_skill",
+            source="semantic_navigation_assist",
+            direction=direction,
+            hold_s=0.58,
+            coach_plan_id=plan.get("plan_id"),
+            coach_provider=plan.get("provider"),
+            fly_intention=fly_intention,
+            target_type=target_type,
+        )
+        self._last_steer_ns = now_ns
+        self.stats["semantic_steers"] += 1
+        self._phase = "navigate_servo"
+        return True
+
     def step(self) -> None:
         env = self.obs.read()
         if env is None:
@@ -420,6 +496,13 @@ class QuestCombatSupervisor(Worker):
                 now, target, health, stamina, fly_intention)
             return
 
+        if self._semantic_navigation_assist(
+                now, target, fly_intention,
+                yellow_quest, yellow_proximity, yellow_direction):
+            self._publish_state(
+                now, target, health, stamina, fly_intention)
+            return
+
         # The autonomous agent never moves the user's camera. Character
         # steering and semantic recovery use W/A/D/S, jump/climb/dash and
         # reobservation only.
@@ -448,8 +531,10 @@ class QuestCombatSupervisor(Worker):
             self._emit(recovery, now, reason="target_progress_stalled")
             if recovery == "JUMP":
                 self.stats["jumps"] += 1
-            else:
+            elif recovery == "CLIMB":
                 self.stats["climbs"] += 1
+            else:
+                self.stats["evades"] += 1
             self._publish_state(
                 now, target, health, stamina, fly_intention)
             return
