@@ -27,6 +27,7 @@ REPLAY_TOPICS = (
     "perception.fast.events",
     "perception.heavy.events",
     "brain.events",
+    "coach.events",
     "action.inputs",
 )
 
