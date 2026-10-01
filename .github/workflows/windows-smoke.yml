@@ -17,6 +17,8 @@ jobs:
           python-version: '3.12'
       - name: Install lightweight test dependencies
         run: python -m pip install --upgrade pip numpy opencv-python pytest PyYAML brian2==2.10.1
+      - name: Compile Python sources
+        run: python -m compileall -q lab brain/scripts tests
       - name: Neural interface and navigation unit tests
         run: >-
           python -m pytest -q
