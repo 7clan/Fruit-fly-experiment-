@@ -276,11 +276,11 @@ Return ONLY compact JSON:
         if not text:
             raise RuntimeError(
                 f"local SmolVLM returned no text: {str(payload)[:500]}")
-        if text.startswith("\`\`\`"):
+        if text.startswith("```"):
             lines = text.splitlines()
-            if lines and lines[0].startswith("\`\`\`"):
+            if lines and lines[0].startswith("```"):
                 lines = lines[1:]
-            if lines and lines[-1].strip().startswith("\`\`\`"):
+            if lines and lines[-1].strip().startswith("```"):
                 lines = lines[:-1]
             text = "\n".join(lines).strip()
         return json.loads(text)
