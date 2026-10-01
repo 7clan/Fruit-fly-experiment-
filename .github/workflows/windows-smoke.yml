@@ -19,6 +19,19 @@ jobs:
         run: python -m pip install --upgrade pip numpy opencv-python pytest PyYAML brian2==2.10.1
       - name: Compile Python sources
         run: python -m compileall -q lab brain/scripts tests
+      - name: Parse PowerShell launchers
+        shell: powershell
+        run: |
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\run_autonomous_navigation_windows.ps1",
+            [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\run_autonomous_questing_windows.ps1",
+            [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
       - name: Neural interface and navigation unit tests
         run: >-
           python -m pytest -q
