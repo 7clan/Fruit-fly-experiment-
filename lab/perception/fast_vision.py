@@ -676,6 +676,74 @@ class GPOHeuristicFastVision:
             | cv2.inRange(hsv, np.array([170, 120, 100], dtype=np.uint8),
                           np.array([179, 255, 255], dtype=np.uint8))
         )
+
+        # Quest-enemy objective marker. Direct live observation from the user
+        # establishes the current tracker convention: after accepting a kill
+        # quest the recommended target becomes a large red circular marker.
+        # Detect only compact red circle + nearby red text support in the
+        # gameplay area so the health bar, roofs and damage text cannot win.
+        red_obj_roi = np.zeros_like(red)
+        ry0, ry1 = int(0.10 * h), int(0.70 * h)
+        rx0, rx1 = int(0.05 * w), int(0.995 * w)
+        red_obj_roi[ry0:ry1, rx0:rx1] = red[ry0:ry1, rx0:rx1]
+        nr, _rrlab, rrstats, rrcents = cv2.connectedComponentsWithStats(
+            red_obj_roi)
+        red_objective_candidates = []
+        min_red_obj_area = max(7, int(w * h * 0.000045))
+        max_red_obj_area = max(120, int(w * h * 0.0025))
+        for ri in range(1, nr):
+            rx, ry, rw, rh, rarea = rrstats[ri]
+            if not (min_red_obj_area <= rarea <= max_red_obj_area):
+                continue
+            aspect = rw / max(float(rh), 1.0)
+            if not (0.62 <= aspect <= 1.55):
+                continue
+            if rw < 4 or rh < 4:
+                continue
+            sx0 = max(0, rx - 2 * rw)
+            sx1 = min(w, rx + 3 * rw)
+            sy0 = min(h, ry + rh)
+            sy1 = min(h, ry + rh + max(3 * rh, int(0.070 * h)))
+            support = int(np.count_nonzero(red[sy0:sy1, sx0:sx1]))
+            # Large circular target markers may have sparse distance text;
+            # require only weak support, but reject isolated red scenery.
+            if support < max(2, int(rarea * 0.05)):
+                continue
+            rcx, rcy = map(float, rrcents[ri])
+            compact = 1.0 - min(1.0, abs(aspect - 1.0))
+            centrality = max(0.30, 1.0 - abs(rcx / max(w, 1) - 0.5))
+            score = (float(rarea) * (0.75 + 0.25 * compact)
+                     * (1.0 + min(1.0, support / max(float(rarea), 1.0)))
+                     * centrality)
+            red_objective_candidates.append(
+                (score, rcx, rcy, int(rarea), int(rw), int(rh)))
+
+        enemy_marker_found = False
+        enemy_marker_xy = None
+        enemies = []
+        if red_objective_candidates:
+            _rscore, etx, ety, _ra, _rw, _rh = max(
+                red_objective_candidates)
+            ebearing = self._bearing(px, py, etx, ety, w, h)
+            escreen_d = math.hypot((etx - px) / w, (ety - py) / h)
+            eproximity = max(0.0, min(1.0, 1.0 - escreen_d / 0.70))
+            target = {
+                "type": "quest_enemy_marker",
+                "direction": float(ebearing),
+                "distance": float(eproximity),
+                "confidence": 0.94,
+            }
+            enemies = [{
+                "direction": float(ebearing),
+                "distance": float(eproximity),
+                "attacking": False,
+                "threat": float(max(0.0, (eproximity - 0.55) / 0.45)),
+                "confidence": 0.94,
+                "type": "quest_enemy_marker",
+            }]
+            enemy_marker_found = True
+            enemy_marker_xy = (float(etx), float(ety))
+
         cyan = cv2.inRange(
             hsv, np.array([95, 110, 90], dtype=np.uint8),
             np.array([110, 255, 255], dtype=np.uint8))
@@ -711,12 +779,12 @@ class GPOHeuristicFastVision:
             "loading": False,
             "dialogue": False,
             "menu": False,
-            "combat": False,
+            "combat": bool(enemy_marker_found),
         }
         return {
             "player": player,
             "target": target,
-            "enemies": [],
+            "enemies": enemies,
             "ui": ui,
             "abilities": [],
             "_notes": {
@@ -724,6 +792,13 @@ class GPOHeuristicFastVision:
                 "quest_marker_detected": target_found,
                 "recommended_waypoint_detected": waypoint_found,
                 "recommended_waypoint_xy": waypoint_xy,
+                "quest_enemy_marker_detected": enemy_marker_found,
+                "quest_enemy_marker_xy": enemy_marker_xy,
+                "quest_phase_hint": (
+                    "hunt_enemy" if enemy_marker_found
+                    else "quest_giver" if target_found
+                    else "travel" if waypoint_found
+                    else "unknown"),
                 "health_bar_detected": health is not None,
                 "stamina_bar_detected": stamina is not None,
                 "entity_tracks": stable_tracks,
