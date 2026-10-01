@@ -36,7 +36,7 @@ from ..worker import Worker
 TOPICS = ("world.observation", "world.semantics", "brain.output",
           "fly.channels", "helper.goal", "action.selected",
           "brain.meta", "memory.stats", "value.table", "action.meta",
-          "quest.state", "action.command")
+          "quest.state", "coach.plan", "action.command")
 
 
 class Snapshot:
@@ -121,6 +121,7 @@ class TextDashboardRenderer:
         brain_meta = d.get("brain.meta") or {}
         action_meta = d.get("action.meta") or {}
         quest_state = d.get("quest.state") or {}
+        coach = d.get("coach.plan") or {}
         command = d.get("action.command") or {}
         obs = d.get("world.observation") or {}
         intention = (brain.get("intention") or {})
@@ -151,6 +152,9 @@ class TextDashboardRenderer:
                               "menu", "combat")
                               if (obs.get("ui") or {}).get(k)),
             f"  quest phase    {_fmt(quest_state.get('phase'))}",
+            f"  coach          {_fmt(coach.get('skill'))} "
+            f"(conf {_fmt(coach.get('confidence'))})",
+            f"  coach scene    {_fmt(coach.get('scene'))}",
             f"  command        {_fmt(command.get('name'))}",
         ]
         action_col = [
@@ -569,6 +573,7 @@ class OpenCVDashboardRenderer:
         brain_meta = d.get("brain.meta") or {}
         action_meta = d.get("action.meta") or {}
         quest_state = d.get("quest.state") or {}
+        coach = d.get("coach.plan") or {}
         command = d.get("action.command") or {}
 
         game_w = int(self.width * 0.56)
@@ -677,6 +682,19 @@ class OpenCVDashboardRenderer:
         player = obs.get("player") or {}
         target = obs.get("target") or {}
         mode = str(action_meta.get("mode") or "passive")
+        if coach:
+            if coach.get("enabled") is False:
+                coach_line = (
+                    "AI COACH: DISABLED - "
+                    f"{coach.get('reason', 'API key missing')}")
+            else:
+                coach_line = (
+                    f"AI COACH: {coach.get('skill') or '-'} "
+                    f"conf={coach.get('confidence')} "
+                    f"scene={coach.get('scene') or '-'}")
+            self._put(
+                canvas, x0, 678, coach_line,
+                (190, 170, 245), scale=0.31)
         self._put(
             canvas, x0, 697,
             f"ENGINEERED PERCEPTION: target={target.get('type')}  "
