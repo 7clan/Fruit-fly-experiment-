@@ -42,7 +42,7 @@ if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
 }
 Write-Host "Semantic coach API key: configured." -ForegroundColor Green
 $coachModel = $env:GEMINI_MODEL
-if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.5-flash-lite" }
+if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.1-flash-lite" }
 Write-Host "Coach model: $coachModel" -ForegroundColor DarkCyan
 
 # Verify key/model before spending ~1 minute initializing the canonical brain.
