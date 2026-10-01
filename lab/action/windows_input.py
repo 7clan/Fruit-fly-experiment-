@@ -32,12 +32,6 @@ MOUSEEVENTF_RIGHTDOWN = 0x0008
 MOUSEEVENTF_RIGHTUP = 0x0010
 MOUSEEVENTF_MIDDLEDOWN = 0x0020
 MOUSEEVENTF_MIDDLEUP = 0x0040
-MOUSEEVENTF_LEFTDOWN = 0x0002
-MOUSEEVENTF_LEFTUP = 0x0004
-MOUSEEVENTF_RIGHTDOWN = 0x0008
-MOUSEEVENTF_RIGHTUP = 0x0010
-MOUSEEVENTF_MIDDLEDOWN = 0x0020
-MOUSEEVENTF_MIDDLEUP = 0x0040
 
 _user32 = ctypes.WinDLL("user32", use_last_error=True)
 
@@ -188,33 +182,12 @@ class WindowsInputBackend:
         finally:
             self.mouse_up("right")
 
+    # Compatibility names used by MotorExecutor/InputBackend.
     def mouse_button_down(self, button: str) -> None:
-        button = str(button).lower()
-        flags = {
-            "left": MOUSEEVENTF_LEFTDOWN,
-            "right": MOUSEEVENTF_RIGHTDOWN,
-            "middle": MOUSEEVENTF_MIDDLEDOWN,
-        }
-        if button not in flags:
-            raise ValueError(f"unsupported mouse button {button!r}")
-        inp = _INPUT(type=INPUT_MOUSE)
-        inp.union.mi = _MOUSEINPUT(0, 0, 0, flags[button], 0, 0)
-        self._send(inp, f"mouse_down:{button}")
-        self._mouse_down.add(button)
+        self.mouse_down(button)
 
     def mouse_button_up(self, button: str) -> None:
-        button = str(button).lower()
-        flags = {
-            "left": MOUSEEVENTF_LEFTUP,
-            "right": MOUSEEVENTF_RIGHTUP,
-            "middle": MOUSEEVENTF_MIDDLEUP,
-        }
-        if button not in flags:
-            raise ValueError(f"unsupported mouse button {button!r}")
-        inp = _INPUT(type=INPUT_MOUSE)
-        inp.union.mi = _MOUSEINPUT(0, 0, 0, flags[button], 0, 0)
-        self._send(inp, f"mouse_up:{button}")
-        self._mouse_down.discard(button)
+        self.mouse_up(button)
 
     def release_all(self) -> None:
         for code in list(self._down):
