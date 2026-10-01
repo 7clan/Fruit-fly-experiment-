@@ -73,7 +73,7 @@ Write-Host "LOCAL AI: SmolVLM2-256M Q4_K_M via llama.cpp; no Gemini/API key." -F
 Write-Host "Local AI runs only on semantic events / slow intervals, not every frame." -ForegroundColor Yellow
 Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
 Write-Host "Local AI may reason about quests, obstacles, combat, visible shops, equipment and ships using the offline GPO playbook." -ForegroundColor Yellow
-Write-Host "CPU policy: llama.cpp uses ONE inference thread and zero GPU layers to protect Roblox + Brian2." -ForegroundColor Yellow
+Write-Host "CPU policy: llama.cpp uses 2 low-priority CPU threads in short bursts; zero GPU layers." -ForegroundColor Yellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
 Write-Host "Persistent run: END RUN/F12 saves the report and ZIP." -ForegroundColor Red
@@ -83,9 +83,14 @@ if (-not (Test-Health)) {
     $stdout = Join-Path $logDir "live_server.stdout.log"
     $stderr = Join-Path $logDir "live_server.stderr.log"
     Remove-Item $stdout,$stderr -Force -ErrorAction SilentlyContinue
-    $serverArgs = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "1", "--threads-batch", "1", "--ctx-size", "4096", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-webui")
+    $serverArgs = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "2", "--threads-batch", "2", "--ctx-size", "2048", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-warmup", "--no-webui")
     Write-Host "Starting local SmolVLM server..." -ForegroundColor Cyan
     $serverProc = Start-Process -FilePath $serverExe -ArgumentList $serverArgs -PassThru -WindowStyle Minimized -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    try {
+        $serverProc.PriorityClass = "BelowNormal"
+    } catch {
+        Write-Host "[local-ai] could not lower process priority; continuing." -ForegroundColor DarkYellow
+    }
 
     $ready = $false
     $maxWaitSeconds = 600
@@ -129,7 +134,7 @@ if (-not (Test-Health)) {
 }
 
 Write-Host "Testing local visual coach before brain startup..." -ForegroundColor Cyan
-& $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 120
+& $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 240
 if ($LASTEXITCODE -ne 0) {
     if ($serverProc -and -not $serverProc.HasExited) {
         Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
