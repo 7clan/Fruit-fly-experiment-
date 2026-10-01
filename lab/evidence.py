@@ -15,7 +15,8 @@ from .worker import Worker
 class EvidenceRecorder(Worker):
     name = "evidence_recorder"
 
-    def __init__(self, bus: Bus, session_dir: Path, target_hz: float = 5.0):
+    def __init__(self, bus: Bus, session_dir: Path, target_hz: float = 5.0,
+                 save_raw: bool = True):
         super().__init__(bus, target_hz=target_hz)
         self.capture = bus.state("capture.frames.latest")
         self.brain = bus.state("brain.output")
@@ -23,7 +24,8 @@ class EvidenceRecorder(Worker):
         self.out_dir = Path(session_dir) / "evidence"
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self._last_chunk = None
-        self.stats.update({"saved": 0})
+        self.save_raw = bool(save_raw)
+        self.stats.update({"saved": 0, "raw_saved": 0})
 
     def step(self) -> None:
         b = self.brain.read()
@@ -82,12 +84,14 @@ class EvidenceRecorder(Worker):
                     cv2.LINE_AA)
 
             stem = f"brain_chunk_{int(chunk):06d}"
-            cv2.imwrite(
-                str(self.out_dir / f"{stem}_raw.jpg"), raw,
-                [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+            if self.save_raw:
+                cv2.imwrite(
+                    str(self.out_dir / f"{stem}_raw.jpg"), raw,
+                    [int(cv2.IMWRITE_JPEG_QUALITY), 78])
+                self.stats["raw_saved"] += 1
             cv2.imwrite(
                 str(self.out_dir / f"{stem}_annotated.jpg"), annotated,
-                [int(cv2.IMWRITE_JPEG_QUALITY), 82])
+                [int(cv2.IMWRITE_JPEG_QUALITY), 78])
             self._last_chunk = chunk
             self.stats["saved"] += 1
         except Exception as exc:
