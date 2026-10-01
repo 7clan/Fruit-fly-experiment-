@@ -44,8 +44,8 @@ class EvidenceRecorder(Worker):
             frame = img
             if frame.ndim == 3 and frame.shape[2] == 4:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
-            raw = frame.copy()
-            annotated = raw.copy()
+            raw = frame.copy() if self.save_raw else None
+            annotated = frame.copy()
             h, w = annotated.shape[:2]
 
             o = self.obs.read()
