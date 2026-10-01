@@ -1,5 +1,6 @@
 from lab.bus import Bus
 from lab.coach.semantic_coach import SemanticCoachWorker
+from lab.coach.local_smolvlm import LocalSmolVLMCoachWorker
 from lab.coach.probe import choose_model
 from lab.action.quest_combat_supervisor import QuestCombatSupervisor
 from lab.world.value import ValueTable
@@ -238,3 +239,36 @@ def test_probe_falls_back_to_current_flash_lite():
     assert choose_model("gemini-3.1-flash-lite", available) == (
         "gemini-3.5-flash-lite"
     )
+
+
+def test_local_smolvlm_coach_is_offline_and_low_duty_cycle():
+    bus = Bus()
+    coach = LocalSmolVLMCoachWorker(bus)
+    assert coach.provider == "local_smolvlm2_llamacpp"
+    assert coach.allow_remote_wiki is False
+    assert coach.min_call_interval_s >= 18.0
+    assert coach.stats["local_only_inference"] is True
+
+
+def test_local_smolvlm_prompt_stays_compact_for_tiny_model():
+    bus = Bus()
+    coach = LocalSmolVLMCoachWorker(bus)
+    prompt = coach._prompt(
+        {
+            "target": {
+                "type": "recommended_quest_waypoint",
+                "direction": 0.3,
+                "distance": 0.4,
+            },
+            "player": {"health": 1.0, "stamina": 1.0},
+            "notes": {"quest_marker_detected": True},
+        },
+        {"phase": "travel"},
+        {"intention": {"name": "APPROACH"}},
+        _catalog(),
+        {"gpo_loadout": "default_melee"},
+        {},
+    )
+    assert "SMALL LOCAL VISUAL COACH" in prompt
+    assert "NAVIGATE_OBJECTIVE" in prompt
+    assert len(prompt) < 18000
