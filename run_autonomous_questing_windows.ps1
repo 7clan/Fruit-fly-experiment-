@@ -16,7 +16,7 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-Write-Host "== GATE 7B: DIGITAL FLY QUEST FOLLOWING + STARTER PVE ==" -ForegroundColor Cyan
+Write-Host "== GATE 7C: DIGITAL FLY + SEMANTIC GAME COACH ==" -ForegroundColor Cyan
 
 # Cheap structural preflight before the ~1 minute canonical brain startup.
 # SendInput requires cbSize to equal the native Win32 INPUT size.
@@ -26,17 +26,25 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Fly brain owns turn/approach/retreat navigation." -ForegroundColor Green
-Write-Host "Quest helper: yellow QUEST = interact, green tracker = travel, red quest marker = starter PvE." -ForegroundColor Yellow
-Write-Host "Camera assist: bounded recenter on visible quest/enemy tracker; fly still owns locomotor direction." -ForegroundColor Yellow
-Write-Host "Obstacle recovery: jump, climb, bounded camera search; far APPROACH may double-W sprint." -ForegroundColor Yellow
+Write-Host "Semantic coach: understands quests, progression, shops, ships, gear, fruit/style/weapon planning and visible UI." -ForegroundColor Yellow
+Write-Host "Camera policy: autonomy NEVER rotates/drags your camera; fly steers with character movement." -ForegroundColor Yellow
+Write-Host "Obstacle recovery: semantic coach may choose jump, climb, backtrack, sprint or reobserve." -ForegroundColor Yellow
 Write-Host "Starter PvE: F block, Q evade, M1, E Gut Punch, R Ground Smash; broader skill keys are catalogued but context-gated." -ForegroundColor Yellow
-Write-Host "Keep the observed default Melee loadout equipped for this Gate-7B run." -ForegroundColor Yellow
+Write-Host "Keep the observed default Melee loadout equipped for the first semantic-coach test." -ForegroundColor Yellow
 Write-Host "Defense learning is ENGINEERED ValueTable learning, not biological MB learning." -ForegroundColor DarkYellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
 Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor Yellow
 Write-Host "Low-power profile: capture/CV 3 Hz, x2 capture downsample, 480px detector, dashboard 0.25 Hz." -ForegroundColor Yellow
 Write-Host "Persistent run: use END RUN or F12 to stop and save the report/ZIP." -ForegroundColor Red
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+    Write-Host "Semantic coach API key: MISSING (run .\setup_semantic_coach_windows.ps1 first)." -ForegroundColor Red
+} else {
+    Write-Host "Semantic coach API key: configured." -ForegroundColor Green
+}
+$coachModel = $env:GEMINI_MODEL
+if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.5-flash-lite" }
+Write-Host "Coach model: $coachModel" -ForegroundColor DarkCyan
 
 & $mainPython -m lab.app `
     --runtime canonical `
@@ -53,6 +61,9 @@ Write-Host "Persistent run: use END RUN or F12 to stop and save the report/ZIP."
     --dashboard-ui `
     --dashboard-hz 0.25 `
     --quest-autonomy `
+    --semantic-coach `
+    --coach-model $coachModel `
+    --coach-hz 1 `
     --gpo-loadout default_melee
 
 exit $LASTEXITCODE
