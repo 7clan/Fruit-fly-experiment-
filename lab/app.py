@@ -102,7 +102,8 @@ class DigitalFlyLab:
         # workers (order = pipeline flow)
         self.fast_vision = FastVisionWorker(
             self.bus, target_hz=fast_hz,
-            max_detect_width=int(fast_detect_width))
+            max_detect_width=int(fast_detect_width),
+            role_detection=not movement_only)
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
@@ -199,6 +200,7 @@ class DigitalFlyLab:
             "low_power_profile": bool(self.autonomy_requested),
             "worker_targets_hz": {
                 "fast": self.fast_vision.governor.target_hz,
+                "fast_role_detection": self.fast_vision.role_detection,
                 "heavy": self.heavy_vision.governor.target_hz,
                 "planner": self.planner.governor.target_hz,
                 "encoder": self.encoder.governor.target_hz,
