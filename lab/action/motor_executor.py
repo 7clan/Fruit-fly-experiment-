@@ -579,6 +579,106 @@ class MotorExecutor(Worker):
             "exception_path": True,
         }, ts_ns=now_ns)
 
+    # -- engineered quest/combat command path --------------------------------
+    def _release_movement_locked(self, now_ns: int,
+                                 reason: str = "engineered_command") -> None:
+        for code in ("W", "A", "S", "D", "Q", "CTRL", "SPACE"):
+            if code in self._held:
+                if self.autonomy_enabled:
+                    self.backend.key_up(code)
+                self._held.pop(code, None)
+                self.inputs.publish({
+                    "kind": "key_up", "ts_ns": now_ns, "code": code,
+                    "shadow": not self.autonomy_enabled, "reason": reason,
+                }, ts_ns=now_ns)
+
+    def _hold_key_locked(self, code: str, now_ns: int,
+                         hold_s: float) -> None:
+        code = code.upper()
+        if code not in self._held and self.autonomy_enabled:
+            self.backend.key_down(code)
+        self._held[code] = now_ns + int(max(0.03, hold_s) * 1e9)
+
+    def _consume_engineered_command(self, now_ns: int) -> None:
+        """Execute one new semantic helper command.
+
+        The command contains an action CATEGORY, never a raw arbitrary key.
+        This path exists for game semantics the fly DN decoder cannot
+        represent directly (quest interaction, obstacle recovery and the
+        first conservative PvE reflexes). Every command is explicit in replay
+        and can never bypass the hard QuestingBackend allowlist.
+        """
+        if not self.autonomy_enabled:
+            return
+        env = self.command_state.read()
+        if env is None:
+            return
+        cmd = env.payload or {}
+        cid = int(cmd.get("command_id", -1))
+        if cid < 0 or cid == self._last_command_id:
+            return
+        self._last_command_id = cid
+        if now_ns > int(cmd.get("expires_ns", now_ns + int(0.5e9))):
+            return
+
+        name = str(cmd.get("name", "")).upper()
+        allowed = {
+            "INTERACT_QUEST", "JUMP", "CLIMB", "SEARCH_CAMERA",
+            "BLOCK", "EVADE_BACK", "ATTACK_LIGHT",
+            "GUT_PUNCH", "GROUND_SMASH",
+        }
+        if name not in allowed:
+            return
+
+        with self._lock:
+            # Combat/interaction owns the actuator briefly; obstacle recovery
+            # and camera search may coexist with the current locomotor goal.
+            if name in {
+                "INTERACT_QUEST", "BLOCK", "EVADE_BACK",
+                "ATTACK_LIGHT", "GUT_PUNCH", "GROUND_SMASH",
+            }:
+                self._release_movement_locked(now_ns, reason=name.lower())
+
+            if name == "INTERACT_QUEST":
+                self._hold_key_locked("T", now_ns, 0.08)
+                self.action_lock_until_ns = now_ns + int(0.40e9)
+            elif name == "JUMP":
+                self._hold_key_locked("SPACE", now_ns, 0.10)
+            elif name == "CLIMB":
+                self._hold_key_locked("W", now_ns, 0.60)
+                self._hold_key_locked("CTRL", now_ns, 0.60)
+            elif name == "SEARCH_CAMERA":
+                self.backend.mouse_move(int(cmd.get("dx", 35)), 0)
+            elif name == "BLOCK":
+                self._hold_key_locked(
+                    "F", now_ns, float(cmd.get("hold_s", 0.55)))
+                self.action_lock_until_ns = now_ns + int(0.50e9)
+            elif name == "EVADE_BACK":
+                self._hold_key_locked("S", now_ns, 0.16)
+                self._hold_key_locked("Q", now_ns, 0.16)
+                self.action_lock_until_ns = now_ns + int(0.30e9)
+            elif name == "ATTACK_LIGHT":
+                self.backend.mouse_button_down("left")
+                self.backend.mouse_button_up("left")
+                self.action_lock_until_ns = now_ns + int(0.16e9)
+            elif name == "GUT_PUNCH":
+                self._hold_key_locked("E", now_ns, 0.07)
+                self.action_lock_until_ns = now_ns + int(0.35e9)
+            elif name == "GROUND_SMASH":
+                self._hold_key_locked("R", now_ns, 0.07)
+                self.action_lock_until_ns = now_ns + int(0.45e9)
+
+        self.inputs.publish({
+            "kind": "engineered_command",
+            "ts_ns": now_ns,
+            "command_id": cid,
+            "name": name,
+            "source": cmd.get("source", "quest_combat_supervisor"),
+            "reason": cmd.get("reason"),
+            "ENGINEERED": True,
+        }, ts_ns=now_ns)
+        self.stats["inputs_emitted"] += 1
+
     # -- execution ------------------------------------------------------------
     def _execute(self, action: ConcreteAction, now_ns: int,
                  new_brain_decision: bool = True) -> None:
