@@ -375,6 +375,62 @@ class MotorExecutor(Worker):
                     notes={"resolver": ra.resolver_config,
                            "score": ra.score,
                            "observed_binding": ra.input_binding})
+        if self.questing:
+            # Fly DN intention owns locomotor direction. The engineered
+            # questing layer only realizes that intention in GPO controls.
+            if intention.name == "TURN_LEFT":
+                return ConcreteAction(
+                    intention="TURN_LEFT", ability_id="",
+                    bindings=["key:W", "key:A"], hold_s=2.25,
+                    mouse_dx=-60, mouse_dy=0,
+                    notes={"source": "questing_fly_navigation"})
+            if intention.name == "TURN_RIGHT":
+                return ConcreteAction(
+                    intention="TURN_RIGHT", ability_id="",
+                    bindings=["key:W", "key:D"], hold_s=2.25,
+                    mouse_dx=60, mouse_dy=0,
+                    notes={"source": "questing_fly_navigation"})
+            if intention.name == "APPROACH":
+                try:
+                    wall_s = float(brain_out.get("chunk_wall_s", 0.0))
+                except (TypeError, ValueError):
+                    wall_s = 0.0
+                hold_s = max(2.25, min(5.0, wall_s * 0.75))
+                return ConcreteAction(
+                    intention="APPROACH", ability_id="",
+                    bindings=["key:W"], hold_s=hold_s,
+                    notes={"source": "questing_fly_navigation",
+                           "adaptive_hold_from_chunk_wall_s": wall_s})
+            if intention.name == "RETREAT":
+                return ConcreteAction(
+                    intention="RETREAT", ability_id="",
+                    bindings=["key:S"], hold_s=1.0,
+                    notes={"source": "questing_fly_navigation"})
+            if intention.name == "ESCAPE":
+                return ConcreteAction(
+                    intention="ESCAPE", ability_id="",
+                    bindings=["key:S", "key:Q"], hold_s=0.18,
+                    notes={"source": "questing_fly_navigation"})
+            if intention.name == "EVADE_LEFT":
+                return ConcreteAction(
+                    intention="EVADE_LEFT", ability_id="",
+                    bindings=["key:A", "key:Q"], hold_s=0.18,
+                    notes={"source": "questing_fly_navigation"})
+            if intention.name == "EVADE_RIGHT":
+                return ConcreteAction(
+                    intention="EVADE_RIGHT", ability_id="",
+                    bindings=["key:D", "key:Q"], hold_s=0.18,
+                    notes={"source": "questing_fly_navigation"})
+            if intention.name == "DEFEND":
+                return ConcreteAction(
+                    intention="DEFEND", ability_id="",
+                    bindings=["key:F"], hold_s=0.55,
+                    notes={"source": "questing_fly_navigation"})
+            return ConcreteAction(
+                intention="STOP", ability_id="", bindings=[], hold_s=0.0,
+                notes={"source": "questing_fly_failsafe",
+                       "brain_intention": intention.name})
+
         # First active Gate-6 run is deliberately movement-only.
         # RETREAT/ESCAPE/combat-like intentions fail closed to STOP.
         if self.movement_only:
