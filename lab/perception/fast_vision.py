@@ -569,6 +569,9 @@ class GPOHeuristicFastVision:
 
         target_found = False
         quest_xy = None
+        quest_direction = None
+        quest_proximity = None
+        quest_confidence = 0.0
         if comps:
             main = max(comps, key=lambda q: q[0])
             mcx, mcy = main[5], main[6]
@@ -592,6 +595,9 @@ class GPOHeuristicFastVision:
                 "confidence": confidence,
             }
             quest_xy = (float(tx), float(ty))
+            quest_direction = float(bearing)
+            quest_proximity = float(proximity)
+            quest_confidence = float(confidence)
             target_found = True
         else:
             target = {
@@ -790,6 +796,10 @@ class GPOHeuristicFastVision:
             "_notes": {
                 "player_mode": player_mode,
                 "quest_marker_detected": target_found,
+                "quest_marker_xy": quest_xy,
+                "quest_marker_direction": quest_direction,
+                "quest_marker_proximity": quest_proximity,
+                "quest_marker_confidence": quest_confidence,
                 "recommended_waypoint_detected": waypoint_found,
                 "recommended_waypoint_xy": waypoint_xy,
                 "quest_enemy_marker_detected": enemy_marker_found,
