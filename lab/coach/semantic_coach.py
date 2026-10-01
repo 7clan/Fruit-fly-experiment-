@@ -120,6 +120,7 @@ class SemanticCoachWorker(Worker):
 
         self._last_call_ns = 0
         self._last_signature = None
+        self._previous_image_b64 = None
         self._plan_id = 0
         self._disabled_published = False
         self.stats.update({
@@ -169,13 +170,13 @@ class SemanticCoachWorker(Worker):
             import cv2
             img = frame
             h, w = img.shape[:2]
-            if w > 480:
-                scale = 480.0 / float(w)
+            if w > 720:
+                scale = 720.0 / float(w)
                 img = cv2.resize(
-                    img, (480, max(1, int(h * scale))),
+                    img, (720, max(1, int(h * scale))),
                     interpolation=cv2.INTER_AREA)
             ok, enc = cv2.imencode(
-                ".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 55])
+                ".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 58])
             if not ok:
                 return None, 0.0
             data = base64.b64encode(enc.tobytes()).decode("ascii")
@@ -186,6 +187,7 @@ class SemanticCoachWorker(Worker):
     def _prompt(
         self, obs: dict, quest: dict, brain: dict,
         catalog: dict, action_meta: dict,
+        previous_plan: dict,
     ) -> str:
         controls = [
             {
@@ -207,6 +209,7 @@ class SemanticCoachWorker(Worker):
                 "loadout": action_meta.get("gpo_loadout"),
             },
             "verified_controls": controls,
+            "previous_coach_plan": _compact(previous_plan, 900),
         }
         return f"""You are the SEMANTIC COACH for a Grand Piece Online
 autonomous research agent.  You understand game meaning and choose ONE
@@ -252,12 +255,29 @@ Return ONLY a JSON object with exactly these fields:
   "next_after_success": "one short next step"
 }}"""
 
-    def _call_gemini(self, prompt: str, image_b64: str | None) -> dict:
+    def _call_gemini(
+            self, prompt: str, image_b64: str | None,
+            previous_image_b64: str | None = None) -> dict:
         endpoint = (
             "https://generativelanguage.googleapis.com/v1beta/models/"
             f"{self.model}:generateContent")
         parts = [{"text": prompt}]
+        if previous_image_b64:
+            parts.append({
+                "text": (
+                    "PREVIOUS GAME FRAME from the prior coach observation. "
+                    "Use it only to infer motion/progress/stuck state.")
+            })
+            parts.append({
+                "inlineData": {
+                    "mimeType": "image/jpeg",
+                    "data": previous_image_b64,
+                }
+            })
         if image_b64:
+            parts.append({
+                "text": "CURRENT GAME FRAME. This is the authoritative view."
+            })
             parts.append({
                 "inlineData": {
                     "mimeType": "image/jpeg",
@@ -399,12 +419,16 @@ Return ONLY a JSON object with exactly these fields:
         self.stats["jpeg_ms_total"] = round(
             float(self.stats["jpeg_ms_total"]) + jpeg_ms, 3)
 
-        prompt = self._prompt(obs, quest, brain, catalog, meta)
+        previous_plan = self._state(self.plan_state)
+        prompt = self._prompt(
+            obs, quest, brain, catalog, meta, previous_plan)
+        previous_image = self._previous_image_b64
         self._last_call_ns = now
         self._last_signature = sig
         t0 = time.perf_counter()
         try:
-            raw = self._call_gemini(prompt, image_b64)
+            raw = self._call_gemini(
+                prompt, image_b64, previous_image_b64=previous_image)
             plan = self._validate_plan(raw, catalog)
         except (urllib.error.URLError, urllib.error.HTTPError,
                 TimeoutError, json.JSONDecodeError, ValueError,
@@ -420,6 +444,8 @@ Return ONLY a JSON object with exactly these fields:
             self.events.publish(event, ts_ns=event["ts_ns"])
             return
         finally:
+            if image_b64:
+                self._previous_image_b64 = image_b64
             self.stats["api_ms_total"] = round(
                 float(self.stats["api_ms_total"])
                 + (time.perf_counter() - t0) * 1000.0, 3)
