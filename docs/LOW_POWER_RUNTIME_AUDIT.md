@@ -152,3 +152,53 @@ with captured frames, and the session header records the capture profile.
 
 This is an engineered perception optimization only; it does not change the
 canonical brain or neural decoder.
+
+
+## Measured result: 2026-10-01 Gate-6 navigation run
+
+Session `lab_20261001_124345` is the first successful live run after the
+low-power pass.
+
+Measured from its report/replay:
+
+- canonical init: 40.922 s;
+- canonical prewarm: 65.422 s;
+- post-ready run: 188.844 s;
+- 33 brain-worker live steps, 32 recorded brain events;
+- 50 ms biological chunks had mean wall time 6.894 s, median 6.771 s,
+  p95 9.859 s, min 3.609 s and max 10.248 s;
+- final observed chunk: 5.258 s;
+- final reported biological throughput: 0.0095 bio-s / wall-s;
+- 610 fast observations at median 46.5 ms detector time;
+- 70/70 Win32 SendInput operations succeeded, 0 failed;
+- total worker errors: 0.
+
+The previous successful Gate-6F baseline ended at a 9.336 s canonical chunk
+and 0.0054 bio-s / wall-s. The new final chunk was therefore 43.7% shorter
+and the final instantaneous biological-throughput figure was 75.9% higher.
+Those are same-position endpoint comparisons, not a claim that every chunk
+improved by those percentages.
+
+The run also exposed a control-quality issue caused by the remaining
+multi-second neural cadence: the dashboard can show a current waypoint on one
+side while the canonical network still expresses a turn intention from older
+sensory state. That is expected neural persistence, but blindly executing the
+stale turn is poor navigation.
+
+The movement executor now has a fail-closed visual coherence gate:
+
+- vision can only STOP a movement, never choose or substitute a key;
+- a missing/stale waypoint stops a held navigation action;
+- a TURN_LEFT neural decision is vetoed if the current waypoint is clearly
+  right, and vice versa;
+- APPROACH is vetoed when the current waypoint is far off-axis;
+- after a veto, movement remains released until a NEW brain decision arrives.
+
+APPROACH hold duration now adapts to measured canonical chunk wall time,
+capped at 5 s, so a valid forward neural intention can persist across more of
+the slow brain interval without increasing brain load. Turning pulses remain
+conservative.
+
+A separate executor bug was also fixed: when a new neural action changes
+direction or becomes STOP, obsolete held keys are now released immediately.
+This prevents old D/A steering from overlapping the new action.
