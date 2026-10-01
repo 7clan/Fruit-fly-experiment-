@@ -44,7 +44,7 @@ function Test-Health {
 
 Write-Host "== LOCAL SEMANTIC COACH SETUP ==" -ForegroundColor Cyan
 Write-Host "Model: SmolVLM2-256M-Video-Instruct Q4_K_M" -ForegroundColor Yellow
-Write-Host "Runtime: llama.cpp, CPU-only, 1 inference thread during gameplay" -ForegroundColor Yellow
+Write-Host "Runtime: llama.cpp, CPU-only, 2 low-priority inference threads" -ForegroundColor Yellow
 Write-Host "No Gemini/API key is required." -ForegroundColor Green
 Write-Host "First setup downloads the small model and vision projector." -ForegroundColor DarkYellow
 
@@ -81,10 +81,15 @@ else {
     $stderr = Join-Path $logDir "setup_server.stderr.log"
     Remove-Item $stdout,$stderr -Force -ErrorAction SilentlyContinue
 
-    $args = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "1", "--threads-batch", "1", "--ctx-size", "4096", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-webui")
+    $args = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "2", "--threads-batch", "2", "--ctx-size", "2048", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-warmup", "--no-webui")
 
     Write-Host "Downloading/loading local model. First run can take a few minutes..." -ForegroundColor Cyan
     $proc = Start-Process -FilePath $serverExe -ArgumentList $args -PassThru -WindowStyle Minimized -RedirectStandardOutput $stdout -RedirectStandardError $stderr
+    try {
+        $proc.PriorityClass = "BelowNormal"
+    } catch {
+        Write-Host "[local-ai] could not lower process priority; continuing." -ForegroundColor DarkYellow
+    }
 
     try {
         $ready = $false
@@ -122,7 +127,7 @@ else {
         }
 
         Write-Host "Local server ready; testing one tiny vision request..." -ForegroundColor Cyan
-        & $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 120
+        & $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 240
         if ($LASTEXITCODE -ne 0) {
             throw "Local SmolVLM vision probe failed. See $stderr"
         }
