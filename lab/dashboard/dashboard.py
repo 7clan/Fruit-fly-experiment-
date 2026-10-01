@@ -709,13 +709,19 @@ class OpenCVDashboardRenderer:
             state_text = "AGENT: LOCKED — BRAIN NOT READY"
             state_color = (80, 190, 255)
         elif mode == "quest_pve_v1":
+            reason = str(action_meta.get("last_control_reason") or "")
             state_text = ("QUEST/PVE AGENT: ENABLED" if active
                           else "QUEST/PVE AGENT: DISABLED")
+            if reason and not active:
+                state_text += f" [{reason}]"
             state_color = ((100, 230, 100) if active
                            else (120, 180, 255))
         else:
+            reason = str(action_meta.get("last_control_reason") or "")
             state_text = ("MOVEMENT: ENABLED" if active
                           else "MOVEMENT: DISABLED")
+            if reason and not active:
+                state_text += f" [{reason}]"
             state_color = ((100, 230, 100) if active
                            else (120, 180, 255))
         self._put(canvas, x0, 748, state_text, state_color,
