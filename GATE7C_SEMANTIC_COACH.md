@@ -97,8 +97,9 @@ REOBSERVE.
 ## Cost/load control
 
 - no local VLM is loaded;
-- screenshot sent to coach is capped at 480 px wide JPEG quality 55;
+- semantic frames are capped at 720 px wide JPEG quality 58;
 - API calls occur only while agent is enabled;
+- the coach receives current + previous semantic frames after the first call, so it can infer progress/stuck state;
 - minimum call interval: 8 s;
 - unchanged situations refresh at most every 30 s;
 - coach runs in its own worker thread;
