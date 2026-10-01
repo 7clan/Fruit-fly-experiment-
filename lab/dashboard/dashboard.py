@@ -35,7 +35,8 @@ from ..worker import Worker
 
 TOPICS = ("world.observation", "world.semantics", "brain.output",
           "fly.channels", "helper.goal", "action.selected",
-          "brain.meta", "memory.stats", "value.table", "action.meta")
+          "brain.meta", "memory.stats", "value.table", "action.meta",
+          "quest.state", "action.command")
 
 
 class Snapshot:
@@ -119,6 +120,10 @@ class TextDashboardRenderer:
         act = d.get("action.selected") or {}
         brain_meta = d.get("brain.meta") or {}
         action_meta = d.get("action.meta") or {}
+        quest_state = d.get("quest.state") or {}
+        command = d.get("action.command") or {}
+        quest_state = d.get("quest.state") or {}
+        command = d.get("action.command") or {}
         obs = d.get("world.observation") or {}
         intention = (brain.get("intention") or {})
         fly_col = [
@@ -147,6 +152,8 @@ class TextDashboardRenderer:
             f"  ui             " + "/".join(k for k in ("loading", "dialogue",
                               "menu", "combat")
                               if (obs.get("ui") or {}).get(k)),
+            f"  quest phase    {_fmt(quest_state.get('phase'))}",
+            f"  command        {_fmt(command.get('name'))}",
         ]
         action_col = [
             "ACTION SYSTEM  [ENGINEERED resolver]",
@@ -669,38 +676,50 @@ class OpenCVDashboardRenderer:
         notes = obs.get("notes") or {}
         player = obs.get("player") or {}
         target = obs.get("target") or {}
+        mode = str(action_meta.get("mode") or "passive")
         self._put(
-            canvas, x0, 705,
+            canvas, x0, 697,
             f"ENGINEERED PERCEPTION: target={target.get('type')}  "
-            f"unknown={notes.get('humanoid_track_count', 0)}  "
-            f"quest={notes.get('quest_npc_track_count', 0)}  "
-            f"hostile?={notes.get('hostile_candidate_count', 0)}",
-            (120, 180, 240), scale=0.34)
+            f"red_enemy={notes.get('quest_enemy_marker_detected', False)}",
+            (120, 180, 240), scale=0.33)
         self._put(
-            canvas, x0, 726,
+            canvas, x0, 716,
             f"health={player.get('health')} stamina={player.get('stamina')}  "
             f"goal={(goal.get('goal') or {}).get('label')}",
-            (120, 180, 240), scale=0.34)
+            (120, 180, 240), scale=0.33)
+        if mode == "quest_pve_v1":
+            dv = quest_state.get("defense_values") or {}
+            self._put(
+                canvas, x0, 735,
+                f"QUEST/PVE [ENGINEERED]: phase={quest_state.get('phase')}  "
+                f"cmd={command.get('name') or '-'}  "
+                f"learn block={dv.get('block')} evade={dv.get('evade_back')}",
+                (110, 205, 235), scale=0.31)
 
-        active = bool(
-            act.get("autonomy", action_meta.get("autonomy", False)))
+        active = bool(action_meta.get(
+            "autonomy", act.get("autonomy", False)))
         ready = bool(brain_meta.get("ready", False))
         controls_available = bool(
             action_meta.get("movement_control_available", False))
 
         if not controls_available:
-            state_text = "MOVEMENT: PASSIVE MODE"
+            state_text = "AGENT: PASSIVE MODE"
             state_color = (150, 150, 150)
         elif not ready:
-            state_text = "MOVEMENT: LOCKED — BRAIN NOT READY"
+            state_text = "AGENT: LOCKED — BRAIN NOT READY"
             state_color = (80, 190, 255)
+        elif mode == "quest_pve_v1":
+            state_text = ("QUEST/PVE AGENT: ENABLED" if active
+                          else "QUEST/PVE AGENT: DISABLED")
+            state_color = ((100, 230, 100) if active
+                           else (120, 180, 255))
         else:
             state_text = ("MOVEMENT: ENABLED" if active
                           else "MOVEMENT: DISABLED")
             state_color = ((100, 230, 100) if active
                            else (120, 180, 255))
         self._put(canvas, x0, 748, state_text, state_color,
-                  scale=0.41, thickness=1)
+                  scale=0.39, thickness=1)
 
         # Explicit controls instead of a single toggle. These are all
         # safety/run controls; none injects an unapproved game action.
