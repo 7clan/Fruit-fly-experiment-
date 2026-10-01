@@ -205,11 +205,13 @@ class DualModeBrain:
     def __init__(self, mode, seed=STUDY_SEED, version="783",
                  channel_ids=None, readout_pops=None,
                  comp=None, con=None, schedule=None, grid_ms=25.0,
-                 quiet=True, record_full_spikes=True):
+                 quiet=True, record_full_spikes=True,
+                 enable_checkpoints=True):
         import brian2 as b2
 
         assert mode in ("reference", "interactive")
         self.mode = mode
+        self.enable_checkpoints = bool(enable_checkpoints)
         bl.ensure_model()
         import model as dbm
 
@@ -274,9 +276,10 @@ class DualModeBrain:
         self.build_wall_s = time.perf_counter() - t0
 
         self.seed_all(seed)
-        if not _is_standalone():
-            # checkpoints are a runtime-mode feature; the C++ standalone
-            # device does not support store/restore (offline replay only)
+        if not _is_standalone() and self.enable_checkpoints:
+            # Offline D7 studies rely on a pristine checkpoint. The live
+            # game runtime never resets episodes, so it can skip this very
+            # large state copy on the 8 GB target laptop.
             self.net.store("ep0")               # pristine checkpoint
         self.cursor = 0
         self._prev_spike_counts = np.zeros(
@@ -309,6 +312,9 @@ class DualModeBrain:
         """Restore pristine state + reseed. The ONLY episode-reset protocol:
         Brian2 2.10 store/restore does not restore the RNG stream, so
         determinism comes from the explicit reseed (checkpoint study)."""
+        if not self.enable_checkpoints:
+            raise RuntimeError(
+                "checkpoints are disabled in low-memory live mode")
         self.net.restore("ep0")
         self.seed_all(seed)
         self.cursor = 0
@@ -414,9 +420,15 @@ class DualModeBrain:
 
     # ---------------- checkpoints ----------------
     def checkpoint(self, tag="ckpt"):
+        if not self.enable_checkpoints:
+            raise RuntimeError(
+                "checkpoints are disabled in low-memory live mode")
         self.net.store(tag)
 
     def resume(self, tag="ckpt", reseed=None):
+        if not self.enable_checkpoints:
+            raise RuntimeError(
+                "checkpoints are disabled in low-memory live mode")
         self.net.restore(tag)
         if reseed is not None:
             self.seed_all(reseed)
@@ -428,9 +440,15 @@ class DualModeBrain:
             self.cursor = int(self.mon.num_spikes)
 
     def store_disk(self, path):
+        if not self.enable_checkpoints:
+            raise RuntimeError(
+                "checkpoints are disabled in low-memory live mode")
         self.net.store(filename=str(path))
 
     def load_disk(self, path):
+        if not self.enable_checkpoints:
+            raise RuntimeError(
+                "checkpoints are disabled in low-memory live mode")
         self.net.restore(filename=str(path))
         if self.record_full_spikes:
             self.cursor = int(len(np.asarray(self.mon.t[:])))
