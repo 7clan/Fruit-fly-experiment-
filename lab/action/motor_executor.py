@@ -534,7 +534,9 @@ class MotorExecutor(Worker):
         except (TypeError, ValueError):
             direction = None
 
-        if (target_type not in {"recommended_quest_waypoint", "quest_marker"}
+        if (target_type not in {
+                "recommended_quest_waypoint", "quest_marker",
+                "quest_enemy_marker"}
                 or confidence < 0.60 or direction is None):
             return "navigation_target_not_visible"
 
