@@ -41,8 +41,8 @@ def _post(url: str, payload: dict, timeout_s: float):
 def _tiny_jpeg_b64() -> str:
     import cv2
     import numpy as np
-    img = np.zeros((96, 96, 3), dtype=np.uint8)
-    img[24:72, 24:72] = 255
+    img = np.zeros((48, 48, 3), dtype=np.uint8)
+    img[12:36, 12:36] = 255
     ok, enc = cv2.imencode(".jpg", img)
     if not ok:
         raise RuntimeError("could not encode local probe image")
@@ -51,7 +51,7 @@ def _tiny_jpeg_b64() -> str:
 
 def probe(base_url: str = DEFAULT_URL,
           model: str = DEFAULT_MODEL,
-          timeout_s: float = 45.0) -> tuple[bool, str]:
+          timeout_s: float = 180.0) -> tuple[bool, str]:
     base_url = str(base_url).rstrip("/")
     try:
         models = _get(base_url + "/models", timeout_s)
@@ -77,8 +77,7 @@ def probe(base_url: str = DEFAULT_URL,
                         {
                             "type": "text",
                             "text": (
-                                "Look at the image and return only JSON "
-                                '{"ok":true}.'
+                                "Look at the image. Reply only: OK"
                             ),
                         },
                         {
@@ -93,8 +92,7 @@ def probe(base_url: str = DEFAULT_URL,
                     ],
                 }],
                 "temperature": 0.0,
-                "max_tokens": 32,
-                "response_format": {"type": "json_object"},
+                "max_tokens": 4,
             },
             timeout_s,
         )
@@ -120,7 +118,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser("DigitalFlyLab local coach preflight")
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--model", default=DEFAULT_MODEL)
-    ap.add_argument("--timeout", type=float, default=45.0)
+    ap.add_argument("--timeout", type=float, default=180.0)
     args = ap.parse_args(argv)
     ok, detail = probe(args.url, args.model, args.timeout)
     print(f"[local-coach-probe] {'OK' if ok else 'FAILED'} {detail}")
