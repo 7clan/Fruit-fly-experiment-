@@ -59,6 +59,12 @@ class InputBackend(ABC):
     @abstractmethod
     def mouse_move(self, dx: int, dy: int) -> None: ...
 
+    def mouse_button_down(self, button: str) -> None:
+        raise NotImplementedError
+
+    def mouse_button_up(self, button: str) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     def release_all(self) -> None: ...
 
@@ -83,6 +89,14 @@ class SafeNoopBackend(InputBackend):
             self.emitted += 1
 
     def mouse_move(self, dx: int, dy: int) -> None:
+        with self._lock:
+            self.emitted += 1
+
+    def mouse_button_down(self, button: str) -> None:
+        with self._lock:
+            self.emitted += 1
+
+    def mouse_button_up(self, button: str) -> None:
         with self._lock:
             self.emitted += 1
 
@@ -124,6 +138,12 @@ class MovementOnlyBackend(InputBackend):
     def mouse_move(self, dx: int, dy: int) -> None:
         # Gate-6 navigation no longer depends on Roblox mouse-capture state.
         # Steering is W+A / W+D only.
+        return
+
+    def mouse_button_down(self, button: str) -> None:
+        return
+
+    def mouse_button_up(self, button: str) -> None:
         return
 
     def release_all(self) -> None:
@@ -276,16 +296,24 @@ class MotorExecutor(Worker):
         """
         resolved = brain_out.get("resolved")
         if resolved:
-            ra = ResolvedAbility(**{k: resolved[k] for k in
-                                    ("intention", "ability_id", "score",
-                                     "candidates", "resolver_config",
-                                     "blocked_reason")})
+            fields = {
+                "intention": resolved["intention"],
+                "ability_id": resolved["ability_id"],
+                "score": resolved["score"],
+                "input_binding": resolved.get("input_binding", ""),
+                "candidates": resolved.get("candidates", []),
+                "resolver_config": resolved.get("resolver_config", ""),
+                "blocked_reason": resolved.get("blocked_reason"),
+            }
+            ra = ResolvedAbility(**fields)
             if ra.ability_id:
+                bindings = [ra.input_binding] if ra.input_binding else []
                 return ConcreteAction(
                     intention=ra.intention, ability_id=ra.ability_id,
-                    bindings=[], hold_s=0.2,
+                    bindings=bindings, hold_s=0.12,
                     notes={"resolver": ra.resolver_config,
-                           "score": ra.score})
+                           "score": ra.score,
+                           "observed_binding": ra.input_binding})
         # First active Gate-6 run is deliberately movement-only.
         # RETREAT/ESCAPE/combat-like intentions fail closed to STOP.
         if self.movement_only:
