@@ -64,16 +64,16 @@ def test_questing_backend_is_hard_allowlisted_to_known_gpo_action_surface():
     assert ("camera", 90, 35) in fake.events
 
 
-def test_fly_questing_turn_includes_camera_and_forward_steer():
+def test_fly_questing_turn_uses_forward_steer_without_camera_drag():
     ex = MotorExecutor(
         Bus(), backend=SafeNoopBackend(), autonomy_enabled=False,
         questing=True)
     left = ex._materialize({}, Intention(name="TURN_LEFT"))
     right = ex._materialize({}, Intention(name="TURN_RIGHT"))
     assert left.bindings == ["key:W", "key:A"]
-    assert left.mouse_dx < 0
+    assert left.mouse_dx == 0
     assert right.bindings == ["key:W", "key:D"]
-    assert right.mouse_dx > 0
+    assert right.mouse_dx == 0
 
 
 def test_yellow_quest_marker_emits_interact_semantic_command():
@@ -255,3 +255,25 @@ def test_current_gpo_control_catalog_covers_core_and_default_melee():
     melee = {x.control_id: x for x in loadout_controls("default_melee")}
     assert melee["melee_gut_punch"].bindings == ("key:E",)
     assert melee["melee_ground_smash"].bindings == ("key:R",)
+
+
+def test_camera_assist_does_not_recenter_while_fly_is_turning():
+    bus = Bus()
+    sup = QuestCombatSupervisor(bus, ValueTable())
+    bus.state("action.meta").write({"autonomy": True})
+    bus.state("brain.output").write({
+        "intention": {"name": "TURN_RIGHT", "confidence": 1.0}
+    })
+    bus.state("world.observation").write({
+        "target": {
+            "type": "recommended_quest_waypoint",
+            "distance": 0.3, "direction": 1.1, "confidence": 0.92,
+        },
+        "player": {
+            "health": 1.0, "health_units": "fraction", "stamina": 1.0,
+        },
+        "notes": {},
+    })
+    sup.step()
+    env = bus.state("action.command").read()
+    assert env is None or (env.payload or {}).get("name") != "SEARCH_CAMERA"
