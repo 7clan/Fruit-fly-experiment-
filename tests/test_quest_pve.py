@@ -197,3 +197,22 @@ def test_yellow_quest_cue_survives_green_primary_target():
     sup.step()
     cmd = bus.state("action.command").read().payload
     assert cmd["name"] == "INTERACT_QUEST"
+
+
+def test_quest_enemy_marker_is_valid_fly_navigation_target():
+    bus = Bus()
+    ex = MotorExecutor(
+        bus, backend=SafeNoopBackend(), autonomy_enabled=False,
+        questing=True)
+    now = ex.clock.now_ns()
+    bus.state("world.observation").write({
+        "ts_ns": now,
+        "target": {
+            "type": "quest_enemy_marker",
+            "direction": 0.4,
+            "distance": 0.4,
+            "confidence": 0.94,
+        },
+    }, ts_ns=now)
+    action = ex._materialize({}, Intention(name="TURN_RIGHT"))
+    assert ex._navigation_veto_reason(action, now) is None
