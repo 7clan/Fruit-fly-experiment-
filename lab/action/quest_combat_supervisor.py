@@ -261,8 +261,13 @@ class QuestCombatSupervisor(Worker):
                 "recommended_quest_waypoint", "quest_marker",
                 "quest_enemy_marker"}
                 and direction is not None
-                and abs(direction) >= 0.20
-                and now - self._last_center_ns > int(0.85e9)
+                and abs(direction) >= 0.65
+                # Do not swing the camera while the canonical decoder is
+                # already asking for a turn. On the target laptop a 50 ms
+                # biological chunk takes several wall-seconds; aggressive
+                # recentering during that interval makes its bearing stale.
+                and fly_intention in {"STOP", "APPROACH"}
+                and now - self._last_center_ns > int(2.5e9)
                 and now - self._last_damage_ns > int(0.65e9)):
             dx = int(max(-70, min(70, direction * 90.0)))
             if abs(dx) >= 14:
