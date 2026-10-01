@@ -1,5 +1,6 @@
 from lab.bus import Bus
 from lab.coach.semantic_coach import SemanticCoachWorker
+from lab.coach.probe import choose_model
 from lab.action.quest_combat_supervisor import QuestCombatSupervisor
 from lab.world.value import ValueTable
 
@@ -217,3 +218,23 @@ def test_coach_live_ability_requires_visible_binding_and_label():
         "memory_updates": [],
     }, _catalog())
     assert bad["skill"] == "REOBSERVE"
+
+
+def test_probe_prefers_requested_when_available():
+    available = {
+        "gemini-3.5-flash-lite",
+        "gemini-3.1-flash-lite",
+    }
+    assert choose_model("gemini-3.1-flash-lite", available) == (
+        "gemini-3.1-flash-lite"
+    )
+
+
+def test_probe_falls_back_to_current_flash_lite():
+    available = {
+        "gemini-3.5-flash-lite",
+        "gemini-3.8-flash",
+    }
+    assert choose_model("gemini-3.1-flash-lite", available) == (
+        "gemini-3.5-flash-lite"
+    )
