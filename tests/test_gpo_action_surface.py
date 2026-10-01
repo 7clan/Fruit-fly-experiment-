@@ -68,8 +68,8 @@ def test_quest_backend_physically_supports_known_movement_combat_skill_keys():
     assert {"Z", "X", "C", "N", "G", "J", "1", "9", "0"} <= downs
 
 
-def test_quest_backend_camera_is_bounded_drag_not_raw_mouse_steering():
+def test_quest_backend_never_moves_or_drags_user_camera():
     fake = _FakeBackend()
     b = QuestingBackend(fake)
     b.mouse_move(999, -999)
-    assert fake.events[-1] == ("camera", 90, -35)
+    assert not any(e[0] in {"move", "camera"} for e in fake.events)
