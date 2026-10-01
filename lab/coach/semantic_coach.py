@@ -118,6 +118,17 @@ class SemanticCoachWorker(Worker):
         except Exception:
             self.knowledge = ""
 
+        self.profile_path = root / "runtime_state" / "gpo_coach_profile.json"
+        self.profile_path.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            self.profile = json.loads(
+                self.profile_path.read_text(encoding="utf-8"))
+            if not isinstance(self.profile, dict):
+                self.profile = {"claims": {}}
+        except Exception:
+            self.profile = {"claims": {}}
+        self.profile.setdefault("claims", {})
+
         self._last_call_ns = 0
         self._last_signature = None
         self._previous_image_b64 = None
@@ -133,6 +144,7 @@ class SemanticCoachWorker(Worker):
             "jpeg_ms_total": 0.0,
             "api_ms_total": 0.0,
             "last_plan": None,
+            "profile_claims": len(self.profile.get("claims", {})),
             "disabled_reason": (
                 None if self.api_key else "GEMINI_API_KEY_missing"),
         })
@@ -210,6 +222,8 @@ class SemanticCoachWorker(Worker):
             },
             "verified_controls": controls,
             "previous_coach_plan": _compact(previous_plan, 900),
+            "persistent_character_profile": _compact(
+                self.profile, 2400),
         }
         return f"""You are the SEMANTIC COACH for a Grand Piece Online
 autonomous research agent.  You understand game meaning and choose ONE
@@ -252,7 +266,15 @@ Return ONLY a JSON object with exactly these fields:
   }},
   "confidence": 0.0,
   "explanation": "one short sentence",
-  "next_after_success": "one short next step"
+  "next_after_success": "one short next step",
+  "memory_updates": [
+    {{
+      "key": "one of: level,peli,island,active_quest,fruit,fighting_style,primary_weapon,ship,buso_haki,observation_haki,equipment,hotbar,stat_build",
+      "value": "observed value",
+      "confidence": 0.0,
+      "evidence": "visible or state"
+    }}
+  ]
 }}"""
 
     def _call_gemini(
@@ -314,6 +336,64 @@ Return ONLY a JSON object with exactly these fields:
                 f"Gemini returned no text: {str(payload)[:400]}")
         return json.loads(text)
 
+    _PROFILE_KEYS = frozenset({
+        "level", "peli", "island", "active_quest", "fruit",
+        "fighting_style", "primary_weapon", "ship", "buso_haki",
+        "observation_haki", "equipment", "hotbar", "stat_build",
+    })
+
+    def _validated_memory_updates(self, raw_updates) -> list[dict]:
+        out = []
+        if not isinstance(raw_updates, list):
+            return out
+        for rec in raw_updates[:16]:
+            if not isinstance(rec, dict):
+                continue
+            key = str(rec.get("key") or "").strip()
+            evidence = str(rec.get("evidence") or "").strip().lower()
+            try:
+                conf = float(rec.get("confidence", 0.0))
+            except (TypeError, ValueError):
+                conf = 0.0
+            if (key not in self._PROFILE_KEYS
+                    or evidence not in {"visible", "state"}
+                    or conf < 0.85):
+                continue
+            value = rec.get("value")
+            # Keep persistent claims compact and JSON-safe.
+            try:
+                encoded = json.dumps(value, default=str)
+            except Exception:
+                continue
+            if len(encoded) > 900:
+                continue
+            out.append({
+                "key": key,
+                "value": value,
+                "confidence": round(min(1.0, max(0.0, conf)), 4),
+                "evidence": evidence,
+            })
+        return out
+
+    def _apply_memory_updates(self, updates: list[dict], now_ns: int) -> None:
+        if not updates:
+            return
+        claims = self.profile.setdefault("claims", {})
+        for rec in updates:
+            claims[rec["key"]] = {
+                "value": rec["value"],
+                "confidence": rec["confidence"],
+                "evidence": rec["evidence"],
+                "updated_ns": int(now_ns),
+            }
+        self.profile["updated_ns"] = int(now_ns)
+        tmp = self.profile_path.with_suffix(".json.tmp")
+        tmp.write_text(
+            json.dumps(self.profile, indent=1, default=str),
+            encoding="utf-8")
+        tmp.replace(self.profile_path)
+        self.stats["profile_claims"] = len(claims)
+
     def _validate_plan(self, raw: dict, catalog: dict) -> dict:
         if not isinstance(raw, dict):
             raise ValueError("coach output must be an object")
@@ -366,6 +446,8 @@ Return ONLY a JSON object with exactly these fields:
             "explanation": str(raw.get("explanation") or "")[:300],
             "next_after_success": str(
                 raw.get("next_after_success") or "")[:240],
+            "memory_updates": self._validated_memory_updates(
+                raw.get("memory_updates")),
             "ENGINEERED": True,
         }
 
@@ -451,6 +533,8 @@ Return ONLY a JSON object with exactly these fields:
                 + (time.perf_counter() - t0) * 1000.0, 3)
             self.stats["calls"] += 1
 
+        self._apply_memory_updates(
+            plan.get("memory_updates") or [], plan["ts_ns"])
         self.plan_state.write(plan, ts_ns=plan["ts_ns"])
         self.events.publish(
             {"kind": "coach_plan", "plan": plan, "ts_ns": plan["ts_ns"]},
