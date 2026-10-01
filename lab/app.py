@@ -96,6 +96,13 @@ class DigitalFlyLab:
             raise ValueError(f"unknown capture_kind {capture_kind!r}")
         self.memory = MemoryStore(self.session_dir / "memory")
         self.value = ValueTable(self.memory)
+        self.value_path = (
+            AGENT_ROOT / "runtime_state" / "gpo_engineered_values.json")
+        try:
+            self.value.load_file(self.value_path)
+        except Exception:
+            # Corrupt optional learned state must never prevent safe startup.
+            pass
         self.action_meta = self.bus.state("action.meta")
         self.control_catalog_state = self.bus.state("action.control_catalog")
 
@@ -549,6 +556,10 @@ class DigitalFlyLab:
             w.stop()
         self.capture.stop()
         self.memory.stop(persist=True)
+        try:
+            self.value.save_file(self.value_path)
+        except Exception as exc:
+            print(f"[lab] learned-value save warning: {exc!r}", flush=True)
         return self.report()
 
     # -- synthetic drive (dev/test/benchmark dry-run) ------------------------
