@@ -160,6 +160,59 @@ def create_windows_movement_only_backend() -> InputBackend:
     return MovementOnlyBackend(create_windows_input_backend())
 
 
+class QuestingBackend(InputBackend):
+    """Hard allowlist for autonomous quest/navigation + starter PvE."""
+
+    name = "windows_questing_v1"
+    ALLOWED_KEYS = {
+        "W", "A", "S", "D", "SPACE", "CTRL", "Q",
+        "F", "T", "E", "R",
+    }
+    ALLOWED_MOUSE = {"left"}
+
+    def __init__(self, inner: InputBackend):
+        self.inner = inner
+
+    def key_down(self, code: str) -> None:
+        if code.upper() in self.ALLOWED_KEYS:
+            self.inner.key_down(code)
+
+    def key_up(self, code: str) -> None:
+        if code.upper() in self.ALLOWED_KEYS:
+            self.inner.key_up(code)
+
+    def mouse_move(self, dx: int, dy: int) -> None:
+        dx = max(-90, min(90, int(dx)))
+        dy = max(-35, min(35, int(dy)))
+        if dx or dy:
+            drag = getattr(self.inner, "camera_drag", None)
+            if drag is not None:
+                drag(dx, dy)
+
+    def mouse_button_down(self, button: str) -> None:
+        if str(button).lower() in self.ALLOWED_MOUSE:
+            self.inner.mouse_button_down(button)
+
+    def mouse_button_up(self, button: str) -> None:
+        if str(button).lower() in self.ALLOWED_MOUSE:
+            self.inner.mouse_button_up(button)
+
+    def release_all(self) -> None:
+        self.inner.release_all()
+
+    def backend_health(self) -> dict:
+        h = dict(self.inner.backend_health())
+        h["backend"] = self.name
+        h["allowed_keys"] = sorted(self.ALLOWED_KEYS)
+        h["allowed_mouse"] = sorted(self.ALLOWED_MOUSE)
+        h["camera_drag"] = True
+        return h
+
+
+def create_windows_questing_backend() -> InputBackend:
+    return QuestingBackend(create_windows_input_backend())
+
+
 # ---------------------------------------------------------------------------
 # concrete action schema (input binding expansion)
 # ---------------------------------------------------------------------------
