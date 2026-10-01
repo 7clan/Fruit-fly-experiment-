@@ -131,24 +131,26 @@ def test_damage_triggers_learnable_defense_not_agent_shutdown():
     assert sup._pending_defense is not None
 
 
-def test_stalled_fly_navigation_requests_jump_then_climb():
+def test_stalled_navigation_uses_bounded_recovery_not_blind_climb():
     sup = QuestCombatSupervisor(Bus(), ValueTable())
     t0 = 10_000_000_000
     assert sup._update_progress(
         "recommended_quest_waypoint", 0.2, t0, "APPROACH") is None
-    # No progress for >3.5 s -> jump.
     assert sup._update_progress(
         "recommended_quest_waypoint", 0.2,
-        t0 + 4_000_000_000, "APPROACH") == "JUMP"
-    # Repeated stalls eventually escalate to climb.
+        t0 + 5_000_000_000, "APPROACH") == "JUMP"
     sup._last_command_ns = 0
     assert sup._update_progress(
         "recommended_quest_waypoint", 0.2,
-        t0 + 8_000_000_000, "APPROACH") == "JUMP"
+        t0 + 10_000_000_000, "APPROACH") == "DASH_LEFT"
     sup._last_command_ns = 0
     assert sup._update_progress(
         "recommended_quest_waypoint", 0.2,
-        t0 + 12_000_000_000, "APPROACH") == "CLIMB"
+        t0 + 15_000_000_000, "APPROACH") == "DASH_RIGHT"
+    sup._last_command_ns = 0
+    assert sup._update_progress(
+        "recommended_quest_waypoint", 0.2,
+        t0 + 20_000_000_000, "APPROACH") == "DASH_BACK"
 
 
 def test_red_circle_with_red_distance_support_becomes_quest_enemy_marker():
@@ -277,3 +279,38 @@ def test_camera_assist_does_not_recenter_while_fly_is_turning():
     sup.step()
     env = bus.state("action.command").read()
     assert env is None or (env.payload or {}).get("name") != "SEARCH_CAMERA"
+
+
+def test_navigation_skill_emits_fresh_visual_steer_target():
+    bus = Bus()
+    sup = QuestCombatSupervisor(bus, ValueTable())
+    bus.state("action.meta").write({"autonomy": True})
+    now = sup.clock.now_ns()
+    bus.state("coach.plan").write({
+        "plan_id": 7,
+        "ts_ns": now,
+        "skill": "NAVIGATE_OBJECTIVE",
+        "confidence": 0.95,
+        "provider": "local_smolvlm2_text_skill",
+    }, ts_ns=now)
+    bus.state("brain.output").write({
+        "intention": {"name": "TURN_LEFT"},
+    }, ts_ns=now)
+    bus.state("world.observation").write({
+        "target": {
+            "type": "recommended_quest_waypoint",
+            "distance": 0.30,
+            "direction": 0.8,
+            "confidence": 0.92,
+        },
+        "player": {
+            "health": 1.0, "health_units": "fraction", "stamina": 1.0,
+        },
+        "notes": {},
+    }, ts_ns=now)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["direction"] == 0.8
+    assert cmd.payload["source"] == "semantic_navigation_assist"
