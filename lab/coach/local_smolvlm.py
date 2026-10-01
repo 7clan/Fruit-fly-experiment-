@@ -15,7 +15,7 @@ import urllib.error
 import urllib.request
 
 from .semantic_coach import ALLOWED_SKILLS, SemanticCoachWorker, _compact
-from .gpo_skills import render_skill_cards
+from .gpo_skills import render_skill_cards, procedural_skill_plan
 
 
 DEFAULT_LOCAL_MODEL = "smolvlm2-256m"
@@ -33,7 +33,7 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
         target_hz: float = 0.5,
         model: str | None = None,
         base_url: str | None = None,
-        timeout_s: float = 180.0,
+        timeout_s: float = 45.0,
     ):
         super().__init__(
             bus,
@@ -48,12 +48,17 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
         self.provider = "local_smolvlm2_llamacpp"
         self.allow_remote_wiki = False
         self._sections = self._split_sections(self.knowledge)
+        self._last_skill_signature = None
+        self._last_skill_publish_ns = 0
+        self._vision_backoff_until_ns = 0
         self.stats.update({
             "provider": self.provider,
             "base_url": self.base_url,
             "remote_wiki": False,
             "local_only_inference": True,
             "min_call_interval_s": self.min_call_interval_s,
+            "procedural_plans": 0,
+            "visual_calls_reserved_for_ui": True,
         })
 
     @staticmethod
@@ -137,10 +142,10 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
             import cv2
             img = frame
             h, w = img.shape[:2]
-            if w > 384:
-                scale = 384.0 / float(w)
+            if w > 256:
+                scale = 256.0 / float(w)
                 img = cv2.resize(
-                    img, (384, max(1, int(h * scale))),
+                    img, (256, max(1, int(h * scale))),
                     interpolation=cv2.INTER_AREA)
             ok, enc = cv2.imencode(
                 ".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 48])
@@ -225,6 +230,151 @@ Return ONLY compact JSON:
  "knowledge_query":"",
  "memory_updates":[]
 }}"""
+
+    def _publish_skill_plan(self, raw: dict, catalog: dict,
+                            now_ns: int) -> None:
+        raw = dict(raw or {})
+        raw.setdefault("control_id", "")
+        raw.setdefault("observed_ability", {"binding": "", "label": ""})
+        raw.setdefault(
+            "ui_click",
+            {"needed": False, "x_norm": 0.0, "y_norm": 0.0, "label": ""})
+        raw.setdefault("memory_updates", [])
+        raw.setdefault("knowledge_query", "")
+        plan = self._validate_plan(raw, catalog)
+        plan["provider"] = "procedural_skill_router"
+        plan["model"] = self.model
+        plan["skill_card"] = raw.get("skill_card")
+        plan["local_vlm_used"] = False
+        plan["ts_ns"] = int(now_ns)
+        self.plan_state.write(plan, ts_ns=now_ns)
+        self.events.publish(
+            {"kind": "coach_plan", "plan": plan, "ts_ns": now_ns},
+            ts_ns=now_ns)
+        self.stats["plans"] += 1
+        self.stats["last_plan"] = {
+            "plan_id": plan["plan_id"],
+            "scene": plan["scene"],
+            "skill": plan["skill"],
+            "confidence": plan["confidence"],
+            "skill_card": plan.get("skill_card"),
+            "local_vlm_used": False,
+        }
+
+    def step(self) -> None:
+        """Skill-first local coach.
+
+        Obvious quest states use executable procedural skills immediately.
+        The 256M visual model is reserved for scenes where reading an actual
+        dialog/menu can add information.  If local inference stalls or dies,
+        gameplay continues through the skill/supervisor layers.
+        """
+        now = self.clock.now_ns()
+        meta = self._state(self.meta_state)
+        if not bool(meta.get("autonomy")):
+            self.stats["skips"] += 1
+            return
+
+        obs = self._state(self.world_state)
+        if not obs:
+            self.stats["skips"] += 1
+            return
+        quest = self._state(self.quest_state)
+        catalog = self._state(self.catalog_state)
+
+        raw = procedural_skill_plan(obs, quest)
+        if raw is not None:
+            target = obs.get("target") or {}
+            notes = obs.get("notes") or {}
+            signature = (
+                str(raw.get("skill") or ""),
+                str(raw.get("scene") or ""),
+                str(target.get("type") or ""),
+                round(float(target.get("distance") or 0.0), 1),
+                bool(notes.get("quest_marker_detected")),
+            )
+            due = (
+                signature != self._last_skill_signature
+                or now - self._last_skill_publish_ns >= int(8.0e9))
+            if due:
+                self._publish_skill_plan(raw, catalog, now)
+                self._last_skill_signature = signature
+                self._last_skill_publish_ns = now
+                self.stats["procedural_plans"] = (
+                    int(self.stats.get("procedural_plans", 0)) + 1)
+            else:
+                self.stats["skips"] += 1
+            return
+
+        ui = dict(obs.get("ui") or {})
+        target = dict(obs.get("target") or {})
+        needs_visual_semantics = bool(
+            ui.get("dialogue") or ui.get("menu")
+        )
+
+        # Unknown outdoor scene: do not burn 45-180 seconds of old-laptop CPU
+        # trying to make a 256M VLM rediscover that no objective is visible.
+        # The CV/supervisor will continue reacquiring quest markers.
+        if not needs_visual_semantics:
+            fallback = {
+                "scene": "uncertain_no_visible_objective",
+                "objective": "wait for a reliable quest/objective cue",
+                "target": str(target.get("type") or "none"),
+                "skill": "REOBSERVE",
+                "confidence": 0.94,
+                "explanation": (
+                    "No dialog/menu or reliable semantic target requires "
+                    "expensive local vision right now."),
+                "next_after_success": "resume the matching procedural skill",
+                "skill_card": "obstacle_recovery",
+            }
+            if now - self._last_skill_publish_ns >= int(12.0e9):
+                self._publish_skill_plan(fallback, catalog, now)
+                self._last_skill_publish_ns = now
+                self.stats["procedural_plans"] = (
+                    int(self.stats.get("procedural_plans", 0)) + 1)
+            else:
+                self.stats["skips"] += 1
+            return
+
+        if now < self._vision_backoff_until_ns:
+            self.stats["skips"] += 1
+            return
+
+        before_errors = int(self.stats.get("api_errors", 0))
+        try:
+            super().step()
+        except Exception as exc:
+            # A local VLM/server failure must never kill the game-control
+            # experiment.  Fall back to the executable skill layer.
+            self.stats["api_errors"] = int(
+                self.stats.get("api_errors", 0)) + 1
+            self.stats["last_error"] = repr(exc)
+            self.events.publish({
+                "kind": "coach_error",
+                "ts_ns": now,
+                "model": self.model,
+                "error": repr(exc),
+                "fallback": "procedural_skills",
+            }, ts_ns=now)
+
+        if int(self.stats.get("api_errors", 0)) > before_errors:
+            # Back off hard after an expensive failure.  The rest of the
+            # agent remains fully operational without the VLM.
+            self._vision_backoff_until_ns = now + int(180.0e9)
+            fallback = {
+                "scene": "local_vision_unavailable",
+                "objective": "continue using procedural quest skills",
+                "target": str(target.get("type") or "none"),
+                "skill": "REOBSERVE",
+                "confidence": 0.98,
+                "explanation": (
+                    "Local vision timed out/unavailable; procedural skills "
+                    "remain active."),
+                "next_after_success": "retry visual semantics later",
+                "skill_card": "obstacle_recovery",
+            }
+            self._publish_skill_plan(fallback, catalog, now)
 
     def _call_gemini(
             self, prompt: str, image_b64: str | None,
