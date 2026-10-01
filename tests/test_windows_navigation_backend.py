@@ -31,3 +31,14 @@ def test_navigation_backend_hard_allows_only_w_a_d():
         b.key_down(key)
     b.mouse_move(50, 0)
     assert fake.events == [("down", "W"), ("down", "A"), ("down", "D")]
+
+
+@pytest.mark.skipif(platform.system() != "Windows", reason="Windows-only backend")
+def test_windows_backend_covers_every_catalog_key():
+    from lab.action.gpo_controls import CORE_CONTROLS
+    from lab.action.windows_input import _SCAN
+    for control in CORE_CONTROLS:
+        for binding in control.bindings:
+            if binding.startswith("key:"):
+                assert binding[4:].upper() in _SCAN, (
+                    control.control_id, binding)
