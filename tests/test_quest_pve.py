@@ -314,3 +314,43 @@ def test_navigation_skill_emits_fresh_visual_steer_target():
     assert cmd.payload["name"] == "STEER_TARGET"
     assert cmd.payload["direction"] == 0.8
     assert cmd.payload["source"] == "semantic_navigation_assist"
+
+
+def test_semantic_servo_uses_yellow_geometry_when_red_marker_coexists():
+    bus = Bus()
+    sup = QuestCombatSupervisor(bus, ValueTable())
+    bus.state("action.meta").write({"autonomy": True})
+    now = sup.clock.now_ns()
+    bus.state("coach.plan").write({
+        "plan_id": 9,
+        "ts_ns": now,
+        "skill": "NAVIGATE_OBJECTIVE",
+        "skill_card": "quest_accept",
+        "confidence": 0.95,
+        "provider": "local_smolvlm2_text_skill",
+    }, ts_ns=now)
+    bus.state("brain.output").write({
+        "intention": {"name": "STOP"},
+    }, ts_ns=now)
+    bus.state("world.observation").write({
+        "target": {
+            "type": "quest_enemy_marker",
+            "distance": 0.8,
+            "direction": -1.5,
+            "confidence": 0.94,
+        },
+        "player": {
+            "health": 1.0, "health_units": "fraction", "stamina": 1.0,
+        },
+        "notes": {
+            "quest_marker_detected": True,
+            "quest_marker_proximity": 0.45,
+            "quest_marker_direction": 0.40,
+        },
+    }, ts_ns=now)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["direction"] == 0.40
+    assert cmd.payload["target_type"] == "quest_marker"
