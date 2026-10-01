@@ -164,9 +164,16 @@ class QuestingBackend(InputBackend):
     """Hard allowlist for autonomous quest/navigation + starter PvE."""
 
     name = "windows_questing_v1"
+    # Physical capability surface. This is deliberately broader than the
+    # current policy: semantic commands + observed-ability validation remain
+    # the actual autonomy gate, so merely being listed here cannot trigger a
+    # move. This lets later loadouts use their HUD-observed keys without
+    # rewriting the Windows backend.
     ALLOWED_KEYS = {
-        "W", "A", "S", "D", "SPACE", "CTRL", "Q",
-        "F", "T", "E", "R",
+        "W", "A", "S", "D", "SPACE", "CTRL", "SHIFT", "Q",
+        "F", "T", "E", "R", "Z", "X", "C", "V", "B", "N",
+        "G", "J", "P", "M",
+        "0", "1", "2", "3", "4", "5", "6", "7", "8", "9",
     }
     ALLOWED_MOUSE = {"left"}
 
@@ -627,8 +634,12 @@ class MotorExecutor(Worker):
         name = str(cmd.get("name", "")).upper()
         allowed = {
             "INTERACT_QUEST", "JUMP", "CLIMB", "SEARCH_CAMERA",
-            "BLOCK", "EVADE_BACK", "ATTACK_LIGHT",
-            "GUT_PUNCH", "GROUND_SMASH",
+            "SPRINT", "DASH_FORWARD", "DASH_BACK", "DASH_LEFT",
+            "DASH_RIGHT", "GEPP0",
+            "BLOCK", "PERFECT_BLOCK", "EVADE_BACK", "ATTACK_LIGHT",
+            "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
+            "BUSO_HAKI", "OBSERVATION_HAKI", "EQUIP_SLOT",
+            "USE_OBSERVED_ABILITY",
         }
         if name not in allowed:
             return
@@ -637,8 +648,9 @@ class MotorExecutor(Worker):
             # Combat/interaction owns the actuator briefly; obstacle recovery
             # and camera search may coexist with the current locomotor goal.
             if name in {
-                "INTERACT_QUEST", "BLOCK", "EVADE_BACK",
-                "ATTACK_LIGHT", "GUT_PUNCH", "GROUND_SMASH",
+                "INTERACT_QUEST", "BLOCK", "PERFECT_BLOCK", "EVADE_BACK",
+                "ATTACK_LIGHT", "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
+                "USE_OBSERVED_ABILITY", "EQUIP_SLOT",
             }:
                 self._release_movement_locked(now_ns, reason=name.lower())
 
@@ -651,11 +663,33 @@ class MotorExecutor(Worker):
                 self._hold_key_locked("W", now_ns, 0.60)
                 self._hold_key_locked("CTRL", now_ns, 0.60)
             elif name == "SEARCH_CAMERA":
-                self.backend.mouse_move(int(cmd.get("dx", 35)), 0)
+                self.backend.mouse_move(
+                    max(-90, min(90, int(cmd.get("dx", 35)))), 0)
+            elif name == "SPRINT":
+                # Current GPO control reference: double-tap W.
+                self._hold_key_locked("W", now_ns, 0.055)
+                self.backend.key_up("W")
+                self.backend.key_down("W")
+                self._held["W"] = now_ns + int(0.70e9)
+            elif name.startswith("DASH_"):
+                direction_key = {
+                    "DASH_FORWARD": "W", "DASH_BACK": "S",
+                    "DASH_LEFT": "A", "DASH_RIGHT": "D",
+                }[name]
+                self._hold_key_locked(direction_key, now_ns, 0.16)
+                self._hold_key_locked("Q", now_ns, 0.10)
+                self.action_lock_until_ns = now_ns + int(0.28e9)
+            elif name == "GEPP0":
+                # One bounded airborne Space pulse. Repetition is policy-owned.
+                self._hold_key_locked("SPACE", now_ns, 0.08)
             elif name == "BLOCK":
                 self._hold_key_locked(
                     "F", now_ns, float(cmd.get("hold_s", 0.55)))
                 self.action_lock_until_ns = now_ns + int(0.50e9)
+            elif name == "PERFECT_BLOCK":
+                # Primitive only: timing policy must decide when to issue it.
+                self._hold_key_locked("F", now_ns, 0.055)
+                self.action_lock_until_ns = now_ns + int(0.16e9)
             elif name == "EVADE_BACK":
                 self._hold_key_locked("S", now_ns, 0.16)
                 self._hold_key_locked("Q", now_ns, 0.16)
@@ -664,12 +698,41 @@ class MotorExecutor(Worker):
                 self.backend.mouse_button_down("left")
                 self.backend.mouse_button_up("left")
                 self.action_lock_until_ns = now_ns + int(0.16e9)
+            elif name == "AIR_COMBO":
+                self._hold_key_locked("SPACE", now_ns, 0.16)
+                self.backend.mouse_button_down("left")
+                self.backend.mouse_button_up("left")
+                self.action_lock_until_ns = now_ns + int(0.22e9)
             elif name == "GUT_PUNCH":
                 self._hold_key_locked("E", now_ns, 0.07)
                 self.action_lock_until_ns = now_ns + int(0.35e9)
             elif name == "GROUND_SMASH":
                 self._hold_key_locked("R", now_ns, 0.07)
                 self.action_lock_until_ns = now_ns + int(0.45e9)
+            elif name == "BUSO_HAKI":
+                self._hold_key_locked("J", now_ns, 0.06)
+            elif name == "OBSERVATION_HAKI":
+                self._hold_key_locked("G", now_ns, 0.06)
+            elif name == "EQUIP_SLOT":
+                slot = str(cmd.get("slot", ""))
+                if slot not in set("0123456789"):
+                    return
+                self._hold_key_locked(slot, now_ns, 0.06)
+                self.action_lock_until_ns = now_ns + int(0.20e9)
+            elif name == "USE_OBSERVED_ABILITY":
+                from .gpo_controls import validate_observed_ability_binding
+                binding = validate_observed_ability_binding(
+                    str(cmd.get("binding", "")))
+                if binding.startswith("key:"):
+                    self._hold_key_locked(binding[4:], now_ns, 0.07)
+                elif binding == "mouse:left":
+                    self.backend.mouse_button_down("left")
+                    self.backend.mouse_button_up("left")
+                else:
+                    # Camera/right mouse is not a combat ability primitive.
+                    return
+                self.action_lock_until_ns = now_ns + int(
+                    max(0.16, float(cmd.get("lock_s", 0.25))) * 1e9)
 
         self.inputs.publish({
             "kind": "engineered_command",
