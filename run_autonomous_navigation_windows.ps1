@@ -28,21 +28,22 @@ if ($LASTEXITCODE -ne 0) {
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
 Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor Yellow
+Write-Host "Low-power profile: capture/CV 2 Hz, 384px detector, dashboard 0.25 Hz." -ForegroundColor Yellow
 Write-Host "Persistent run: use DISABLE/END RUN or F9/F12 to stop movement/run." -ForegroundColor Red
 
 & $mainPython -m lab.app `
     --runtime canonical `
     --capture windows `
     --seconds 0 `
-    --capture-fps 3 `
+    --capture-fps 2 `
     --chunk-ms 50 `
     --brain-codegen cython `
     --brain-transport subprocess `
-    --fast-hz 3 `
-    --heavy-hz 0.1 `
-    --fast-detect-width 480 `
+    --fast-hz 2 `
+    --heavy-hz 0.05 `
+    --fast-detect-width 384 `
     --dashboard-ui `
-    --dashboard-hz 0.5 `
+    --dashboard-hz 0.25 `
     --movement-only-autonomy
 
 exit $LASTEXITCODE
