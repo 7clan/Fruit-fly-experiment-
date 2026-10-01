@@ -217,13 +217,15 @@ class CanonicalBrianRuntime:
     def __init__(self, seed: int = 20260929, chunk_ms: float = 50.0,
                  backend: str = "numpy", quiet: bool = True,
                  codegen_target: str | None = None,
-                 record_full_spikes: bool = True):
+                 record_full_spikes: bool = True,
+                 enable_checkpoints: bool = True):
         self.seed = int(seed)
         self.chunk_ms = float(chunk_ms)
         self.backend = backend
         self.quiet = quiet
         self.codegen_target = codegen_target
         self.record_full_spikes = bool(record_full_spikes)
+        self.enable_checkpoints = bool(enable_checkpoints)
         self._brain = None
         self._iface_channels = None
         self._readout_pops = None
@@ -277,7 +279,8 @@ class CanonicalBrianRuntime:
             "interactive", seed=self.seed, version="783",
             channel_ids=self._iface_channels,
             readout_pops=self._readout_pops, quiet=self.quiet,
-            record_full_spikes=self.record_full_spikes)
+            record_full_spikes=self.record_full_spikes,
+            enable_checkpoints=self.enable_checkpoints)
 
     def prewarm(self, prewarm_chunks: int = 2) -> None:
         """Advance a few silent chunks so lazy codegen/spike buffers are
