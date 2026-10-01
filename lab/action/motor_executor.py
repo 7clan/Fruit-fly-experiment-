@@ -368,6 +368,16 @@ class MotorExecutor(Worker):
             "TURN_RIGHT": (["key:D"], 0.12),
             "APPROACH": (["key:W"], 0.30),
             "RETREAT": (["key:S"], 0.20),
+            "EVADE_LEFT": (["key:A", "key:Q"], 0.12),
+            "EVADE_RIGHT": (["key:D", "key:Q"], 0.12),
+            "DEFEND": (["key:F"], 0.25),
+            "ATTACK_LIGHT": (["mouse:left"], 0.07),
+            # Heavy/ranged/special attacks are loadout-specific. They are
+            # executed only when AbilityResolver supplies an observed HUD
+            # binding; guessing a fixed key here would be unsafe and stale.
+            "ATTACK_HEAVY": ([], 0.0),
+            "ATTACK_RANGED": ([], 0.0),
+            "SPECIAL": ([], 0.0),
             "ESCAPE": (["key:SPACE"], 0.10),
         }
         bindings, hold_s = binding_map.get(intention.name, ([], 0.0))
