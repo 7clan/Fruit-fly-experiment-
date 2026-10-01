@@ -88,11 +88,23 @@ if (-not (Test-Health)) {
     $serverProc = Start-Process -FilePath $serverExe -ArgumentList $serverArgs -PassThru -WindowStyle Minimized -RedirectStandardOutput $stdout -RedirectStandardError $stderr
 
     $ready = $false
-    for ($i = 0; $i -lt 180; $i++) {
+    $maxWaitSeconds = 600
+    for ($i = 0; $i -lt $maxWaitSeconds; $i++) {
         if ($serverProc.HasExited) { break }
         if (Test-Health) {
             $ready = $true
             break
+        }
+        if (($i % 10) -eq 0) {
+            $lastLine = ""
+            if (Test-Path $stderr) {
+                $lastLine = Get-Content $stderr -Tail 1 -ErrorAction SilentlyContinue
+            }
+            if ([string]::IsNullOrWhiteSpace($lastLine)) {
+                Write-Host ("[local-ai] still loading/downloading... {0}s" -f $i) -ForegroundColor DarkCyan
+            } else {
+                Write-Host ("[local-ai] {0}s | {1}" -f $i, $lastLine) -ForegroundColor DarkCyan
+            }
         }
         Start-Sleep -Seconds 1
     }
