@@ -183,6 +183,10 @@ class MotorExecutor(Worker):
                  movement_only: bool = False):
         super().__init__(bus, target_hz=target_hz)
         self.brain_out: StateChannel = bus.state(self.TOPIC_IN)
+        # Navigation-only fail-closed observation. It may STOP a stale or
+        # contradictory neural movement, but it is never allowed to choose a
+        # key or substitute a different direction.
+        self.world_obs: StateChannel = bus.state("world.observation")
         self.action_state: StateChannel = bus.state(self.TOPIC_ACTION)
         self.inputs: StreamChannel = bus.stream(self.TOPIC_INPUT, maxsize=256)
         self.backend = backend or SafeNoopBackend()
@@ -195,7 +199,8 @@ class MotorExecutor(Worker):
         self._last_hold_refresh_ns = 0
         self._last_brain_out_ts: int = -1
         self.stats.update({"inputs_emitted": 0, "shadow_only": 0,
-                           "emergency_stops": 0, "hold_refreshes": 0})
+                           "emergency_stops": 0, "hold_refreshes": 0,
+                           "navigation_vetoes": 0})
 
     # -- autonomy gate ----------------------------------------------------
     def set_autonomy(self, enabled: bool, reason: str = "") -> None:
@@ -220,12 +225,25 @@ class MotorExecutor(Worker):
     def step(self) -> None:
         now = self.clock.now_ns()
         self._expire_holds(now)
+        self._navigation_safety_for_held(now)
         snap = self.brain_out.read()
         if snap is None:
             return
         out = snap.payload
         intention = Intention.from_dict(out["intention"])
         action = self._materialize(out, intention)
+        veto_reason = self._navigation_veto_reason(action, now)
+        if veto_reason is not None:
+            # Technical failsafe only: preserve the neural decision in the
+            # decision event, but materialize STOP rather than allowing stale
+            # vision to make the executor turn the wrong way. No alternate
+            # movement is selected from vision.
+            action = ConcreteAction(
+                intention="STOP", ability_id="", bindings=[], hold_s=0.0,
+                notes={"source": "navigation_safety_veto",
+                       "brain_intention": intention.name,
+                       "reason": veto_reason})
+            self.stats["navigation_vetoes"] += 1
         brain_out_ts = int(out.get("ts_ns", now))
         # one decision event per brain output (exact latency chain in replay)
         new_brain_decision = brain_out_ts != self._last_brain_out_ts
@@ -293,11 +311,21 @@ class MotorExecutor(Worker):
                            "locomotor_interpretation":
                                "P9 turn -> forward plus ipsiversive steering"})
             if intention.name == "APPROACH":
+                # The canonical brain is slower than wall-clock real time on
+                # the target laptop. Let a neural APPROACH persist most of one
+                # measured brain interval, but cap it and keep the live visual
+                # safety veto active between chunks.
+                try:
+                    wall_s = float(brain_out.get("chunk_wall_s", 0.0))
+                except (TypeError, ValueError):
+                    wall_s = 0.0
+                hold_s = max(2.5, min(5.0, wall_s * 0.75))
                 return ConcreteAction(
                     intention="APPROACH", ability_id="",
-                    bindings=["key:W"], hold_s=2.5,
+                    bindings=["key:W"], hold_s=hold_s,
                     notes={"source": "gate6_navigation_keys",
-                           "brain_intention": intention.name})
+                           "brain_intention": intention.name,
+                           "adaptive_hold_from_chunk_wall_s": wall_s})
             return ConcreteAction(
                 intention="STOP", ability_id="", bindings=[], hold_s=0.0,
                 notes={"source": "gate6_navigation_failsafe",
@@ -316,6 +344,85 @@ class MotorExecutor(Worker):
         return ConcreteAction(intention=intention.name, ability_id="",
                               bindings=bindings, hold_s=hold_s,
                               notes={"source": "basic_movement_map"})
+
+    # -- navigation safety -----------------------------------------------------
+    def _navigation_veto_reason(self, action: ConcreteAction,
+                                now_ns: int) -> str | None:
+        """Return a STOP-only safety reason for movement-only navigation.
+
+        Current vision is allowed to veto a stale/contradictory neural
+        movement, never to select a key. This is important because a 50 ms
+        canonical biological chunk currently takes several wall-seconds on
+        the target laptop, so the visual waypoint may move significantly
+        before the next neural decision arrives.
+        """
+        if not self.movement_only or not action.bindings:
+            return None
+
+        snap = self.world_obs.read()
+        if snap is None:
+            return "no_world_observation"
+        obs = snap.payload or {}
+        obs_ts = int(obs.get("ts_ns", snap.ts_ns))
+        if now_ns - obs_ts > int(1.5e9):
+            return "stale_world_observation"
+
+        target = obs.get("target") or {}
+        target_type = str(target.get("type") or "none")
+        try:
+            confidence = float(target.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+        direction = target.get("direction")
+        try:
+            direction = float(direction)
+        except (TypeError, ValueError):
+            direction = None
+
+        if (target_type not in {"recommended_quest_waypoint", "quest_marker"}
+                or confidence < 0.60 or direction is None):
+            return "navigation_target_not_visible"
+
+        # Positive bearing = target right, negative = target left.
+        deadband = 0.15  # ~8.6 degrees; ignore tiny detector jitter.
+        if action.intention == "TURN_LEFT" and direction > deadband:
+            return "turn_left_conflicts_with_target_right"
+        if action.intention == "TURN_RIGHT" and direction < -deadband:
+            return "turn_right_conflicts_with_target_left"
+        if action.intention == "APPROACH" and abs(direction) > 0.60:
+            return "approach_target_too_far_off_axis"
+        return None
+
+    def _navigation_safety_for_held(self, now_ns: int) -> None:
+        """Release a held neural movement if fresh vision contradicts it.
+
+        This never presses a key or chooses another direction. After a veto,
+        movement stays released until a NEW brain decision arrives.
+        """
+        if (not self.movement_only or not self.autonomy_enabled
+                or not self._held or not self._last_sig):
+            return
+        intention = str(self._last_sig[0])
+        if intention not in {"TURN_LEFT", "TURN_RIGHT", "APPROACH"}:
+            return
+        action = ConcreteAction(
+            intention=intention, ability_id="",
+            bindings=[f"key:{k}" for k in sorted(self._held)])
+        reason = self._navigation_veto_reason(action, now_ns)
+        if reason is None:
+            return
+        with self._lock:
+            self.backend.release_all()
+            self._held.clear()
+            self.action_lock_until_ns = 0
+        self.stats["navigation_vetoes"] += 1
+        self.inputs.publish({
+            "kind": "navigation_veto",
+            "ts_ns": now_ns,
+            "reason": reason,
+            "brain_intention": intention,
+            "exception_path": True,
+        }, ts_ns=now_ns)
 
     # -- execution ------------------------------------------------------------
     def _execute(self, action: ConcreteAction, now_ns: int,
