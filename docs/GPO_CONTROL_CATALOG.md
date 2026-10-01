@@ -23,6 +23,8 @@ Movement / traversal:
 Combat fundamentals:
 
 - mouse-left basic attack / M1
+- repeated M1 strings
+- Space held during the M1 sequence for uptilt / air-combo launch
 - F block
 - timed F perfect block / parry
 - R firearm reload
