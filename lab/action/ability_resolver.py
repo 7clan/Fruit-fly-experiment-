@@ -49,6 +49,7 @@ class ResolvedAbility:
     intention: str
     ability_id: str
     score: float
+    input_binding: str = ""
     candidates: list = field(default_factory=list)   # [(id, score, why)]
     resolver_config: str = CONFIG_ID
     blocked_reason: str | None = None
@@ -56,6 +57,7 @@ class ResolvedAbility:
     def to_dict(self) -> dict:
         return {"intention": self.intention,
                 "ability_id": self.ability_id,
+                "input_binding": self.input_binding,
                 "score": round(self.score, 4),
                 "candidates": [{"id": i, "score": round(s, 4), "why": w}
                                for i, s, w in self.candidates],
@@ -130,7 +132,7 @@ class AbilityResolver:
         if not scored:
             self.stats["blocked"] += 1
             return ResolvedAbility(intention=intention.name, ability_id="",
-                                   score=0.0, candidates=[],
+                                   score=0.0, input_binding="", candidates=[],
                                    resolver_config=self.config_id,
                                    blocked_reason="no_compatible_available")
 
@@ -138,7 +140,9 @@ class AbilityResolver:
         best_id, best_score, _ = scored[0]
         self._last_used[best_id] = now_ns
         self.stats["resolved"] += 1
+        best_record = self.registry.get(best_id)
         return ResolvedAbility(intention=intention.name, ability_id=best_id,
                                score=best_score,
+                               input_binding=best_record.input_binding,
                                candidates=[(i, s, w) for i, s, w in scored],
                                resolver_config=self.config_id)
