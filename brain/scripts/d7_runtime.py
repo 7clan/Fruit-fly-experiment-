@@ -339,12 +339,7 @@ class DualModeBrain:
                     minlength=len(self.pop_names) + 1)[1:]
             else:
                 pop_counts = None
-            if self.record_full_spikes:
             self.cursor = int(len(np.asarray(self.mon.t[:])))
-        else:
-            self._prev_spike_counts = np.asarray(
-                self.mon.count[:], dtype=np.int64).copy()
-            self.cursor = int(self.mon.num_spikes)
         else:
             # Exact per-neuron deltas without storing individual spike times.
             now_counts = np.asarray(self.mon.count[:], dtype=np.int64)
