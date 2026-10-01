@@ -253,9 +253,11 @@ class MotorExecutor(Worker):
     def __init__(self, bus: Bus, target_hz: float = 40.0,
                  backend: Optional[InputBackend] = None,
                  autonomy_enabled: bool = False,
-                 movement_only: bool = False):
+                 movement_only: bool = False,
+                 questing: bool = False):
         super().__init__(bus, target_hz=target_hz)
         self.brain_out: StateChannel = bus.state(self.TOPIC_IN)
+        self.command_state: StateChannel = bus.state("action.command")
         # Navigation-only fail-closed observation. It may STOP a stale or
         # contradictory neural movement, but it is never allowed to choose a
         # key or substitute a different direction.
@@ -265,6 +267,7 @@ class MotorExecutor(Worker):
         self.backend = backend or SafeNoopBackend()
         self.autonomy_enabled = bool(autonomy_enabled)   # GATED (see module doc)
         self.movement_only = bool(movement_only)
+        self.questing = bool(questing)
         self._held: dict[str, float] = {}   # keyboard code -> hold-until ns
         self._held_mouse: dict[str, float] = {}  # mouse button -> hold-until ns
         self._lock = threading.Lock()
@@ -272,6 +275,7 @@ class MotorExecutor(Worker):
         self._last_sig: tuple = ()          # (intention, ability, bindings)
         self._last_hold_refresh_ns = 0
         self._last_brain_out_ts: int = -1
+        self._last_command_id: int = -1
         self.stats.update({"inputs_emitted": 0, "shadow_only": 0,
                            "emergency_stops": 0, "hold_refreshes": 0,
                            "navigation_vetoes": 0})
@@ -301,6 +305,8 @@ class MotorExecutor(Worker):
         now = self.clock.now_ns()
         self._expire_holds(now)
         self._navigation_safety_for_held(now)
+        if self.questing:
+            self._consume_engineered_command(now)
         snap = self.brain_out.read()
         if snap is None:
             return
