@@ -763,6 +763,15 @@ class MotorExecutor(Worker):
                 if (not bool(cmd.get("ui_context"))
                         or confidence < 0.85):
                     return
+                label = str(cmd.get("ui_label") or "").strip().lower()
+                # Never automate platform-money/account/trade confirmations.
+                forbidden = (
+                    "robux", "gamepass", "premium", "external link",
+                    "trade accept", "accept trade", "confirm trade",
+                    "password", "account", "purchase robux",
+                )
+                if any(term in label for term in forbidden):
+                    return
                 x = float(cmd.get("x_norm", -1.0))
                 y = float(cmd.get("y_norm", -1.0))
                 if not (0.0 <= x <= 1.0 and 0.0 <= y <= 1.0):
