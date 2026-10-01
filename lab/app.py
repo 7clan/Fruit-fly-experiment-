@@ -90,6 +90,15 @@ class DigitalFlyLab:
         self.memory = MemoryStore(self.session_dir / "memory")
         self.value = ValueTable(self.memory)
         self.action_meta = self.bus.state("action.meta")
+
+        # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
+        # canonical Brian2 subprocess is the dominant workload. Movement-only
+        # autonomy therefore caps auxiliary polling rates so UI/logging do
+        # not steal a whole logical core from the brain/game.
+        if movement_only:
+            executor_hz = min(float(executor_hz), 20.0)
+            planner_hz = min(float(planner_hz), 0.5)
+
         # workers (order = pipeline flow)
         self.fast_vision = FastVisionWorker(
             self.bus, target_hz=fast_hz,
@@ -128,9 +137,13 @@ class DigitalFlyLab:
             # is armed only after brain READY and game-focus succeeds.
             autonomy_enabled=False if self.autonomy_requested else autonomy,
             movement_only=movement_only)
-        self.replay = ReplayRecorder(self.bus, self.session_dir)
+        self.replay = ReplayRecorder(
+            self.bus, self.session_dir,
+            target_hz=10.0 if movement_only else 30.0)
         self.evidence = (
-            EvidenceRecorder(self.bus, self.session_dir, target_hz=4.0)
+            EvidenceRecorder(
+                self.bus, self.session_dir,
+                target_hz=1.0, save_raw=False)
             if movement_only else None)
         self.dashboard_ui = None
         self.assessment_started_ns = None
@@ -183,6 +196,21 @@ class DigitalFlyLab:
                            else "ACTIVE")),
             "runtime": self.brain.runtime.runtime_label,
             "chunk_ms": self.brain.chunk_ms,
+            "low_power_profile": bool(self.autonomy_requested),
+            "worker_targets_hz": {
+                "fast": self.fast_vision.governor.target_hz,
+                "heavy": self.heavy_vision.governor.target_hz,
+                "planner": self.planner.governor.target_hz,
+                "encoder": self.encoder.governor.target_hz,
+                "executor": self.executor.governor.target_hz,
+                "replay": self.replay.governor.target_hz,
+                "evidence": (
+                    self.evidence.governor.target_hz
+                    if self.evidence is not None else None),
+                "dashboard": (
+                    self.dashboard.governor.target_hz
+                    if self.dashboard is not None else None),
+            },
             "started_wall_ns": SHARED_CLOCK.wall_time_ns(),
             "bus_specs": self.bus.specs(),
         }
