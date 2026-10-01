@@ -126,10 +126,10 @@ else {
             throw "Local SmolVLM server did not become ready. Last server log: $tail"
         }
 
-        Write-Host "Local server ready; testing one tiny vision request..." -ForegroundColor Cyan
-        & $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 240
+        Write-Host "Local server ready; testing one tiny text request (vision stays lazy)..." -ForegroundColor Cyan
+        & $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 30
         if ($LASTEXITCODE -ne 0) {
-            throw "Local SmolVLM vision probe failed. See $stderr"
+            throw "Local SmolVLM model probe failed. See $stderr"
         }
     }
     finally {
