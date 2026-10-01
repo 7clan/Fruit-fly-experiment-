@@ -82,6 +82,11 @@ def test_yellow_quest_marker_emits_interact_semantic_command():
             "health": 1.0, "health_units": "fraction",
             "stamina": 1.0,
         },
+        "notes": {
+            "quest_marker_detected": True,
+            "quest_marker_proximity": 0.85,
+            "quest_marker_direction": 0.05,
+        },
     })
     sup.step()
     cmd = bus.state("action.command").read().payload
@@ -169,3 +174,26 @@ def test_engineered_defense_values_persist(tmp_path):
     snap = second.snapshot()["gpo|defense|quest_enemy"]["block"]
     assert snap["uses"] == 2
     assert snap["success"] == 1
+
+
+def test_yellow_quest_cue_survives_green_primary_target():
+    bus = Bus()
+    sup = QuestCombatSupervisor(bus, ValueTable())
+    bus.state("action.meta").write({"autonomy": True})
+    bus.state("world.observation").write({
+        "target": {
+            "type": "recommended_quest_waypoint", "distance": 0.80,
+            "direction": 0.02, "confidence": 0.92,
+        },
+        "player": {
+            "health": 1.0, "health_units": "fraction", "stamina": 1.0,
+        },
+        "notes": {
+            "quest_marker_detected": True,
+            "quest_marker_proximity": 0.82,
+            "quest_marker_direction": 0.03,
+        },
+    })
+    sup.step()
+    cmd = bus.state("action.command").read().payload
+    assert cmd["name"] == "INTERACT_QUEST"
