@@ -375,3 +375,24 @@ def test_local_coach_common_quest_step_uses_text_model_skill_selector():
     assert env.payload["local_vlm_used"] is True
     assert coach.stats["calls"] == 1
     assert coach.stats["text_skill_calls"] == 1
+
+
+def test_procedural_candidate_prioritizes_yellow_quest_giver_over_red_npc():
+    plan = procedural_skill_plan({
+        "target": {
+            "type": "quest_enemy_marker",
+            "distance": 0.75,
+            "direction": -1.2,
+            "confidence": 0.94,
+        },
+        "player": {"health": 1.0},
+        "ui": {"dialogue": False, "menu": False},
+        "notes": {
+            "quest_marker_detected": True,
+            "quest_marker_proximity": 0.45,
+            "quest_marker_direction": 0.35,
+        },
+    }, {"phase": "observe"})
+    assert plan is not None
+    assert plan["skill_card"] == "quest_accept"
+    assert plan["skill"] == "NAVIGATE_OBJECTIVE"
