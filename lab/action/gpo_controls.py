@@ -99,9 +99,9 @@ CORE_CONTROLS: tuple[GPOControl, ...] = (
 
     # world / utility
     GPOControl("interact", "Interact / talk", "world", ("key:T",),
-               pattern="tap", provenance="community_observed",
-               confidence=0.7,
-               notes="Observed on NPC dialogue references; requires live confirmation."),
+               pattern="tap", provenance="community_verified",
+               confidence=1.0, autonomous_ready=True,
+               notes="Current GPO community wiki: T interacts with NPCs/quests."),
     GPOControl("carry_downed", "Carry downed player", "world", ("key:V",),
                pattern="tap", context="downed player nearby"),
     GPOControl("grip_downed", "Grip/execute downed player", "combat",
@@ -114,13 +114,38 @@ CORE_CONTROLS: tuple[GPOControl, ...] = (
     GPOControl("observation_haki", "Toggle Observation Haki", "combat",
                ("key:G",), pattern="tap", context="Haki acquired"),
 
-    # Contextual evasive has conflicting historical community documentation.
-    # Keep both candidate bindings known, but do not let autonomy guess.
     GPOControl("evasive_contextual", "Evasive while stunned", "combat",
-               (), pattern="tap", context="stunned and evasive ready",
-               provenance="conflicting_community_sources", confidence=0.5,
-               autonomous_ready=False,
-               notes="Sources disagree between CTRL and Q across versions; live HUD/behavior must resolve it."),
+               ("key:CTRL",), pattern="tap",
+               context="stunned and evasive ready",
+               provenance="community_verified", confidence=1.0,
+               notes="Current GPO controls reference: Left CTRL while stunned."),
+
+    # camera / equipment
+    GPOControl("camera_look", "Rotate camera", "camera",
+               ("mouse:right",), pattern="hold",
+               context="hold RMB while moving mouse",
+               provenance="community_verified", confidence=0.9,
+               autonomous_ready=True),
+    GPOControl("equip_slot_1", "Equip hotbar slot 1", "equipment",
+               ("key:1",), pattern="tap"),
+    GPOControl("equip_slot_2", "Equip hotbar slot 2", "equipment",
+               ("key:2",), pattern="tap"),
+    GPOControl("equip_slot_3", "Equip hotbar slot 3", "equipment",
+               ("key:3",), pattern="tap"),
+    GPOControl("equip_slot_4", "Equip hotbar slot 4", "equipment",
+               ("key:4",), pattern="tap"),
+    GPOControl("equip_slot_5", "Equip hotbar slot 5", "equipment",
+               ("key:5",), pattern="tap"),
+    GPOControl("equip_slot_6", "Equip hotbar slot 6", "equipment",
+               ("key:6",), pattern="tap"),
+    GPOControl("equip_slot_7", "Equip hotbar slot 7", "equipment",
+               ("key:7",), pattern="tap"),
+    GPOControl("equip_slot_8", "Equip hotbar slot 8", "equipment",
+               ("key:8",), pattern="tap"),
+    GPOControl("equip_slot_9", "Equip hotbar slot 9", "equipment",
+               ("key:9",), pattern="tap"),
+    GPOControl("equip_slot_0", "Equip hotbar slot 0", "equipment",
+               ("key:0",), pattern="tap"),
 )
 
 
@@ -153,3 +178,34 @@ def control_map() -> dict[str, GPOControl]:
 
 def controls_by_category(category: str) -> list[GPOControl]:
     return [c for c in CORE_CONTROLS if c.category == category]
+
+
+# Current starter/default Melee moves confirmed both by the live HUD supplied
+# in this project and the current GPO wiki. These are a LOADOUT PROFILE, not a
+# claim that E/R always mean the same move after the user changes style/item.
+CURRENT_DEFAULT_MELEE: tuple[GPOControl, ...] = (
+    GPOControl(
+        "melee_gut_punch", "Gut Punch", "ability", ("key:E",),
+        pattern="tap", context="default Melee equipped; close range",
+        provenance="live_plus_community_verified", confidence=1.0,
+        notes="10 mastery; 20 stamina; ~15 s cooldown; block-break."),
+    GPOControl(
+        "melee_ground_smash", "Ground Smash", "ability", ("key:R",),
+        pattern="tap", context="default Melee equipped; close range",
+        provenance="live_plus_community_verified", confidence=1.0,
+        notes="25 mastery; 25 stamina; ~20 s cooldown; blockable."),
+)
+
+# Equipped fruits/styles/swords use loadout-specific skill keys. The action
+# backend supports these common observed skill keys, but autonomy must only
+# bind a named move after the current HUD/loadout confirms it.
+OBSERVED_ABILITY_KEYS = frozenset({
+    "E", "R", "Z", "X", "C", "V", "B", "N", "Q", "F", "G", "J",
+})
+
+
+def loadout_controls(loadout: str) -> list[GPOControl]:
+    loadout = str(loadout or "").strip().lower()
+    if loadout in {"default_melee", "melee", "combat"}:
+        return list(CURRENT_DEFAULT_MELEE)
+    return []
