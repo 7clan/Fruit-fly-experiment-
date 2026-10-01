@@ -15,6 +15,7 @@ import urllib.error
 import urllib.request
 
 from .semantic_coach import ALLOWED_SKILLS, SemanticCoachWorker, _compact
+from .gpo_skills import render_skill_cards
 
 
 DEFAULT_LOCAL_MODEL = "smolvlm2-256m"
@@ -177,6 +178,7 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
         }
         situation_text = json.dumps(compact_state, default=str)
         knowledge = self._relevant_playbook(situation_text)
+        skill_cards = render_skill_cards(situation_text, max_cards=5)
         skills = ", ".join(sorted(ALLOWED_SKILLS))
 
         return f"""You are a SMALL LOCAL VISUAL COACH for Grand Piece Online.
@@ -196,6 +198,9 @@ RULES:
 - Never click Robux/gamepass/trade/account/external-link confirmations.
 - If unsure: REOBSERVE.
 - Be conservative. One action only.
+
+PROCEDURAL SKILL CARDS:
+{skill_cards}
 
 OFFLINE GPO NOTES:
 {knowledge}
