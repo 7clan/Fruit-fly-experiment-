@@ -94,3 +94,45 @@ def test_approach_hold_adapts_to_slow_canonical_chunk():
     a = ex._materialize(
         {"chunk_wall_s": 6.8}, Intention(name="APPROACH"))
     assert a.hold_s == 5.0
+
+
+class _RecordingBackend(SafeNoopBackend):
+    name = "recording"
+
+    def __init__(self):
+        super().__init__()
+        self.down = []
+        self.up = []
+
+    def key_down(self, code):
+        self.down.append(code)
+
+    def key_up(self, code):
+        self.up.append(code)
+
+    def release_all(self):
+        for code in list(self.down):
+            if code not in self.up:
+                self.up.append(code)
+
+
+def test_new_neural_action_releases_obsolete_steering_key():
+    bus = Bus()
+    backend = _RecordingBackend()
+    ex = MotorExecutor(
+        bus, backend=backend, movement_only=True,
+        autonomy_enabled=True)
+    now = ex.clock.now_ns()
+    # First neural action holds W+D.
+    ex._execute(
+        ex._materialize({}, Intention(name="TURN_RIGHT")),
+        now, new_brain_decision=True)
+    assert "D" in ex.held_keys()
+    # Next action becomes W+A before the old timeout. D must be released
+    # immediately rather than overlapping with A.
+    ex._execute(
+        ex._materialize({}, Intention(name="TURN_LEFT")),
+        now + 100_000_000, new_brain_decision=True)
+    assert "D" not in ex.held_keys()
+    assert "A" in ex.held_keys()
+    assert "D" in backend.up
