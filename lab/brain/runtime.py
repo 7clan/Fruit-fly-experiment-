@@ -216,12 +216,14 @@ class CanonicalBrianRuntime:
 
     def __init__(self, seed: int = 20260929, chunk_ms: float = 50.0,
                  backend: str = "numpy", quiet: bool = True,
-                 codegen_target: str | None = None):
+                 codegen_target: str | None = None,
+                 record_full_spikes: bool = True):
         self.seed = int(seed)
         self.chunk_ms = float(chunk_ms)
         self.backend = backend
         self.quiet = quiet
         self.codegen_target = codegen_target
+        self.record_full_spikes = bool(record_full_spikes)
         self._brain = None
         self._iface_channels = None
         self._readout_pops = None
@@ -274,7 +276,8 @@ class CanonicalBrianRuntime:
         self._brain = rt.DualModeBrain(
             "interactive", seed=self.seed, version="783",
             channel_ids=self._iface_channels,
-            readout_pops=self._readout_pops, quiet=self.quiet)
+            readout_pops=self._readout_pops, quiet=self.quiet,
+            record_full_spikes=self.record_full_spikes)
 
     def prewarm(self, prewarm_chunks: int = 2) -> None:
         """Advance a few silent chunks so lazy codegen/spike buffers are
@@ -313,6 +316,8 @@ class CanonicalBrianRuntime:
             n_active_new=rec.get("n_active_new", 0),
             active_flywire_ids_sample=rec.get(
                 "active_flywire_ids_sample", []),
+            instrumentation_scope=rec.get(
+                "instrumentation_scope", "full_spike_recording"),
             rss_kb=rec.get("rss_kb"),
         )
 
