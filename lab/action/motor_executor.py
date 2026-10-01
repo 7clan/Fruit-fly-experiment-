@@ -635,7 +635,7 @@ class MotorExecutor(Worker):
         allowed = {
             "INTERACT_QUEST", "JUMP", "CLIMB", "SEARCH_CAMERA",
             "SPRINT", "DASH_FORWARD", "DASH_BACK", "DASH_LEFT",
-            "DASH_RIGHT", "GEPP0",
+            "DASH_RIGHT", "GEPPO",
             "BLOCK", "PERFECT_BLOCK", "EVADE_BACK", "ATTACK_LIGHT",
             "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
             "BUSO_HAKI", "OBSERVATION_HAKI", "EQUIP_SLOT",
@@ -679,7 +679,7 @@ class MotorExecutor(Worker):
                 self._hold_key_locked(direction_key, now_ns, 0.16)
                 self._hold_key_locked("Q", now_ns, 0.10)
                 self.action_lock_until_ns = now_ns + int(0.28e9)
-            elif name == "GEPP0":
+            elif name == "GEPPO":
                 # One bounded airborne Space pulse. Repetition is policy-owned.
                 self._hold_key_locked("SPACE", now_ns, 0.08)
             elif name == "BLOCK":
