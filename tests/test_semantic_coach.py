@@ -1,7 +1,9 @@
 from lab.bus import Bus
 from lab.coach.semantic_coach import SemanticCoachWorker
 from lab.coach.local_smolvlm import LocalSmolVLMCoachWorker
-from lab.coach.gpo_skills import select_skill_cards, render_skill_cards
+from lab.coach.gpo_skills import (
+    select_skill_cards, render_skill_cards, procedural_skill_plan,
+)
 from lab.coach.probe import choose_model
 from lab.action.quest_combat_supervisor import QuestCombatSupervisor
 from lab.world.value import ValueTable
@@ -296,3 +298,68 @@ def test_skill_cards_include_failure_recovery_not_just_action_names():
     assert "IF FAIL:" in text
     assert "obstacle_recovery" in text
     assert "quest_travel" in text
+
+
+def test_procedural_skill_router_handles_green_waypoint_without_vlm():
+    plan = procedural_skill_plan({
+        "target": {
+            "type": "recommended_quest_waypoint",
+            "distance": 0.35,
+            "direction": 0.8,
+        },
+        "player": {"health": 1.0},
+        "ui": {"dialogue": False, "menu": False},
+        "notes": {},
+    }, {"phase": "travel"})
+    assert plan is not None
+    assert plan["skill"] == "NAVIGATE_OBJECTIVE"
+    assert plan["skill_card"] == "quest_travel"
+
+
+def test_procedural_skill_router_handles_close_red_enemy_without_vlm():
+    plan = procedural_skill_plan({
+        "target": {
+            "type": "quest_enemy_marker",
+            "distance": 0.80,
+            "direction": 0.0,
+        },
+        "player": {"health": 0.9},
+        "ui": {"dialogue": False, "menu": False},
+        "notes": {},
+    }, {"phase": "combat"})
+    assert plan is not None
+    assert plan["skill"] == "FIGHT_QUEST_TARGET"
+    assert plan["skill_card"] == "quest_combat"
+
+
+def test_local_coach_common_quest_step_does_not_invoke_vlm():
+    bus = Bus()
+    coach = LocalSmolVLMCoachWorker(bus)
+
+    def should_not_run(*args, **kwargs):
+        raise AssertionError("local VLM should not run for obvious green waypoint")
+
+    coach._call_gemini = should_not_run
+    bus.state("action.meta").write({
+        "autonomy": True,
+        "gpo_loadout": "default_melee",
+    })
+    bus.state("action.control_catalog").write(_catalog())
+    bus.state("quest.state").write({"phase": "travel"})
+    bus.state("world.observation").write({
+        "target": {
+            "type": "recommended_quest_waypoint",
+            "distance": 0.30,
+            "direction": -0.5,
+        },
+        "player": {"health": 1.0, "stamina": 1.0},
+        "ui": {"dialogue": False, "menu": False},
+        "notes": {"recommended_waypoint_detected": True},
+    })
+    coach.step()
+    env = bus.state("coach.plan").read()
+    assert env is not None
+    assert env.payload["skill"] == "NAVIGATE_OBJECTIVE"
+    assert env.payload["provider"] == "procedural_skill_router"
+    assert env.payload["local_vlm_used"] is False
+    assert coach.stats["calls"] == 0
