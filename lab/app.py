@@ -43,7 +43,7 @@ from .bus import Bus, BusMode
 from .capture.base import (CaptureAdapter, SyntheticCapture,
                            create_windows_capture)
 from .clock import SHARED_CLOCK
-from .coach import SemanticCoachWorker
+from .coach import SemanticCoachWorker, LocalSmolVLMCoachWorker
 from .dashboard.dashboard import (
     DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
 from .evidence import EvidenceRecorder
@@ -71,7 +71,9 @@ class DigitalFlyLab:
                  quest_autonomy: bool = False,
                  gpo_loadout: str = "default_melee",
                  semantic_coach: bool = False,
+                 coach_provider: str = "gemini",
                  coach_model: str | None = None,
+                 coach_url: str | None = None,
                  coach_hz: float = 1.0,
                  dashboard: bool = True,
                  dashboard_renderer: str = "text",
@@ -165,11 +167,24 @@ class DigitalFlyLab:
             movement_only=movement_only,
             questing=self.quest_autonomy)
 
-        self.semantic_coach = (
-            SemanticCoachWorker(
-                self.bus, target_hz=float(coach_hz),
-                model=coach_model)
-            if self.quest_autonomy and semantic_coach else None)
+        if self.quest_autonomy and semantic_coach:
+            provider = str(coach_provider or "gemini").strip().lower()
+            if provider == "local":
+                self.semantic_coach = LocalSmolVLMCoachWorker(
+                    self.bus,
+                    target_hz=float(coach_hz),
+                    model=coach_model,
+                    base_url=coach_url)
+            elif provider == "gemini":
+                self.semantic_coach = SemanticCoachWorker(
+                    self.bus,
+                    target_hz=float(coach_hz),
+                    model=coach_model)
+            else:
+                raise ValueError(
+                    f"unknown semantic coach provider {coach_provider!r}")
+        else:
+            self.semantic_coach = None
         self.quest_supervisor = (
             QuestCombatSupervisor(
                 self.bus, self.value, target_hz=4.0,
@@ -247,13 +262,16 @@ class DigitalFlyLab:
             "gpo_loadout": self.gpo_loadout,
             "semantic_coach": {
                 "requested": bool(self.semantic_coach is not None),
-                "provider": "gemini" if self.semantic_coach else None,
+                "provider": (
+                    getattr(self.semantic_coach, "provider", None)
+                    if self.semantic_coach else None),
                 "model": (
                     self.semantic_coach.model
                     if self.semantic_coach else None),
-                "enabled": (
-                    bool(self.semantic_coach.api_key)
-                    if self.semantic_coach else False),
+                "base_url": (
+                    getattr(self.semantic_coach, "base_url", None)
+                    if self.semantic_coach else None),
+                "enabled": bool(self.semantic_coach is not None),
             },
             "runtime": self.brain.runtime.runtime_label,
             "chunk_ms": self.brain.chunk_ms,
@@ -757,9 +775,14 @@ def main(argv=None) -> int:
     ap.add_argument("--gpo-loadout", default="default_melee",
                     help="observed equipped GPO loadout profile")
     ap.add_argument("--semantic-coach", action="store_true",
-                    help="low-rate Gemini multimodal game coach (quest mode)")
+                    help="low-rate multimodal game coach (quest mode)")
+    ap.add_argument("--coach-provider",
+                    choices=["gemini", "local"], default="gemini",
+                    help="semantic coach provider")
     ap.add_argument("--coach-model", default=None,
-                    help="Gemini model id; defaults to current Flash-Lite")
+                    help="provider model id")
+    ap.add_argument("--coach-url", default=None,
+                    help="local coach OpenAI-compatible base URL")
     ap.add_argument("--coach-hz", type=float, default=1.0,
                     help="coach polling rate; API calls are event/rate gated")
     args = ap.parse_args(argv)
@@ -794,7 +817,9 @@ def main(argv=None) -> int:
                         quest_autonomy=bool(args.quest_autonomy),
                         gpo_loadout=args.gpo_loadout,
                         semantic_coach=bool(args.semantic_coach),
+                        coach_provider=args.coach_provider,
                         coach_model=args.coach_model,
+                        coach_url=args.coach_url,
                         coach_hz=args.coach_hz,
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
                         brain_hz=args.brain_hz, fast_hz=args.fast_hz,
