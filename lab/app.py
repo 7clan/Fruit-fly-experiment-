@@ -43,6 +43,7 @@ from .bus import Bus, BusMode
 from .capture.base import (CaptureAdapter, SyntheticCapture,
                            create_windows_capture)
 from .clock import SHARED_CLOCK
+from .coach import SemanticCoachWorker
 from .dashboard.dashboard import (
     DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
 from .evidence import EvidenceRecorder
@@ -69,6 +70,9 @@ class DigitalFlyLab:
                  movement_only: bool = False,
                  quest_autonomy: bool = False,
                  gpo_loadout: str = "default_melee",
+                 semantic_coach: bool = False,
+                 coach_model: str | None = None,
+                 coach_hz: float = 1.0,
                  dashboard: bool = True,
                  dashboard_renderer: str = "text",
                  brain_hz: float = 10.0,
@@ -161,6 +165,11 @@ class DigitalFlyLab:
             movement_only=movement_only,
             questing=self.quest_autonomy)
 
+        self.semantic_coach = (
+            SemanticCoachWorker(
+                self.bus, target_hz=float(coach_hz),
+                model=coach_model)
+            if self.quest_autonomy and semantic_coach else None)
         self.quest_supervisor = (
             QuestCombatSupervisor(
                 self.bus, self.value, target_hz=4.0,
@@ -206,6 +215,8 @@ class DigitalFlyLab:
             self.dashboard = None
         self.workers = [self.fast_vision, self.heavy_vision, self.planner,
                         self.encoder, self.brain] + (
+                            [self.semantic_coach]
+                            if self.semantic_coach else []) + (
                             [self.quest_supervisor]
                             if self.quest_supervisor else []) + [
                         self.executor, self.replay] + (
@@ -234,6 +245,16 @@ class DigitalFlyLab:
                 else "navigation_v1" if self.autonomy_requested
                 else "passive"),
             "gpo_loadout": self.gpo_loadout,
+            "semantic_coach": {
+                "requested": bool(self.semantic_coach is not None),
+                "provider": "gemini" if self.semantic_coach else None,
+                "model": (
+                    self.semantic_coach.model
+                    if self.semantic_coach else None),
+                "enabled": (
+                    bool(self.semantic_coach.api_key)
+                    if self.semantic_coach else False),
+            },
             "runtime": self.brain.runtime.runtime_label,
             "chunk_ms": self.brain.chunk_ms,
             "capture_config": {
@@ -259,6 +280,9 @@ class DigitalFlyLab:
                 "planner": self.planner.governor.target_hz,
                 "encoder": self.encoder.governor.target_hz,
                 "executor": self.executor.governor.target_hz,
+                "coach": (
+                    self.semantic_coach.governor.target_hz
+                    if self.semantic_coach is not None else None),
                 "replay": self.replay.governor.target_hz,
                 "evidence": (
                     self.evidence.governor.target_hz
@@ -449,6 +473,10 @@ class DigitalFlyLab:
         hwnd = int(target.get("handle") or 0)
         if hwnd <= 0:
             raise RuntimeError("cannot arm navigation: captured HWND missing")
+        target_setter = getattr(
+            self.executor.backend, "set_target_window", None)
+        if target_setter is not None:
+            target_setter(hwnd)
         focused = bool(focus_window(hwnd))
         if not focused and self.dashboard_ui is None:
             raise RuntimeError(
@@ -617,6 +645,10 @@ class DigitalFlyLab:
             "workers": {w.name: dict(w.stats) for w in self.workers},
             "memory": self.memory.stats(),
             "input_backend": self.executor.backend.backend_health(),
+            "coach_state": (
+                (lambda e: (e.payload if e is not None else None))(
+                    self.bus.state("coach.plan").read())
+                if self.semantic_coach is not None else None),
             "quest_state": (
                 (self.bus.state("quest.state").read().payload
                  if self.bus.state("quest.state").read() is not None
@@ -648,11 +680,16 @@ class DigitalFlyLab:
         quest_phase = (
             (qenv.payload or {}).get("phase", "-")
             if qenv is not None else "-")
+        cenv = self.bus.state("coach.plan").read()
+        coach_skill = (
+            (cenv.payload or {}).get("skill", "-")
+            if cenv is not None else "-")
         return (f"[lab] frames={self.capture.frames.published} "
                 f"brain_chunks={self.brain.stats['steps']} "
                 f"runtime={self.brain.runtime.runtime_label} "
                 f"intention={intention} "
                 f"quest_phase={quest_phase} "
+                f"coach={coach_skill} "
                 f"inputs={self.executor.stats.get('inputs_emitted', 0)} "
                 f"send_ok={self.executor.backend.backend_health().get('sendinput_successes', 0)} "
                 f"send_fail={self.executor.backend.backend_health().get('sendinput_failures', 0)} "
@@ -719,6 +756,12 @@ def main(argv=None) -> int:
                     help="Gate-7: low-power quest + starter-PvE hybrid agent")
     ap.add_argument("--gpo-loadout", default="default_melee",
                     help="observed equipped GPO loadout profile")
+    ap.add_argument("--semantic-coach", action="store_true",
+                    help="low-rate Gemini multimodal game coach (quest mode)")
+    ap.add_argument("--coach-model", default=None,
+                    help="Gemini model id; defaults to current Flash-Lite")
+    ap.add_argument("--coach-hz", type=float, default=1.0,
+                    help="coach polling rate; API calls are event/rate gated")
     args = ap.parse_args(argv)
 
     if args.autonomy:
@@ -731,6 +774,8 @@ def main(argv=None) -> int:
     if ((args.movement_only_autonomy or args.quest_autonomy)
             and args.capture != "windows"):
         raise SystemExit("active GPO autonomy requires Windows capture")
+    if args.semantic_coach and not args.quest_autonomy:
+        raise SystemExit("--semantic-coach requires --quest-autonomy")
 
     if args.self_test:
         res = self_test(runtime_kind=args.runtime)
@@ -748,6 +793,9 @@ def main(argv=None) -> int:
                         movement_only=bool(args.movement_only_autonomy),
                         quest_autonomy=bool(args.quest_autonomy),
                         gpo_loadout=args.gpo_loadout,
+                        semantic_coach=bool(args.semantic_coach),
+                        coach_model=args.coach_model,
+                        coach_hz=args.coach_hz,
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
                         brain_hz=args.brain_hz, fast_hz=args.fast_hz,
                         heavy_hz=args.heavy_hz,
