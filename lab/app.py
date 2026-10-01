@@ -604,10 +604,15 @@ class DigitalFlyLab:
     def status_line(self) -> str:
         brain = self.brain.current or {}
         intention = (brain.get("intention") or {}).get("name", "-")
+        qenv = self.bus.state("quest.state").read()
+        quest_phase = (
+            (qenv.payload or {}).get("phase", "-")
+            if qenv is not None else "-")
         return (f"[lab] frames={self.capture.frames.published} "
                 f"brain_chunks={self.brain.stats['steps']} "
                 f"runtime={self.brain.runtime.runtime_label} "
                 f"intention={intention} "
+                f"quest_phase={quest_phase} "
                 f"inputs={self.executor.stats.get('inputs_emitted', 0)} "
                 f"send_ok={self.executor.backend.backend_health().get('sendinput_successes', 0)} "
                 f"send_fail={self.executor.backend.backend_health().get('sendinput_failures', 0)} "
