@@ -32,7 +32,8 @@ class Worker:
         self.stop_event = threading.Event()
         self._thread: threading.Thread | None = None
         self.stats = {"steps": 0, "errors": 0, "last_error": None,
-                      "last_step_ms": None, "started": False}
+                      "last_step_ms": None, "work_ms_total": 0.0,
+                      "max_step_ms": 0.0, "started": False}
 
     # -- contract -----------------------------------------------------------
     def step(self) -> None:
@@ -68,7 +69,12 @@ class Worker:
                 except Exception as e:  # noqa: BLE001 — keep the loop alive
                     self.stats["errors"] += 1
                     self.stats["last_error"] = repr(e)
-                self.stats["last_step_ms"] = self.clock.elapsed_ms(t0)
+                step_ms = self.clock.elapsed_ms(t0)
+                self.stats["last_step_ms"] = step_ms
+                self.stats["work_ms_total"] = round(
+                    float(self.stats.get("work_ms_total", 0.0)) + step_ms, 3)
+                self.stats["max_step_ms"] = max(
+                    float(self.stats.get("max_step_ms", 0.0)), step_ms)
         except Exception as e:  # startup failures must be visible in reports
             self.stats["errors"] += 1
             self.stats["last_error"] = repr(e)
@@ -100,7 +106,12 @@ class Worker:
             except Exception as e:  # noqa: BLE001
                 self.stats["errors"] += 1
                 self.stats["last_error"] = repr(e)
-            self.stats["last_step_ms"] = self.clock.elapsed_ms(t0)
+            step_ms = self.clock.elapsed_ms(t0)
+            self.stats["last_step_ms"] = step_ms
+            self.stats["work_ms_total"] = round(
+                float(self.stats.get("work_ms_total", 0.0)) + step_ms, 3)
+            self.stats["max_step_ms"] = max(
+                float(self.stats.get("max_step_ms", 0.0)), step_ms)
         self.on_stop()
 
     def achieved_hz(self, elapsed_s: float) -> float:
