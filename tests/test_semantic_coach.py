@@ -1,6 +1,7 @@
 from lab.bus import Bus
 from lab.coach.semantic_coach import SemanticCoachWorker
 from lab.coach.local_smolvlm import LocalSmolVLMCoachWorker
+from lab.coach.gpo_skills import select_skill_cards, render_skill_cards
 from lab.coach.probe import choose_model
 from lab.action.quest_combat_supervisor import QuestCombatSupervisor
 from lab.world.value import ValueTable
@@ -272,3 +273,26 @@ def test_local_smolvlm_prompt_stays_compact_for_tiny_model():
     assert "SMALL LOCAL VISUAL COACH" in prompt
     assert "NAVIGATE_OBJECTIVE" in prompt
     assert len(prompt) < 18000
+
+
+
+def test_skill_cards_select_quest_accept_for_yellow_marker():
+    cards = select_skill_cards(
+        '{"notes":{"yellow_quest":true},"target":{"type":"quest_marker"}}')
+    ids = [card.skill_id for card in cards]
+    assert "quest_accept" in ids
+
+
+def test_skill_cards_select_combat_for_red_quest_enemy():
+    cards = select_skill_cards(
+        '{"target":{"type":"quest_enemy_marker"},"health":0.8}')
+    ids = [card.skill_id for card in cards]
+    assert "quest_combat" in ids
+
+
+def test_skill_cards_include_failure_recovery_not_just_action_names():
+    text = render_skill_cards(
+        '{"target":{"type":"recommended_quest_waypoint"},"stuck":true}')
+    assert "IF FAIL:" in text
+    assert "obstacle_recovery" in text
+    assert "quest_travel" in text
