@@ -25,6 +25,7 @@ from typing import Any
 
 from ..clock import SHARED_CLOCK
 from ..worker import Worker
+from .wiki import GPOWikiRetriever
 
 
 DEFAULT_MODEL = "gemini-3.1-flash-lite"
@@ -129,6 +130,10 @@ class SemanticCoachWorker(Worker):
             self.profile = {"claims": {}}
         self.profile.setdefault("claims", {})
 
+        self.wiki = GPOWikiRetriever(
+            root / "runtime_state" / "gpo_wiki_cache.json",
+            timeout_s=min(6.0, self.timeout_s))
+
         self._last_call_ns = 0
         self._last_signature = None
         self._previous_image_b64 = None
@@ -145,6 +150,10 @@ class SemanticCoachWorker(Worker):
             "api_ms_total": 0.0,
             "last_plan": None,
             "profile_claims": len(self.profile.get("claims", {})),
+            "wiki_queries": 0,
+            "wiki_hits": 0,
+            "wiki_errors": 0,
+            "refinement_calls": 0,
             "disabled_reason": (
                 None if self.api_key else "GEMINI_API_KEY_missing"),
         })
@@ -200,6 +209,7 @@ class SemanticCoachWorker(Worker):
         self, obs: dict, quest: dict, brain: dict,
         catalog: dict, action_meta: dict,
         previous_plan: dict,
+        retrieved_context: str = "",
     ) -> str:
         controls = [
             {
@@ -224,6 +234,8 @@ class SemanticCoachWorker(Worker):
             "previous_coach_plan": _compact(previous_plan, 900),
             "persistent_character_profile": _compact(
                 self.profile, 2400),
+            "on_demand_wiki_context": (
+                retrieved_context[:6500] if retrieved_context else ""),
         }
         return f"""You are the SEMANTIC COACH for a Grand Piece Online
 autonomous research agent.  You understand game meaning and choose ONE
@@ -267,6 +279,7 @@ Return ONLY a JSON object with exactly these fields:
   "confidence": 0.0,
   "explanation": "one short sentence",
   "next_after_success": "one short next step",
+  "knowledge_query": "short GPO wiki search phrase or empty string",
   "memory_updates": [
     {{
       "key": "one of: level,peli,island,active_quest,fruit,fighting_style,primary_weapon,ship,buso_haki,observation_haki,equipment,hotbar,stat_build",
@@ -446,6 +459,8 @@ Return ONLY a JSON object with exactly these fields:
             "explanation": str(raw.get("explanation") or "")[:300],
             "next_after_success": str(
                 raw.get("next_after_success") or "")[:240],
+            "knowledge_query": str(
+                raw.get("knowledge_query") or "")[:120],
             "memory_updates": self._validated_memory_updates(
                 raw.get("memory_updates")),
             "ENGINEERED": True,
@@ -511,6 +526,39 @@ Return ONLY a JSON object with exactly these fields:
         try:
             raw = self._call_gemini(
                 prompt, image_b64, previous_image_b64=previous_image)
+
+            # Rare/detail-heavy questions are looked up on the public GPO
+            # MediaWiki API only when the model explicitly asks.  This avoids
+            # shipping a giant stale encyclopedia on every cheap vision call.
+            query = str(raw.get("knowledge_query") or "").strip()[:120]
+            if query:
+                self.stats["wiki_queries"] += 1
+                try:
+                    wiki_context = self.wiki.lookup(query)
+                except Exception as wiki_exc:
+                    wiki_context = ""
+                    self.stats["wiki_errors"] += 1
+                    self.events.publish({
+                        "kind": "coach_wiki_error",
+                        "ts_ns": SHARED_CLOCK.now_ns(),
+                        "query": query,
+                        "error": repr(wiki_exc),
+                    })
+                if wiki_context:
+                    self.stats["wiki_hits"] += 1
+                    refine_prompt = self._prompt(
+                        obs, quest, brain, catalog, meta, previous_plan,
+                        retrieved_context=wiki_context)
+                    refine_prompt += (
+                        "\n\nThis is the refinement pass. Use the retrieved "
+                        "wiki context if relevant and return the FINAL one-step "
+                        "plan. Do not request another lookup.")
+                    raw = self._call_gemini(
+                        refine_prompt, image_b64,
+                        previous_image_b64=previous_image)
+                    self.stats["calls"] += 1
+                    self.stats["refinement_calls"] += 1
+
             plan = self._validate_plan(raw, catalog)
         except (urllib.error.URLError, urllib.error.HTTPError,
                 TimeoutError, json.JSONDecodeError, ValueError,
