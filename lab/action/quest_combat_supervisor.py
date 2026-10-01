@@ -41,6 +41,8 @@ class QuestCombatSupervisor(Worker):
         self._last_command_ns = 0
         self._last_interact_ns = 0
         self._last_search_ns = 0
+        self._last_center_ns = 0
+        self._last_sprint_ns = 0
         self._last_block_ns = 0
         self._last_attack_ns = 0
         self._last_e_ns = 0
@@ -59,6 +61,8 @@ class QuestCombatSupervisor(Worker):
             "jumps": 0,
             "climbs": 0,
             "searches": 0,
+            "camera_recenters": 0,
+            "sprints": 0,
             "defense_updates": 0,
         })
 
@@ -248,6 +252,44 @@ class QuestCombatSupervisor(Worker):
                 self._publish_state(
                     now, target, health, stamina, fly_intention)
                 return
+
+        # Camera is part of the fly's sensory apparatus, not a locomotor
+        # decision. Keep a visible navigation cue near the center so the slow
+        # canonical brain receives a stable bearing instead of requiring the
+        # user to drag the camera by hand. This never chooses W/A/D/S.
+        if (target_type in {
+                "recommended_quest_waypoint", "quest_marker",
+                "quest_enemy_marker"}
+                and direction is not None
+                and abs(direction) >= 0.20
+                and now - self._last_center_ns > int(0.85e9)
+                and now - self._last_damage_ns > int(0.65e9)):
+            dx = int(max(-70, min(70, direction * 90.0)))
+            if abs(dx) >= 14:
+                self._emit(
+                    "SEARCH_CAMERA", now,
+                    reason="recenter_visible_navigation_cue", dx=dx)
+                self._last_center_ns = now
+                self.stats["camera_recenters"] += 1
+                self._phase = "camera_recenter"
+                self._publish_state(
+                    now, target, health, stamina, fly_intention)
+                return
+
+        # Long unobstructed travel can use the game's sprint affordance, but
+        # only while the biological decoder is already asking to APPROACH.
+        if (target_type == "recommended_quest_waypoint"
+                and fly_intention == "APPROACH"
+                and proximity is not None and proximity < 0.45
+                and now - self._last_sprint_ns > int(3.0e9)
+                and now - self._last_damage_ns > int(1.0e9)):
+            self._emit("SPRINT", now, reason="far_waypoint_approach")
+            self._last_sprint_ns = now
+            self.stats["sprints"] += 1
+            self._phase = "travel_sprint"
+            self._publish_state(
+                now, target, health, stamina, fly_intention)
+            return
 
         # Movement primitive recovery remains subordinate to the current
         # biological locomotor intention.
