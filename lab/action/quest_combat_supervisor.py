@@ -403,33 +403,9 @@ class QuestCombatSupervisor(Worker):
                 now, target, health, stamina, fly_intention)
             return
 
-        # Camera is part of the fly's sensory apparatus, not a locomotor
-        # decision. Keep a visible navigation cue near the center so the slow
-        # canonical brain receives a stable bearing instead of requiring the
-        # user to drag the camera by hand. This never chooses W/A/D/S.
-        if (target_type in {
-                "recommended_quest_waypoint", "quest_marker",
-                "quest_enemy_marker"}
-                and direction is not None
-                and abs(direction) >= 0.65
-                # Do not swing the camera while the canonical decoder is
-                # already asking for a turn. On the target laptop a 50 ms
-                # biological chunk takes several wall-seconds; aggressive
-                # recentering during that interval makes its bearing stale.
-                and fly_intention in {"STOP", "APPROACH"}
-                and now - self._last_center_ns > int(2.5e9)
-                and now - self._last_damage_ns > int(0.65e9)):
-            dx = int(max(-70, min(70, direction * 90.0)))
-            if abs(dx) >= 14:
-                self._emit(
-                    "SEARCH_CAMERA", now,
-                    reason="recenter_visible_navigation_cue", dx=dx)
-                self._last_center_ns = now
-                self.stats["camera_recenters"] += 1
-                self._phase = "camera_recenter"
-                self._publish_state(
-                    now, target, health, stamina, fly_intention)
-                return
+        # The autonomous agent never moves the user's camera. Character
+        # steering and semantic recovery use W/A/D/S, jump/climb/dash and
+        # reobservation only.
 
         # Long unobstructed travel can use the game's sprint affordance, but
         # only while the biological decoder is already asking to APPROACH.
@@ -520,15 +496,8 @@ class QuestCombatSupervisor(Worker):
             self._phase = "travel"
 
         else:
-            self._phase = "search"
-            # If the tracker disappears, slowly scan the camera instead of
-            # requiring the user to move it by hand.
-            if (now - self._last_search_ns > int(1.5e9)
-                    and now - self._last_damage_ns > int(1.0e9)):
-                self._emit(
-                    "SEARCH_CAMERA", now, reason="no_navigation_target",
-                    dx=32)
-                self._last_search_ns = now
-                self.stats["searches"] += 1
+            # No objective in view: wait for the semantic coach / next game
+            # observation instead of taking over the user's camera.
+            self._phase = "await_visible_target"
 
         self._publish_state(now, target, health, stamina, fly_intention)
