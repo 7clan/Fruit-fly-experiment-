@@ -199,6 +199,11 @@ class DigitalFlyLab:
                            else "ACTIVE")),
             "runtime": self.brain.runtime.runtime_label,
             "chunk_ms": self.brain.chunk_ms,
+            "capture_config": {
+                "fps": float(getattr(self.capture, "target_fps",
+                                     getattr(self.capture, "fps", 0.0))),
+                "downsample": int(getattr(self.capture, "downsample", 1)),
+            },
             "low_power_profile": bool(self.autonomy_requested),
             "worker_targets_hz": {
                 "fast": self.fast_vision.governor.target_hz,
