@@ -134,6 +134,8 @@ class SemanticCoachWorker(Worker):
         self.wiki = GPOWikiRetriever(
             root / "runtime_state" / "gpo_wiki_cache.json",
             timeout_s=min(6.0, self.timeout_s))
+        self.allow_remote_wiki = True
+        self.provider = "gemini"
 
         self._last_call_ns = 0
         self._last_signature = None
@@ -501,7 +503,7 @@ Return ONLY a JSON object with exactly these fields:
         return {
             "plan_id": self._plan_id,
             "ts_ns": SHARED_CLOCK.now_ns(),
-            "provider": "gemini_openai_compat",
+            "provider": self.provider,
             "model": self.model,
             "scene": str(raw.get("scene") or "unknown")[:96],
             "objective": str(raw.get("objective") or "")[:240],
@@ -594,7 +596,7 @@ Return ONLY a JSON object with exactly these fields:
             # MediaWiki API only when the model explicitly asks.  This avoids
             # shipping a giant stale encyclopedia on every cheap vision call.
             query = str(raw.get("knowledge_query") or "").strip()[:120]
-            if query:
+            if query and self.allow_remote_wiki:
                 self.stats["wiki_queries"] += 1
                 try:
                     wiki_context = self.wiki.lookup(query)
