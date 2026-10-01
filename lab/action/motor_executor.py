@@ -389,14 +389,16 @@ class MotorExecutor(Worker):
                 return ConcreteAction(
                     intention="TURN_LEFT", ability_id="",
                     bindings=["key:W", "key:A"], hold_s=2.25,
-                    mouse_dx=-60, mouse_dy=0,
-                    notes={"source": "questing_fly_navigation"})
+                    mouse_dx=0, mouse_dy=0,
+                    notes={"source": "questing_fly_navigation",
+                           "camera_policy": "supervisor_only"})
             if intention.name == "TURN_RIGHT":
                 return ConcreteAction(
                     intention="TURN_RIGHT", ability_id="",
                     bindings=["key:W", "key:D"], hold_s=2.25,
-                    mouse_dx=60, mouse_dy=0,
-                    notes={"source": "questing_fly_navigation"})
+                    mouse_dx=0, mouse_dy=0,
+                    notes={"source": "questing_fly_navigation",
+                           "camera_policy": "supervisor_only"})
             if intention.name == "APPROACH":
                 try:
                     wall_s = float(brain_out.get("chunk_wall_s", 0.0))
@@ -548,7 +550,7 @@ class MotorExecutor(Worker):
             return "navigation_target_not_visible"
 
         # Positive bearing = target right, negative = target left.
-        deadband = 0.15  # ~8.6 degrees; ignore tiny detector jitter.
+        deadband = 0.25  # ~14 degrees; tolerate detector/camera jitter.
         if action.intention == "TURN_LEFT" and direction > deadband:
             return "turn_left_conflicts_with_target_right"
         if action.intention == "TURN_RIGHT" and direction < -deadband:
