@@ -702,9 +702,15 @@ class GPOHeuristicFastVision:
             if not (min_red_obj_area <= rarea <= max_red_obj_area):
                 continue
             aspect = rw / max(float(rh), 1.0)
-            if not (0.62 <= aspect <= 1.55):
+            if not (0.72 <= aspect <= 1.38):
                 continue
-            if rw < 4 or rh < 4:
+            if rw < 5 or rh < 5:
+                continue
+            fill_ratio = float(rarea) / max(float(rw * rh), 1.0)
+            # Red Recommended-Quest arrows are thin/triangular and were
+            # visible in the user's live screenshots even before a kill
+            # objective. A real objective dot is much more compact/filled.
+            if fill_ratio < 0.58:
                 continue
             sx0 = max(0, rx - 2 * rw)
             sx1 = min(w, rx + 3 * rw)
