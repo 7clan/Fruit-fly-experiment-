@@ -43,7 +43,7 @@ if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
     Write-Host "Semantic coach API key: configured." -ForegroundColor Green
 }
 $coachModel = $env:GEMINI_MODEL
-if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-2.5-flash-lite" }
+if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.5-flash-lite" }
 Write-Host "Coach model: $coachModel" -ForegroundColor DarkCyan
 
 & $mainPython -m lab.app `
