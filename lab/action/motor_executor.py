@@ -227,14 +227,14 @@ class MotorExecutor(Worker):
         intention = Intention.from_dict(out["intention"])
         action = self._materialize(out, intention)
         brain_out_ts = int(out.get("ts_ns", now))
-        self.action_state.write(action.to_dict() | {
-            "ts_ns": now, "brain_out_ts_ns": brain_out_ts,
-            "autonomy": self.autonomy_enabled,
-            "backend": self.backend.name,
-            "backend_health": self.backend.backend_health()}, ts_ns=now)
         # one decision event per brain output (exact latency chain in replay)
         new_brain_decision = brain_out_ts != self._last_brain_out_ts
         if new_brain_decision:
+            self.action_state.write(action.to_dict() | {
+                "ts_ns": now, "brain_out_ts_ns": brain_out_ts,
+                "autonomy": self.autonomy_enabled,
+                "backend": self.backend.name,
+                "backend_health": self.backend.backend_health()}, ts_ns=now)
             self._last_brain_out_ts = brain_out_ts
             self.inputs.publish({
                 "kind": "decision", "ts_ns": now,
