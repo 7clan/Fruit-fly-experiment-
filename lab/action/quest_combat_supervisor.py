@@ -70,6 +70,7 @@ class QuestCombatSupervisor(Worker):
             "coach_commands": 0,
             "coach_plans_seen": 0,
             "semantic_steers": 0,
+            "recovery_dashes": 0,
         })
 
     def _armed(self) -> bool:
@@ -168,8 +169,14 @@ class QuestCombatSupervisor(Worker):
             self._stall_recoveries = 0
             return None
 
-        locomoting = fly_intention in {
-            "TURN_LEFT", "TURN_RIGHT", "APPROACH", "RETREAT"}
+        coach_env = self.coach.read()
+        coach_skill = str(
+            ((coach_env.payload or {}).get("skill") if coach_env else "")
+            or "").upper()
+        locomoting = (
+            fly_intention in {
+                "TURN_LEFT", "TURN_RIGHT", "APPROACH", "RETREAT"}
+            or coach_skill == "NAVIGATE_OBJECTIVE")
         # Do not interpret every stall as a climbable wall. The live evidence
         # showed 30 blind CLIMB commands while the avatar was simply pinned
         # against scenery. Use a bounded recovery sequence instead.
@@ -534,7 +541,7 @@ class QuestCombatSupervisor(Worker):
             elif recovery == "CLIMB":
                 self.stats["climbs"] += 1
             else:
-                self.stats["evades"] += 1
+                self.stats["recovery_dashes"] += 1
             self._publish_state(
                 now, target, health, stamina, fly_intention)
             return
