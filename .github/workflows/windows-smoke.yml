@@ -40,6 +40,7 @@ jobs:
           tests/test_navigation_mapping.py
           tests/test_windows_navigation_backend.py
           tests/test_brian_count_monitor.py
+          tests/test_dashboard_quest_mode.py
           tests/test_gpo_action_surface.py
           tests/test_quest_pve.py
           tests/test_gpo_controls.py
