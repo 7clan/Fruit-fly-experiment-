@@ -332,14 +332,24 @@ def test_procedural_skill_router_handles_close_red_enemy_without_vlm():
     assert plan["skill_card"] == "quest_combat"
 
 
-def test_local_coach_common_quest_step_does_not_invoke_vlm():
+def test_local_coach_common_quest_step_uses_text_model_skill_selector():
     bus = Bus()
     coach = LocalSmolVLMCoachWorker(bus)
 
-    def should_not_run(*args, **kwargs):
-        raise AssertionError("local VLM should not run for obvious green waypoint")
+    def fake_local_model(prompt, image_b64, previous_image_b64=None):
+        assert image_b64 is None
+        assert "LOCAL GPO SKILL SELECTOR" in prompt
+        return {
+            "scene": "quest_travel",
+            "objective": "follow green objective",
+            "target": "green waypoint",
+            "skill": "NAVIGATE_OBJECTIVE",
+            "confidence": 0.93,
+            "explanation": "The waypoint is visible and travel is the active skill.",
+            "next_after_success": "reobserve on target change",
+        }
 
-    coach._call_gemini = should_not_run
+    coach._call_gemini = fake_local_model
     bus.state("action.meta").write({
         "autonomy": True,
         "gpo_loadout": "default_melee",
@@ -351,6 +361,7 @@ def test_local_coach_common_quest_step_does_not_invoke_vlm():
             "type": "recommended_quest_waypoint",
             "distance": 0.30,
             "direction": -0.5,
+            "confidence": 0.92,
         },
         "player": {"health": 1.0, "stamina": 1.0},
         "ui": {"dialogue": False, "menu": False},
@@ -360,6 +371,7 @@ def test_local_coach_common_quest_step_does_not_invoke_vlm():
     env = bus.state("coach.plan").read()
     assert env is not None
     assert env.payload["skill"] == "NAVIGATE_OBJECTIVE"
-    assert env.payload["provider"] == "procedural_skill_router"
-    assert env.payload["local_vlm_used"] is False
-    assert coach.stats["calls"] == 0
+    assert env.payload["provider"] == "local_smolvlm2_text_skill"
+    assert env.payload["local_vlm_used"] is True
+    assert coach.stats["calls"] == 1
+    assert coach.stats["text_skill_calls"] == 1
