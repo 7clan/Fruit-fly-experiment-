@@ -19,17 +19,18 @@ boundary explicit.
 
 ## Cloud model
 
-Default for new projects: `gemini-3.5-flash-lite`.
+Default for new projects: `gemini-3.1-flash-lite`.
 
 Rationale:
-- multimodal image + text input;
+- stable multimodal image + text input;
 - structured JSON output;
 - no local model load on the i7-5500U / 8 GB target machine;
 - low-rate calls, normally no more often than every 8 seconds;
-- Google currently directs new Gemini projects toward 3.5 Flash-Lite.
+- lower current paid rate than 3.5 Flash-Lite while remaining available as
+  a stable Gemini 3 model.
 
-Existing Gemini projects that still have 2.5 access may set
-`GEMINI_MODEL=gemini-2.5-flash-lite` for the lower token price.
+Gemini 2.5 Flash-Lite has an even lower legacy token price but Google limits
+2.5 access for new projects, so it is not the default.
 
 The API key is read only from `GEMINI_API_KEY`; setup stores it in the
 Windows USER environment, never the repository.
