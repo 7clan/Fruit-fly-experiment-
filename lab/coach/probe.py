@@ -1,8 +1,9 @@
 """Cheap Gemini semantic-coach preflight.
 
-The preflight deliberately runs before the expensive canonical fly brain.
-It discovers which Flash-Lite models this exact API key/project can use,
-selects a compatible one, then sends a tiny generateContent request.
+Uses Gemini's documented OpenAI-compatible REST endpoint with
+Authorization: Bearer.  This is important for current AI Studio auth keys:
+new AI Studio keys are authorization keys, and the OpenAI-compatible surface
+provides a clean, documented bearer-auth path.
 
 No game screenshot is sent.
 """
@@ -21,11 +22,12 @@ PREFERRED_MODELS = (
     "gemini-3.5-flash-lite",
     "gemini-3.1-flash-lite",
     "gemini-2.5-flash-lite",
+    "gemini-3.8-flash",
 )
 
 
-def _http_json(url: str, key: str, *, data: dict | None = None,
-               timeout_s: float = 10.0) -> dict:
+def _request(url: str, key: str, *, data: dict | None = None,
+             timeout_s: float = 10.0) -> dict:
     raw = None if data is None else json.dumps(data).encode("utf-8")
     req = urllib.request.Request(
         url,
@@ -33,7 +35,8 @@ def _http_json(url: str, key: str, *, data: dict | None = None,
         headers={
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "x-goog-api-key": key,
+            "Authorization": f"Bearer {key}",
+            "User-Agent": "DigitalFlyLab/1.0",
         },
         method="POST" if data is not None else "GET",
     )
@@ -41,24 +44,15 @@ def _http_json(url: str, key: str, *, data: dict | None = None,
         return json.loads(resp.read().decode("utf-8"))
 
 
-def available_generate_models(key: str, timeout_s: float = 10.0) -> set[str]:
-    payload = _http_json(
-        "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
+def openai_models(key: str, timeout_s: float = 10.0) -> set[str]:
+    payload = _request(
+        "https://generativelanguage.googleapis.com/v1beta/openai/models",
         key, timeout_s=timeout_s)
     out = set()
-    for rec in payload.get("models") or []:
-        methods = {str(x).lower() for x in
-                   (rec.get("supportedGenerationMethods") or [])}
-        if "generatecontent" not in methods:
-            continue
-        name = str(rec.get("name") or "")
-        if name.startswith("models/"):
-            name = name[7:]
-        if name:
-            out.add(name)
-        base = str(rec.get("baseModelId") or "")
-        if base:
-            out.add(base)
+    for rec in payload.get("data") or []:
+        mid = str(rec.get("id") or "").strip()
+        if mid:
+            out.add(mid)
     return out
 
 
@@ -73,9 +67,8 @@ def choose_model(requested: str | None, available: set[str]) -> str | None:
         if model in seen:
             continue
         seen.add(model)
-        if model in available:
+        if not available or model in available:
             return model
-    # Last-resort: prefer any available text multimodal Flash-Lite model.
     compatible = sorted(
         m for m in available
         if m.startswith("gemini-") and "flash-lite" in m
@@ -83,25 +76,32 @@ def choose_model(requested: str | None, available: set[str]) -> str | None:
     return compatible[-1] if compatible else None
 
 
-def _probe_generate(model: str, key: str, timeout_s: float) -> bool:
-    endpoint = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"{model}:generateContent")
-    # Keep this intentionally minimal. Structured-output compatibility is
-    # exercised by the runtime; this test only verifies key/model access.
-    payload = _http_json(
-        endpoint, key,
+def _probe_chat(model: str, key: str, timeout_s: float) -> bool:
+    payload = _request(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        key,
         data={
-            "contents": [{
-                "role": "user",
-                "parts": [{"text": "Reply with exactly: OK"}],
-            }],
+            "model": model,
+            "messages": [
+                {"role": "user", "content": "Reply with exactly: OK"}
+            ],
+            "max_tokens": 16,
         },
-        timeout_s=timeout_s)
-    parts = (((payload.get("candidates") or [{}])[0]
-              .get("content") or {}).get("parts") or [])
-    text = "".join(str(p.get("text") or "") for p in parts).strip()
-    return bool(text)
+        timeout_s=timeout_s,
+    )
+    choices = payload.get("choices") or []
+    if not choices:
+        return False
+    content = (((choices[0].get("message") or {}).get("content")) or "")
+    return bool(str(content).strip())
+
+
+def _error_detail(exc: urllib.error.HTTPError) -> str:
+    try:
+        raw = exc.read().decode("utf-8", errors="replace")[:1200]
+    except Exception:
+        raw = ""
+    return raw.replace("\r", " ").replace("\n", " ").strip()
 
 
 def probe(model: str | None = None,
@@ -112,56 +112,62 @@ def probe(model: str | None = None,
     if not key:
         return False, "GEMINI_API_KEY is missing", None
 
+    # Model listing is helpful but not required. If listing is unavailable,
+    # directly probe the requested/preferred models.
+    available: set[str] = set()
+    list_note = ""
     try:
-        available = available_generate_models(key, timeout_s=timeout_s)
+        available = openai_models(key, timeout_s=timeout_s)
     except urllib.error.HTTPError as exc:
-        try:
-            detail = exc.read().decode("utf-8")[:700]
-        except Exception:
-            detail = ""
-        return (
-            False,
-            f"models.list HTTP {exc.code}: {detail}",
-            None,
-        )
+        list_note = f" models_list_http={exc.code}"
     except Exception as exc:
-        return False, f"models.list {type(exc).__name__}: {exc}", None
+        list_note = f" models_list={type(exc).__name__}"
 
-    selected = choose_model(requested, available)
-    if not selected:
-        flash_lite = sorted(
-            m for m in available if "flash-lite" in m.lower())
-        return (
-            False,
-            "no compatible Flash-Lite generateContent model is available "
-            f"to this API project; visible Flash-Lite models={flash_lite[:12]}",
-            None,
-        )
+    candidates = []
+    if requested:
+        candidates.append(requested)
+    if available:
+        chosen = choose_model(requested, available)
+        if chosen:
+            candidates.append(chosen)
+    candidates.extend(PREFERRED_MODELS)
 
-    try:
-        if not _probe_generate(selected, key, timeout_s):
-            return False, f"empty response from model={selected}", selected
-    except urllib.error.HTTPError as exc:
+    seen = set()
+    errors = []
+    for candidate in candidates:
+        candidate = str(candidate or "").strip()
+        if not candidate or candidate in seen:
+            continue
+        seen.add(candidate)
+        if available and candidate not in available:
+            continue
         try:
-            detail = exc.read().decode("utf-8")[:700]
-        except Exception:
-            detail = ""
-        return (
-            False,
-            f"HTTP {exc.code} model={selected}: {detail}",
-            selected,
-        )
-    except Exception as exc:
-        return (
-            False,
-            f"{type(exc).__name__} model={selected}: {exc}",
-            selected,
-        )
+            if _probe_chat(candidate, key, timeout_s):
+                note = ""
+                if candidate != requested:
+                    note = f" fallback_from={requested}"
+                return (
+                    True,
+                    f"model={candidate}{note} transport=openai_compat{list_note}",
+                    candidate,
+                )
+            errors.append(f"{candidate}:empty_response")
+        except urllib.error.HTTPError as exc:
+            errors.append(
+                f"{candidate}:HTTP{exc.code}:{_error_detail(exc)[:350]}")
+        except Exception as exc:
+            errors.append(f"{candidate}:{type(exc).__name__}:{exc}")
 
-    note = ""
-    if selected != requested:
-        note = f" fallback_from={requested}"
-    return True, f"model={selected}{note}", selected
+    # Useful diagnostic without exposing the key.
+    key_kind = (
+        "auth_key" if key.startswith("AQ.")
+        else "standard_or_unknown_key")
+    return (
+        False,
+        f"no Gemini model succeeded via OpenAI-compatible Bearer auth "
+        f"(key_type={key_kind}). Attempts: {' | '.join(errors)[:1800]}",
+        None,
+    )
 
 
 def main(argv=None) -> int:
@@ -171,8 +177,8 @@ def main(argv=None) -> int:
     ok, detail, selected = probe(args.model)
     print(f"[coach-probe] {'OK' if ok else 'FAILED'} {detail}")
     if ok and selected:
-        # Stable machine-readable line for the PowerShell launcher.
         print(f"COACH_MODEL={selected}")
+        print("COACH_TRANSPORT=openai_compat")
     return 0 if ok else 2
 
 
