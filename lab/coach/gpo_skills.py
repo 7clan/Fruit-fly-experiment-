@@ -102,7 +102,7 @@ SKILL_CARDS: tuple[SkillCard, ...] = (
             "never retarget an ordinary player",
         ),
         (
-            "FIGHT_QUEST_TARGET", "BLOCK", "EVADE",
+            "NAVIGATE_OBJECTIVE", "FIGHT_QUEST_TARGET", "BLOCK", "EVADE",
             "USE_OBSERVED_ABILITY", "USE_HAKI", "REOBSERVE",
         ),
         ("red", "enemy", "combat", "fight", "bandit", "boss", "health"),
