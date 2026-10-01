@@ -285,7 +285,10 @@ class QuestCombatSupervisor(Worker):
             # One bounded retreat/dash lets the next visual observation
             # choose a different route without replacing normal fly steering.
             name = "DASH_BACK"
-        elif skill == "UI_CLICK":
+        elif skill in {"UI_CLICK", "BUY_ITEM"}:
+            # Buying is still just a verified visible in-game UI click. The
+            # coach must point at the actual labeled button in the current
+            # screenshot; no blind coordinates or hidden store actions.
             ui = plan.get("ui_click") or {}
             if bool(ui.get("needed")) and confidence >= 0.85:
                 try:
@@ -301,6 +304,7 @@ class QuestCombatSupervisor(Worker):
                         "confidence": confidence,
                         "ui_context": True,
                         "ui_label": str(ui.get("label") or "")[:96],
+                        "purchase_intent": skill == "BUY_ITEM",
                     })
 
         if not name:
