@@ -300,39 +300,52 @@ Return ONLY a JSON object with exactly these fields:
     def _call_gemini(
             self, prompt: str, image_b64: str | None,
             previous_image_b64: str | None = None) -> dict:
+        """Call Gemini through Google's documented OpenAI-compatible REST API.
+
+        AI Studio now issues authorization keys by default.  The compatibility
+        endpoint uses Authorization: Bearer and supports base64 image_url
+        inputs, avoiding native-key transport ambiguity while preserving the
+        same Gemini models.
+        """
         endpoint = (
-            "https://generativelanguage.googleapis.com/v1beta/models/"
-            f"{self.model}:generateContent")
-        parts = [{"text": prompt}]
+            "https://generativelanguage.googleapis.com/"
+            "v1beta/openai/chat/completions")
+
+        content = [{"type": "text", "text": prompt}]
         if previous_image_b64:
-            parts.append({
+            content.append({
+                "type": "text",
                 "text": (
                     "PREVIOUS GAME FRAME from the prior coach observation. "
-                    "Use it only to infer motion/progress/stuck state.")
+                    "Use it only to infer motion/progress/stuck state."),
             })
-            parts.append({
-                "inlineData": {
-                    "mimeType": "image/jpeg",
-                    "data": previous_image_b64,
-                }
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": (
+                        "data:image/jpeg;base64,"
+                        + previous_image_b64),
+                },
             })
         if image_b64:
-            parts.append({
-                "text": "CURRENT GAME FRAME. This is the authoritative view."
+            content.append({
+                "type": "text",
+                "text": "CURRENT GAME FRAME. This is the authoritative view.",
             })
-            parts.append({
-                "inlineData": {
-                    "mimeType": "image/jpeg",
-                    "data": image_b64,
-                }
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": "data:image/jpeg;base64," + image_b64,
+                },
             })
-        base_body = {
-            "contents": [{"role": "user", "parts": parts}],
-        }
-        body = dict(base_body)
-        body["generationConfig"] = {
-            "maxOutputTokens": 520,
-            "responseMimeType": "application/json",
+
+        body = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": content}],
+            "max_tokens": 620,
+            "reasoning_effort": "minimal",
+            # json_object is supported by the compatibility chat endpoint.
+            "response_format": {"type": "json_object"},
         }
 
         def send(request_body):
@@ -341,8 +354,10 @@ Return ONLY a JSON object with exactly these fields:
                 endpoint,
                 data=raw,
                 headers={
+                    "Accept": "application/json",
                     "Content-Type": "application/json",
-                    "x-goog-api-key": self.api_key,
+                    "Authorization": f"Bearer {self.api_key}",
+                    "User-Agent": "DigitalFlyLab/1.0",
                 },
                 method="POST",
             )
@@ -353,21 +368,28 @@ Return ONLY a JSON object with exactly these fields:
         try:
             payload = send(body)
         except urllib.error.HTTPError as exc:
-            # Gemini model generations have had slightly different structured
-            # output surfaces. A model/key that passes preflight should not
-            # lose the run merely because JSON-mode syntax changed.
+            # Compatibility across Gemini generations: if a model rejects
+            # response_format/reasoning options, retry only with the common
+            # chat-completions fields. The prompt itself still requires JSON.
             if int(getattr(exc, "code", 0)) != 400:
                 raise
-            payload = send(base_body)
+            fallback = {
+                "model": self.model,
+                "messages": body["messages"],
+                "max_tokens": 620,
+            }
+            payload = send(fallback)
 
-        parts_out = (((payload.get("candidates") or [{}])[0]
-                      .get("content") or {}).get("parts") or [])
-        text = "".join(str(p.get("text") or "") for p in parts_out).strip()
+        choices = payload.get("choices") or []
+        if not choices:
+            raise RuntimeError(
+                f"Gemini returned no choices: {str(payload)[:500]}")
+        text = str(
+            ((choices[0].get("message") or {}).get("content")) or ""
+        ).strip()
         if not text:
             raise RuntimeError(
-                f"Gemini returned no text: {str(payload)[:400]}")
-        # Prompt already requires JSON. Accept fenced JSON as a compatibility
-        # fallback when structured-output mode was unavailable.
+                f"Gemini returned no text: {str(payload)[:500]}")
         if text.startswith("```"):
             lines = text.splitlines()
             if lines and lines[0].startswith("```"):
@@ -479,7 +501,7 @@ Return ONLY a JSON object with exactly these fields:
         return {
             "plan_id": self._plan_id,
             "ts_ns": SHARED_CLOCK.now_ns(),
-            "provider": "gemini",
+            "provider": "gemini_openai_compat",
             "model": self.model,
             "scene": str(raw.get("scene") or "unknown")[:96],
             "objective": str(raw.get("objective") or "")[:240],
