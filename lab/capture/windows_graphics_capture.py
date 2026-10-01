@@ -122,11 +122,13 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
     def __init__(self, bus: Bus, channel: str = "capture.frames",
                  window_title_re: str = r"^Roblox$",
                  process_name_re: str = r"^RobloxPlayerBeta(?:\.exe)?$",
-                 target_fps: float = 30.0):
+                 target_fps: float = 30.0,
+                 downsample: int = 1):
         super().__init__(bus, channel)
         self.window_title_re = re.compile(window_title_re, re.IGNORECASE)
         self.process_name_re = re.compile(process_name_re, re.IGNORECASE)
         self.target_fps = float(target_fps)
+        self.downsample = max(1, int(downsample))
         self._running = False
         self._frame_id = 0
         self._capture = None
@@ -225,17 +227,27 @@ class WindowsGraphicsCaptureAdapter(CaptureAdapter):
                 # Windows laptop: OpenCV performs the required BGRA->BGR
                 # ownership copy in optimized native code.
                 import cv2
-                img = cv2.cvtColor(
-                    frame.frame_buffer, cv2.COLOR_BGRA2BGR)
+                src = frame.frame_buffer
+                if self.downsample > 1:
+                    # Cheap stride decimation BEFORE the ownership copy.
+                    # The live detector downsamples again, so retaining native
+                    # 1080p pixels only burns memory bandwidth on the 2-core
+                    # target laptop.
+                    src = src[::self.downsample, ::self.downsample]
+                img = cv2.cvtColor(src, cv2.COLOR_BGRA2BGR)
+                out_h, out_w = img.shape[:2]
                 self._frame_id += 1
                 self.publish_frame(
                     self._frame_id,
-                    int(frame.width),
-                    int(frame.height),
+                    int(out_w),
+                    int(out_h),
                     data_ref=img,
                     fmt="bgr",
                     copy_count=1,
-                    extra={"window_title": title, "window_hwnd": hwnd},
+                    extra={"window_title": title, "window_hwnd": hwnd,
+                           "native_width": int(frame.width),
+                           "native_height": int(frame.height),
+                           "capture_downsample": self.downsample},
                 )
             except Exception as e:
                 self._last_error = repr(e)
