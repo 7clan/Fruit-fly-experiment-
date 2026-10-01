@@ -1,6 +1,6 @@
 # run_autonomous_questing_windows.ps1
-# Canonical fly navigation + engineered quest/starter-PvE supervisor.
-# F12 is the global emergency stop.
+# Canonical fly navigation + LOCAL SmolVLM2 semantic coach + quest/PvE supervisor.
+# F12 is the global emergency stop. No cloud API key is required.
 
 $ErrorActionPreference = "Stop"
 $root = $PSScriptRoot
@@ -16,70 +16,121 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-Write-Host "== GATE 7C: DIGITAL FLY + SEMANTIC GAME COACH ==" -ForegroundColor Cyan
+$modelSpec = "ggml-org/SmolVLM2-256M-Video-Instruct-GGUF:Q8_0"
+$modelAlias = "smolvlm2-256m"
+$port = 18080
+$baseUrl = "http://127.0.0.1:$port"
+$apiUrl = "$baseUrl/v1"
+$logDir = Join-Path $root "runtime_state\local_coach"
+New-Item -ItemType Directory -Force -Path $logDir | Out-Null
 
-# Cheap structural preflight before the ~1 minute canonical brain startup.
-# SendInput requires cbSize to equal the native Win32 INPUT size.
+function Refresh-LocalPath {
+    $machine = [Environment]::GetEnvironmentVariable("Path", "Machine")
+    $user = [Environment]::GetEnvironmentVariable("Path", "User")
+    $links = Join-Path $env:LOCALAPPDATA "Microsoft\WinGet\Links"
+    $env:Path = "$machine;$user;$links"
+}
+
+function Find-LlamaServer {
+    $cmd = Get-Command "llama-server" -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    $cmd = Get-Command "llama-server.exe" -ErrorAction SilentlyContinue
+    if ($cmd) { return $cmd.Source }
+    return $null
+}
+
+function Test-Health {
+    try {
+        $null = Invoke-RestMethod -Uri "$baseUrl/health" -Method Get -TimeoutSec 2
+        return $true
+    }
+    catch {
+        return $false
+    }
+}
+
+Write-Host "== GATE 7C LOCAL: DIGITAL FLY + SMOLVLM2-256M COACH ==" -ForegroundColor Cyan
+
 & $mainPython -c "from lab.action.windows_input import _INPUT,_EXPECTED_INPUT_SIZE; import ctypes; s=ctypes.sizeof(_INPUT); print(f'[preflight] Win32 INPUT size={s} expected={_EXPECTED_INPUT_SIZE}'); raise SystemExit(0 if s==_EXPECTED_INPUT_SIZE else 2)"
 if ($LASTEXITCODE -ne 0) {
     throw "Windows input layout preflight failed; brain startup aborted."
 }
 
+Refresh-LocalPath
+$serverExe = Find-LlamaServer
+if (-not $serverExe) {
+    Write-Host "Local coach is not installed yet; running one-time setup..." -ForegroundColor Yellow
+    & ".\setup_local_semantic_coach_windows.ps1"
+    Refresh-LocalPath
+    $serverExe = Find-LlamaServer
+}
+if (-not $serverExe) {
+    throw "llama-server unavailable after local coach setup."
+}
+
 Write-Host "Fly brain owns turn/approach/retreat navigation." -ForegroundColor Green
-Write-Host "Semantic coach: understands quests, progression, shops, ships, gear, fruit/style/weapon planning and visible UI." -ForegroundColor Yellow
-Write-Host "Camera policy: autonomy NEVER rotates/drags your camera; fly steers with character movement." -ForegroundColor Yellow
-Write-Host "Obstacle recovery: semantic coach may choose jump, climb, backtrack, sprint or reobserve." -ForegroundColor Yellow
-Write-Host "Starter PvE: F block, Q evade, M1, E Gut Punch, R Ground Smash; broader skill keys are catalogued but context-gated." -ForegroundColor Yellow
-Write-Host "Keep the observed default Melee loadout equipped for the first semantic-coach test." -ForegroundColor Yellow
-Write-Host "Defense learning is ENGINEERED ValueTable learning, not biological MB learning." -ForegroundColor DarkYellow
+Write-Host "LOCAL AI: SmolVLM2-256M Q8_0 via llama.cpp; no Gemini/API key." -ForegroundColor Green
+Write-Host "Local AI runs only on semantic events / slow intervals, not every frame." -ForegroundColor Yellow
+Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
+Write-Host "Local AI may reason about quests, obstacles, combat, visible shops, equipment and ships using the offline GPO playbook." -ForegroundColor Yellow
+Write-Host "CPU policy: llama.cpp uses ONE inference thread and zero GPU layers to protect Roblox + Brian2." -ForegroundColor Yellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
-Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor Yellow
-Write-Host "Low-power profile: capture/CV 3 Hz, x2 capture downsample, 480px detector, dashboard 0.25 Hz." -ForegroundColor Yellow
-Write-Host "Persistent run: use END RUN or F12 to stop and save the report/ZIP." -ForegroundColor Red
-if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
-    throw "Semantic coach API key missing. Run .\setup_semantic_coach_windows.ps1 first."
-}
-Write-Host "Semantic coach API key: configured." -ForegroundColor Green
-$coachModel = $env:GEMINI_MODEL
-if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.5-flash-lite" }
-Write-Host "Coach model: $coachModel" -ForegroundColor DarkCyan
+Write-Host "Persistent run: END RUN/F12 saves the report and ZIP." -ForegroundColor Red
 
-# Verify key/project and resolve an actually available Flash-Lite model
-# before spending ~1 minute initializing the canonical brain.
-$probeOutput = @(& $mainPython -m lab.coach.probe --model $coachModel)
-$probeExit = $LASTEXITCODE
-$probeOutput | ForEach-Object { Write-Host $_ }
-if ($probeExit -ne 0) {
-    throw "Semantic coach preflight failed. The key/project/model is not usable."
-}
-$selectedModelLine = $probeOutput | Where-Object { $_ -like "COACH_MODEL=*" } | Select-Object -Last 1
-if ([string]::IsNullOrWhiteSpace($selectedModelLine)) {
-    throw "Semantic coach preflight passed but did not return a selected model."
-}
-$coachModel = $selectedModelLine.Substring("COACH_MODEL=".Length).Trim()
-$env:GEMINI_MODEL = $coachModel
-[Environment]::SetEnvironmentVariable("GEMINI_MODEL", $coachModel, "User")
-Write-Host "Resolved coach model: $coachModel" -ForegroundColor Green
+$serverProc = $null
+if (-not (Test-Health)) {
+    $stdout = Join-Path $logDir "live_server.stdout.log"
+    $stderr = Join-Path $logDir "live_server.stderr.log"
+    Remove-Item $stdout,$stderr -Force -ErrorAction SilentlyContinue
+    $serverArgs = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "1", "--threads-batch", "1", "--ctx-size", "4096", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-webui")
+    Write-Host "Starting local SmolVLM server..." -ForegroundColor Cyan
+    $serverProc = Start-Process -FilePath $serverExe -ArgumentList $serverArgs -PassThru -WindowStyle Minimized -RedirectStandardOutput $stdout -RedirectStandardError $stderr
 
-& $mainPython -m lab.app `
-    --runtime canonical `
-    --capture windows `
-    --seconds 0 `
-    --capture-fps 3 `
-    --capture-downsample 2 `
-    --chunk-ms 50 `
-    --brain-codegen cython `
-    --brain-transport subprocess `
-    --fast-hz 3 `
-    --heavy-hz 0.05 `
-    --fast-detect-width 480 `
-    --dashboard-ui `
-    --dashboard-hz 0.25 `
-    --quest-autonomy `
-    --semantic-coach `
-    --coach-model $coachModel `
-    --coach-hz 1 `
-    --gpo-loadout default_melee
+    $ready = $false
+    for ($i = 0; $i -lt 180; $i++) {
+        if ($serverProc.HasExited) { break }
+        if (Test-Health) {
+            $ready = $true
+            break
+        }
+        Start-Sleep -Seconds 1
+    }
+    if (-not $ready) {
+        $tail = ""
+        if (Test-Path $stderr) {
+            $tail = (Get-Content $stderr -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
+        }
+        if ($serverProc -and -not $serverProc.HasExited) {
+            Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
+        }
+        throw "Local SmolVLM server failed to start. Last log: $tail"
+    }
+}
 
-exit $LASTEXITCODE
+Write-Host "Testing local visual coach before brain startup..." -ForegroundColor Cyan
+& $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 120
+if ($LASTEXITCODE -ne 0) {
+    if ($serverProc -and -not $serverProc.HasExited) {
+        Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
+    }
+    throw "Local semantic coach preflight failed; brain startup aborted."
+}
+
+Write-Host "Local coach READY: $modelAlias" -ForegroundColor Green
+Write-Host "Low-power profile: capture/CV 3 Hz, x2 downsample, local AI event-gated ~18s minimum." -ForegroundColor Yellow
+
+$exitCode = 1
+try {
+    & $mainPython -m lab.app --runtime canonical --capture windows --seconds 0 --capture-fps 3 --capture-downsample 2 --chunk-ms 50 --brain-codegen cython --brain-transport subprocess --fast-hz 3 --heavy-hz 0.05 --fast-detect-width 480 --dashboard-ui --dashboard-hz 0.25 --quest-autonomy --semantic-coach --coach-provider local --coach-model $modelAlias --coach-url $apiUrl --coach-hz 0.5 --gpo-loadout default_melee
+    $exitCode = $LASTEXITCODE
+}
+finally {
+    if ($serverProc -and -not $serverProc.HasExited) {
+        Write-Host "Stopping local SmolVLM server..." -ForegroundColor DarkGray
+        Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
+        $serverProc.WaitForExit()
+    }
+}
+
+exit $exitCode
