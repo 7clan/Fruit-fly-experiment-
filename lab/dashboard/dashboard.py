@@ -122,8 +122,6 @@ class TextDashboardRenderer:
         action_meta = d.get("action.meta") or {}
         quest_state = d.get("quest.state") or {}
         command = d.get("action.command") or {}
-        quest_state = d.get("quest.state") or {}
-        command = d.get("action.command") or {}
         obs = d.get("world.observation") or {}
         intention = (brain.get("intention") or {})
         fly_col = [
@@ -570,6 +568,8 @@ class OpenCVDashboardRenderer:
         act = d.get("action.selected") or {}
         brain_meta = d.get("brain.meta") or {}
         action_meta = d.get("action.meta") or {}
+        quest_state = d.get("quest.state") or {}
+        command = d.get("action.command") or {}
 
         game_w = int(self.width * 0.56)
         self._draw_game(canvas, mirror_env, obs, game_w)
