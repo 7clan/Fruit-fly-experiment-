@@ -219,7 +219,7 @@ class TestFlyChannels:
         rates = to_sensory_rates(FlyChannels(target_left=1.0,
                                              threat_intensity=1.0))
         assert set(rates) == {"target_left_hz", "target_right_hz", "looming_hz"}
-        assert rates["target_left_hz"] == 72.0    # D8 rung-1 peak calibration
+        assert rates["target_left_hz"] == 150.0   # frozen D8 target drive ceiling
         assert rates["looming_hz"] == 150.0       # Gate-2 looming drive scale
 
 
