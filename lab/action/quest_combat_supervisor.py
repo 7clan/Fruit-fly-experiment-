@@ -279,6 +279,19 @@ class QuestCombatSupervisor(Worker):
             if control_id:
                 name = "EXEC_CONTROL"
                 extra["control_id"] = control_id
+        elif skill == "USE_OBSERVED_ABILITY":
+            ability = plan.get("observed_ability") or {}
+            binding = str(ability.get("binding") or "").strip().upper()
+            label = str(ability.get("label") or "").strip()[:96]
+            if binding and label:
+                name = "USE_OBSERVED_ABILITY"
+                extra["binding"] = f"key:{binding}"
+                extra["label"] = label
+        elif skill == "GO_AROUND":
+            control_id = str(plan.get("control_id") or "")
+            if control_id in {"move_left", "move_right", "move_backward"}:
+                name = "EXEC_CONTROL"
+                extra["control_id"] = control_id
         elif skill == "BOARD_SHIP":
             name = "BOARD_SHIP"
         elif skill == "BACKTRACK":
