@@ -313,9 +313,11 @@ class MotorExecutor(Worker):
         self._last_hold_refresh_ns = 0
         self._last_brain_out_ts: int = -1
         self._last_command_id: int = -1
+        self._engineered_steer_until_ns: int = 0
         self.stats.update({"inputs_emitted": 0, "shadow_only": 0,
                            "emergency_stops": 0, "hold_refreshes": 0,
-                           "navigation_vetoes": 0})
+                           "navigation_vetoes": 0,
+                           "semantic_steers": 0})
 
     # -- autonomy gate ----------------------------------------------------
     def set_autonomy(self, enabled: bool, reason: str = "") -> None:
@@ -599,6 +601,8 @@ class MotorExecutor(Worker):
                 or not self.autonomy_enabled
                 or not self._held or not self._last_sig):
             return
+        if self.questing and now_ns < self._engineered_steer_until_ns:
+            return
         intention = str(self._last_sig[0])
         if intention not in {"TURN_LEFT", "TURN_RIGHT", "APPROACH"}:
             return
@@ -672,7 +676,7 @@ class MotorExecutor(Worker):
             "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
             "BUSO_HAKI", "OBSERVATION_HAKI", "EQUIP_SLOT",
             "USE_OBSERVED_ABILITY", "EXEC_CONTROL", "UI_CLICK",
-            "BOARD_SHIP",
+            "BOARD_SHIP", "STEER_TARGET",
         }
         if name not in allowed:
             return
@@ -685,10 +689,33 @@ class MotorExecutor(Worker):
                 "ATTACK_LIGHT", "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
                 "USE_OBSERVED_ABILITY", "EQUIP_SLOT",
                 "EXEC_CONTROL", "UI_CLICK", "BOARD_SHIP",
+                "STEER_TARGET",
             }:
                 self._release_movement_locked(now_ns, reason=name.lower())
 
-            if name == "INTERACT_QUEST":
+            if name == "STEER_TARGET":
+                try:
+                    direction = float(cmd.get("direction", 0.0))
+                except (TypeError, ValueError):
+                    direction = 0.0
+                hold_s = max(
+                    0.28, min(0.85, float(cmd.get("hold_s", 0.55))))
+                # Fresh screen-space geometry is the fast steering servo.
+                # The canonical fly still supplies higher-level
+                # approach/retreat/escape state but its 50 ms chunk arrives
+                # several wall-seconds late on the target laptop.
+                self._hold_key_locked("W", now_ns, hold_s)
+                deadband = 0.24
+                if direction < -deadband:
+                    self._hold_key_locked("A", now_ns, hold_s)
+                elif direction > deadband:
+                    self._hold_key_locked("D", now_ns, hold_s)
+                self._engineered_steer_until_ns = (
+                    now_ns + int(hold_s * 1e9))
+                self.action_lock_until_ns = (
+                    now_ns + int(min(0.45, hold_s * 0.65) * 1e9))
+                self.stats["semantic_steers"] += 1
+            elif name == "INTERACT_QUEST":
                 self._hold_key_locked("T", now_ns, 0.08)
                 self.action_lock_until_ns = now_ns + int(0.40e9)
             elif name == "JUMP":
@@ -849,6 +876,14 @@ class MotorExecutor(Worker):
     def _execute(self, action: ConcreteAction, now_ns: int,
                  new_brain_decision: bool = True) -> None:
         shadow = not self.autonomy_enabled
+        if (self.questing
+                and now_ns < self._engineered_steer_until_ns
+                and action.intention in {
+                    "TURN_LEFT", "TURN_RIGHT", "APPROACH"}):
+            # A several-seconds-old neural geometry decision must not undo a
+            # fresh 3 Hz target servo. RETREAT/ESCAPE/DEFEND remain able to
+            # interrupt this assist path.
+            return
         sig = (action.intention, action.ability_id, tuple(action.bindings),
                int(action.mouse_dx), int(action.mouse_dy))
         # State channels are polled much faster than the canonical brain.
