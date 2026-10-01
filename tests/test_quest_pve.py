@@ -155,3 +155,17 @@ def test_red_circle_with_red_distance_support_becomes_quest_enemy_marker():
     assert det["target"]["type"] == "quest_enemy_marker"
     assert det["_notes"]["quest_enemy_marker_detected"] is True
     assert len(det["enemies"]) == 1
+
+
+def test_engineered_defense_values_persist(tmp_path):
+    p = tmp_path / "values.json"
+    first = ValueTable()
+    first.observe(("gpo", "defense", "quest_enemy"), "block", True)
+    first.observe(("gpo", "defense", "quest_enemy"), "block", False)
+    first.save_file(p)
+
+    second = ValueTable()
+    assert second.load_file(p) is True
+    snap = second.snapshot()["gpo|defense|quest_enemy"]["block"]
+    assert snap["uses"] == 2
+    assert snap["success"] == 1
