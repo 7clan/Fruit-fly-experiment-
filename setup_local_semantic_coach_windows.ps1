@@ -109,10 +109,15 @@ else {
             Start-Sleep -Seconds 1
         }
         if (-not $ready) {
-            $tail = ""
+            $tailErr = ""
+            $tailOut = ""
             if (Test-Path $stderr) {
-                $tail = (Get-Content $stderr -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
+                $tailErr = (Get-Content $stderr -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
             }
+            if (Test-Path $stdout) {
+                $tailOut = (Get-Content $stdout -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
+            }
+            $tail = "STDERR: " + $tailErr + " | STDOUT: " + $tailOut
             throw "Local SmolVLM server did not become ready. Last server log: $tail"
         }
 
