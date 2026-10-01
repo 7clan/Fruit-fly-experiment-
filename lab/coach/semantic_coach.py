@@ -27,7 +27,7 @@ from ..clock import SHARED_CLOCK
 from ..worker import Worker
 
 
-DEFAULT_MODEL = "gemini-2.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
 ALLOWED_SKILLS = frozenset({
     "WAIT",
