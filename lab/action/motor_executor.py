@@ -511,7 +511,7 @@ class MotorExecutor(Worker):
         the target laptop, so the visual waypoint may move significantly
         before the next neural decision arrives.
         """
-        if not self.movement_only or not action.bindings:
+        if not (self.movement_only or self.questing) or not action.bindings:
             return None
 
         snap = self.world_obs.read()
@@ -554,7 +554,8 @@ class MotorExecutor(Worker):
         This never presses a key or chooses another direction. After a veto,
         movement stays released until a NEW brain decision arrives.
         """
-        if (not self.movement_only or not self.autonomy_enabled
+        if (not (self.movement_only or self.questing)
+                or not self.autonomy_enabled
                 or not self._held or not self._last_sig):
             return
         intention = str(self._last_sig[0])
@@ -714,18 +715,24 @@ class MotorExecutor(Worker):
                 self._last_sig = sig
                 self._last_hold_refresh_ns = now_ns
                 self.stats["hold_refreshes"] += 1
-                if repressed:
+                camera_reissued = False
+                if (self.questing and (action.mouse_dx or action.mouse_dy)
+                        and not shadow):
+                    self.backend.mouse_move(
+                        action.mouse_dx, action.mouse_dy)
+                    camera_reissued = True
+                if repressed or camera_reissued:
                     self.inputs.publish({
                         "kind": "input_refresh",
                         "ts_ns": now_ns,
                         "shadow": False,
                         "intention": action.intention,
                         "bindings": repressed,
+                        "mouse_dx": action.mouse_dx if camera_reissued else 0,
+                        "mouse_dy": action.mouse_dy if camera_reissued else 0,
                         "hold_s": action.hold_s,
                     }, ts_ns=now_ns)
                     self.stats["inputs_emitted"] += 1
-                # No mouse steering exists in Gate-6F. A held-key refresh is
-                # complete here.
                 return
             if (not shadow and now_ns < self.action_lock_until_ns
                     and not self.movement_only):
