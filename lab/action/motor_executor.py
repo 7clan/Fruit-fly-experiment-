@@ -189,12 +189,11 @@ class QuestingBackend(InputBackend):
             self.inner.key_up(code)
 
     def mouse_move(self, dx: int, dy: int) -> None:
-        dx = max(-90, min(90, int(dx)))
-        dy = max(-35, min(35, int(dy)))
-        if dx or dy:
-            drag = getattr(self.inner, "camera_drag", None)
-            if drag is not None:
-                drag(dx, dy)
+        # Quest autonomy must never take over the user's camera/mouse.
+        # Character steering is W/A/D/S only.  Keep this hard stop at the
+        # backend boundary so an upstream SEARCH_CAMERA bug cannot move the
+        # real mouse even if such a command is accidentally emitted.
+        return
 
     def mouse_button_down(self, button: str) -> None:
         if str(button).lower() in self.ALLOWED_MOUSE:
@@ -212,7 +211,8 @@ class QuestingBackend(InputBackend):
         h["backend"] = self.name
         h["allowed_keys"] = sorted(self.ALLOWED_KEYS)
         h["allowed_mouse"] = sorted(self.ALLOWED_MOUSE)
-        h["camera_drag"] = True
+        h["camera_drag"] = False
+        h["mouse_move_enabled"] = False
         return h
 
 
