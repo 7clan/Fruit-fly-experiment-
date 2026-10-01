@@ -38,13 +38,18 @@ Write-Host "Roblox is focused automatically after brain READY." -ForegroundColor
 Write-Host "Low-power profile: capture/CV 3 Hz, x2 capture downsample, 480px detector, dashboard 0.25 Hz." -ForegroundColor Yellow
 Write-Host "Persistent run: use END RUN or F12 to stop and save the report/ZIP." -ForegroundColor Red
 if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
-    Write-Host "Semantic coach API key: MISSING (run .\setup_semantic_coach_windows.ps1 first)." -ForegroundColor Red
-} else {
-    Write-Host "Semantic coach API key: configured." -ForegroundColor Green
+    throw "Semantic coach API key missing. Run .\setup_semantic_coach_windows.ps1 first."
 }
+Write-Host "Semantic coach API key: configured." -ForegroundColor Green
 $coachModel = $env:GEMINI_MODEL
 if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.5-flash-lite" }
 Write-Host "Coach model: $coachModel" -ForegroundColor DarkCyan
+
+# Verify key/model before spending ~1 minute initializing the canonical brain.
+& $mainPython -m lab.coach.probe --model $coachModel
+if ($LASTEXITCODE -ne 0) {
+    throw "Semantic coach preflight failed. Fix the API key/model before starting the brain."
+}
 
 & $mainPython -m lab.app `
     --runtime canonical `
