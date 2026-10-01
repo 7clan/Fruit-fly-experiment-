@@ -100,6 +100,9 @@ if (-not (Test-Health)) {
             if (Test-Path $stderr) {
                 $lastLine = Get-Content $stderr -Tail 1 -ErrorAction SilentlyContinue
             }
+            if ([string]::IsNullOrWhiteSpace($lastLine) -and (Test-Path $stdout)) {
+                $lastLine = Get-Content $stdout -Tail 1 -ErrorAction SilentlyContinue
+            }
             if ([string]::IsNullOrWhiteSpace($lastLine)) {
                 Write-Host ("[local-ai] still loading/downloading... {0}s" -f $i) -ForegroundColor DarkCyan
             } else {
@@ -109,10 +112,15 @@ if (-not (Test-Health)) {
         Start-Sleep -Seconds 1
     }
     if (-not $ready) {
-        $tail = ""
+        $tailErr = ""
+        $tailOut = ""
         if (Test-Path $stderr) {
-            $tail = (Get-Content $stderr -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
+            $tailErr = (Get-Content $stderr -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
         }
+        if (Test-Path $stdout) {
+            $tailOut = (Get-Content $stdout -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
+        }
+        $tail = "STDERR: " + $tailErr + " | STDOUT: " + $tailOut
         if ($serverProc -and -not $serverProc.HasExited) {
             Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
         }
