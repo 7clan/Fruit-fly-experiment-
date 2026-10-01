@@ -31,6 +31,7 @@ import time
 from pathlib import Path
 
 from . import __version__
+from .action.gpo_controls import CORE_CONTROLS
 from .action.motor_executor import (
     MotorExecutor, SafeNoopBackend, create_windows_movement_only_backend)
 from .brain.worker import BrainWorker
@@ -92,6 +93,7 @@ class DigitalFlyLab:
         self.memory = MemoryStore(self.session_dir / "memory")
         self.value = ValueTable(self.memory)
         self.action_meta = self.bus.state("action.meta")
+        self.control_catalog_state = self.bus.state("action.control_catalog")
 
         # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
         # canonical Brian2 subprocess is the dominant workload. Movement-only
@@ -205,6 +207,11 @@ class DigitalFlyLab:
                 "downsample": int(getattr(self.capture, "downsample", 1)),
             },
             "low_power_profile": bool(self.autonomy_requested),
+            "gpo_control_catalog": {
+                "count": len(CORE_CONTROLS),
+                "ids": [x.control_id for x in CORE_CONTROLS],
+                "dynamic_equipped_moves": True,
+            },
             "worker_targets_hz": {
                 "fast": self.fast_vision.governor.target_hz,
                 "fast_role_detection": self.fast_vision.role_detection,
@@ -227,6 +234,11 @@ class DigitalFlyLab:
         self.action_meta.write({
             "movement_control_available": self.autonomy_requested,
             "autonomy": self.executor.autonomy_enabled,
+            "ts_ns": SHARED_CLOCK.now_ns(),
+        })
+        self.control_catalog_state.write({
+            "controls": [x.to_dict() for x in CORE_CONTROLS],
+            "dynamic_equipped_moves": True,
             "ts_ns": SHARED_CLOCK.now_ns(),
         })
         self.memory.start()
