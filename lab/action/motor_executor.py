@@ -65,6 +65,13 @@ class InputBackend(ABC):
     def mouse_button_up(self, button: str) -> None:
         raise NotImplementedError
 
+    def set_target_window(self, hwnd: int) -> None:
+        return
+
+    def ui_click(self, x_norm: float, y_norm: float,
+                 button: str = "left", restore_cursor: bool = True) -> None:
+        raise NotImplementedError
+
     @abstractmethod
     def release_all(self) -> None: ...
 
@@ -97,6 +104,11 @@ class SafeNoopBackend(InputBackend):
             self.emitted += 1
 
     def mouse_button_up(self, button: str) -> None:
+        with self._lock:
+            self.emitted += 1
+
+    def ui_click(self, x_norm: float, y_norm: float,
+                 button: str = "left", restore_cursor: bool = True) -> None:
         with self._lock:
             self.emitted += 1
 
@@ -203,6 +215,23 @@ class QuestingBackend(InputBackend):
         if str(button).lower() in self.ALLOWED_MOUSE:
             self.inner.mouse_button_up(button)
 
+    def set_target_window(self, hwnd: int) -> None:
+        setter = getattr(self.inner, "set_target_window", None)
+        if setter is not None:
+            setter(int(hwnd))
+
+    def ui_click(self, x_norm: float, y_norm: float,
+                 button: str = "left", restore_cursor: bool = True) -> None:
+        if str(button).lower() not in self.ALLOWED_MOUSE:
+            return
+        clicker = getattr(self.inner, "ui_click", None)
+        if clicker is None:
+            raise RuntimeError("UI click unsupported by input backend")
+        clicker(
+            float(x_norm), float(y_norm),
+            button=str(button).lower(),
+            restore_cursor=bool(restore_cursor))
+
     def release_all(self) -> None:
         self.inner.release_all()
 
@@ -213,6 +242,7 @@ class QuestingBackend(InputBackend):
         h["allowed_mouse"] = sorted(self.ALLOWED_MOUSE)
         h["camera_drag"] = False
         h["mouse_move_enabled"] = False
+        h["ui_click_enabled"] = True
         return h
 
 
@@ -641,7 +671,8 @@ class MotorExecutor(Worker):
             "BLOCK", "PERFECT_BLOCK", "EVADE_BACK", "ATTACK_LIGHT",
             "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
             "BUSO_HAKI", "OBSERVATION_HAKI", "EQUIP_SLOT",
-            "USE_OBSERVED_ABILITY",
+            "USE_OBSERVED_ABILITY", "EXEC_CONTROL", "UI_CLICK",
+            "BOARD_SHIP",
         }
         if name not in allowed:
             return
@@ -653,6 +684,7 @@ class MotorExecutor(Worker):
                 "INTERACT_QUEST", "BLOCK", "PERFECT_BLOCK", "EVADE_BACK",
                 "ATTACK_LIGHT", "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
                 "USE_OBSERVED_ABILITY", "EQUIP_SLOT",
+                "EXEC_CONTROL", "UI_CLICK", "BOARD_SHIP",
             }:
                 self._release_movement_locked(now_ns, reason=name.lower())
 
@@ -721,6 +753,63 @@ class MotorExecutor(Worker):
                     return
                 self._hold_key_locked(slot, now_ns, 0.06)
                 self.action_lock_until_ns = now_ns + int(0.20e9)
+            elif name == "BOARD_SHIP":
+                self._hold_key_locked("P", now_ns, 0.07)
+                self.action_lock_until_ns = now_ns + int(0.30e9)
+            elif name == "UI_CLICK":
+                # Semantic coach supplies a normalized in-game UI point.
+                # Hard gate: explicit UI context + high confidence only.
+                confidence = float(cmd.get("confidence", 0.0))
+                if (not bool(cmd.get("ui_context"))
+                        or confidence < 0.85):
+                    return
+                x = float(cmd.get("x_norm", -1.0))
+                y = float(cmd.get("y_norm", -1.0))
+                if not (0.0 <= x <= 1.0 and 0.0 <= y <= 1.0):
+                    return
+                self.backend.ui_click(
+                    x, y, button="left", restore_cursor=True)
+                self.action_lock_until_ns = now_ns + int(0.45e9)
+            elif name == "EXEC_CONTROL":
+                from .gpo_controls import control_map
+                control_id = str(cmd.get("control_id") or "")
+                control = control_map().get(control_id)
+                if control is None:
+                    return
+                # Never let the generic coach primitive become camera control
+                # or a player grief/social primitive.
+                if control.control_id in {
+                        "camera_look", "carry_downed", "grip_downed"}:
+                    return
+                bindings = list(control.bindings)
+                pattern = str(control.pattern or "tap")
+                if pattern == "double_tap" and len(bindings) == 1:
+                    b = bindings[0]
+                    if not b.startswith("key:"):
+                        return
+                    code = b[4:].upper()
+                    self._hold_key_locked(code, now_ns, 0.05)
+                    if self.autonomy_enabled:
+                        self.backend.key_up(code)
+                        self.backend.key_down(code)
+                    self._held[code] = now_ns + int(0.65e9)
+                else:
+                    hold_s = (
+                        0.45 if pattern == "hold"
+                        else 0.14 if pattern == "chord"
+                        else 0.08)
+                    for b in bindings:
+                        if b.startswith("key:"):
+                            self._hold_key_locked(
+                                b[4:].upper(), now_ns, hold_s)
+                        elif b == "mouse:left":
+                            self.backend.mouse_button_down("left")
+                            self.backend.mouse_button_up("left")
+                        else:
+                            # Right/middle mouse and camera are not generic
+                            # semantic-coach primitives.
+                            return
+                self.action_lock_until_ns = now_ns + int(0.35e9)
             elif name == "USE_OBSERVED_ABILITY":
                 from .gpo_controls import validate_observed_ability_binding
                 binding = validate_observed_ability_binding(
