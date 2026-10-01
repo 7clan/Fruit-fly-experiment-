@@ -14,7 +14,9 @@ periodic/event-driven, never on the combat-critical path.
 
 from __future__ import annotations
 
+import json
 import threading
+from pathlib import Path
 
 from .memory import MemoryStore
 
@@ -55,6 +57,39 @@ class ValueTable:
                     {a: {"success": s, "uses": u, "value": round((s + 1) / (u + 2), 4)}
                      for a, (s, u) in ctx.items()}
                     for k, ctx in self._n.items()} | {"ENGINEERED": True}
+
+    def load_file(self, path: Path) -> bool:
+        """Load engineered values between sessions; never used in combat."""
+        path = Path(path)
+        if not path.exists():
+            return False
+        data = json.loads(path.read_text())
+        loaded = {}
+        for key, abilities in data.items():
+            if key == "ENGINEERED" or not isinstance(abilities, dict):
+                continue
+            ctx = tuple(key.split("|")) if key else ()
+            loaded[ctx] = {}
+            for aid, rec in abilities.items():
+                try:
+                    loaded[ctx][str(aid)] = [
+                        int(rec.get("success", 0)),
+                        int(rec.get("uses", 0)),
+                    ]
+                except Exception:
+                    continue
+        with self._lock:
+            self._n = loaded
+        return True
+
+    def save_file(self, path: Path) -> Path:
+        """Persist engineered values atomically at safe lifecycle points."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+        tmp = path.with_suffix(path.suffix + ".tmp")
+        tmp.write_text(json.dumps(self.snapshot(), indent=1))
+        tmp.replace(path)
+        return path
 
 
 def default_value() -> float:
