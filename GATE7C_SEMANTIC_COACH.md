@@ -134,3 +134,20 @@ weapon/ship/Haki and equipment/hotbar observations.
 Inferred guesses are not persisted as ownership facts. This gives the coach
 continuity for progression planning across sessions without letting one model
 guess permanently rewrite the character state.
+
+
+## On-demand current wiki knowledge
+
+A fixed prompt cannot sensibly contain every GPO accessory, weapon, boss,
+fruit, ship, quest and future update. When the coach needs a named detail not
+covered by the compact playbook/profile, it may emit a short
+`knowledge_query`.
+
+The low-rate coach worker then:
+1. searches the public Grand Piece Online MediaWiki API;
+2. fetches plain-text extracts for the best matching pages;
+3. caches the result for 24 hours in `runtime_state/gpo_wiki_cache.json`;
+4. performs one refinement call with that context;
+5. still treats the live game screenshot as authoritative.
+
+This path is event-driven and does not run on ordinary navigation calls.
