@@ -1,0 +1,157 @@
+import numpy as np
+
+from lab.action.motor_executor import (
+    MotorExecutor, QuestingBackend, SafeNoopBackend,
+)
+from lab.action.quest_combat_supervisor import QuestCombatSupervisor
+from lab.bus import Bus
+from lab.perception.fast_vision import GPOHeuristicFastVision
+from lab.schemas import Intention
+from lab.world.value import ValueTable
+
+
+class _FakeInput:
+    name = "fake"
+
+    def __init__(self):
+        self.events = []
+
+    def key_down(self, key):
+        self.events.append(("key_down", key.upper()))
+
+    def key_up(self, key):
+        self.events.append(("key_up", key.upper()))
+
+    def mouse_button_down(self, button):
+        self.events.append(("mouse_down", button))
+
+    def mouse_button_up(self, button):
+        self.events.append(("mouse_up", button))
+
+    def camera_drag(self, dx, dy=0):
+        self.events.append(("camera", int(dx), int(dy)))
+
+    def release_all(self):
+        self.events.append(("release",))
+
+    def backend_health(self):
+        return {"ok": True}
+
+
+def test_questing_backend_is_hard_allowlisted():
+    fake = _FakeInput()
+    b = QuestingBackend(fake)
+    for key in ["W", "A", "S", "D", "SPACE", "CTRL", "Q",
+                "F", "T", "E", "R", "B", "V", "M", "J"]:
+        b.key_down(key)
+    b.mouse_button_down("left")
+    b.mouse_button_down("right")
+    b.mouse_move(120, 99)
+
+    allowed = {e[1] for e in fake.events if e[0] == "key_down"}
+    assert allowed == {"W", "A", "S", "D", "SPACE", "CTRL",
+                       "Q", "F", "T", "E", "R"}
+    assert ("mouse_down", "left") in fake.events
+    assert ("mouse_down", "right") not in fake.events
+    # Camera yaw is bounded by QuestingBackend.
+    assert ("camera", 90, 35) in fake.events
+
+
+def test_fly_questing_turn_includes_camera_and_forward_steer():
+    ex = MotorExecutor(
+        Bus(), backend=SafeNoopBackend(), autonomy_enabled=False,
+        questing=True)
+    left = ex._materialize({}, Intention(name="TURN_LEFT"))
+    right = ex._materialize({}, Intention(name="TURN_RIGHT"))
+    assert left.bindings == ["key:W", "key:A"]
+    assert left.mouse_dx < 0
+    assert right.bindings == ["key:W", "key:D"]
+    assert right.mouse_dx > 0
+
+
+def test_yellow_quest_marker_emits_interact_semantic_command():
+    bus = Bus()
+    sup = QuestCombatSupervisor(bus, ValueTable())
+    bus.state("action.meta").write({"autonomy": True})
+    bus.state("world.observation").write({
+        "target": {
+            "type": "quest_marker", "distance": 0.85,
+            "direction": 0.05, "confidence": 0.9,
+        },
+        "player": {
+            "health": 1.0, "health_units": "fraction",
+            "stamina": 1.0,
+        },
+    })
+    sup.step()
+    cmd = bus.state("action.command").read().payload
+    assert cmd["name"] == "INTERACT_QUEST"
+    assert cmd["ENGINEERED"] is True
+
+
+def test_damage_triggers_learnable_defense_not_agent_shutdown():
+    bus = Bus()
+    values = ValueTable()
+    sup = QuestCombatSupervisor(bus, values)
+    bus.state("action.meta").write({"autonomy": True})
+
+    def obs(health):
+        bus.state("world.observation").write({
+            "target": {
+                "type": "quest_enemy_marker", "distance": 0.45,
+                "direction": 0.0, "confidence": 0.94,
+            },
+            "player": {
+                "health": health, "health_units": "fraction",
+                "stamina": 1.0,
+            },
+        })
+
+    obs(1.0)
+    sup.step()
+    # Clear command cooldown without sleeping; this is a deterministic unit
+    # test of the event rule, not wall-clock pacing.
+    sup._last_command_ns = 0
+    obs(0.94)
+    sup.step()
+    cmd = bus.state("action.command").read().payload
+    assert cmd["name"] in {"BLOCK", "EVADE_BACK"}
+    assert sup._pending_defense is not None
+
+
+def test_stalled_fly_navigation_requests_jump_then_climb():
+    sup = QuestCombatSupervisor(Bus(), ValueTable())
+    t0 = 10_000_000_000
+    assert sup._update_progress(
+        "recommended_quest_waypoint", 0.2, t0, "APPROACH") is None
+    # No progress for >3.5 s -> jump.
+    assert sup._update_progress(
+        "recommended_quest_waypoint", 0.2,
+        t0 + 4_000_000_000, "APPROACH") == "JUMP"
+    # Repeated stalls eventually escalate to climb.
+    sup._last_command_ns = 0
+    assert sup._update_progress(
+        "recommended_quest_waypoint", 0.2,
+        t0 + 8_000_000_000, "APPROACH") == "JUMP"
+    sup._last_command_ns = 0
+    assert sup._update_progress(
+        "recommended_quest_waypoint", 0.2,
+        t0 + 12_000_000_000, "APPROACH") == "CLIMB"
+
+
+def test_red_circle_with_red_distance_support_becomes_quest_enemy_marker():
+    import cv2
+
+    img = np.zeros((360, 640, 3), dtype=np.uint8)
+    # Bright avatar cue near the camera anchor.
+    cv2.rectangle(img, (300, 170), (340, 240), (245, 245, 245), -1)
+    # User-observed post-quest red objective dot + text support below.
+    cv2.circle(img, (500, 155), 9, (0, 0, 255), -1)
+    cv2.putText(
+        img, "20m", (478, 185), cv2.FONT_HERSHEY_SIMPLEX,
+        0.45, (0, 0, 255), 1, cv2.LINE_AA)
+
+    det = GPOHeuristicFastVision(role_detection=False).detect(img)
+    assert det["target"]["type"] == "quest_enemy_marker"
+    assert det["_notes"]["quest_enemy_marker_detected"] is True
+    assert len(det["enemies"]) == 1
