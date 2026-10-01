@@ -17,6 +17,7 @@ from __future__ import annotations
 import ctypes
 import ctypes.wintypes as wt
 import platform
+import time
 
 if platform.system() != "Windows":  # pragma: no cover
     raise ImportError("windows_input is Windows-only")
@@ -213,14 +214,61 @@ class WindowsInputBackend:
 
 
 def focus_window(hwnd: int) -> bool:
-    """Bring the authorized target game window to the foreground."""
+    """Bring the authorized target game window to the foreground.
+
+    Windows can reject SetForegroundWindow transiently even when the target
+    is valid (foreground-lock rules). Treat an already-foreground window as
+    success, retry briefly, then use AttachThreadInput only as a bounded
+    fallback. No synthetic Alt/key press is used here.
+    """
     try:
         hwnd = int(hwnd)
-        if hwnd <= 0:
+        if hwnd <= 0 or not bool(_user32.IsWindow(wt.HWND(hwnd))):
             return False
+
         SW_RESTORE = 9
+        HWND_TOP = wt.HWND(0)
+        SWP_NOSIZE = 0x0001
+        SWP_NOMOVE = 0x0002
+        SWP_SHOWWINDOW = 0x0040
+
+        def is_foreground() -> bool:
+            return int(_user32.GetForegroundWindow() or 0) == hwnd
+
         _user32.ShowWindow(wt.HWND(hwnd), SW_RESTORE)
-        return bool(_user32.SetForegroundWindow(wt.HWND(hwnd)))
+        if is_foreground():
+            return True
+
+        for _ in range(3):
+            _user32.BringWindowToTop(wt.HWND(hwnd))
+            _user32.SetForegroundWindow(wt.HWND(hwnd))
+            if is_foreground():
+                return True
+            time.sleep(0.05)
+
+        # Bounded fallback for foreground-lock situations. Attach only the
+        # current and foreground GUI threads and always detach in finally.
+        fg = int(_user32.GetForegroundWindow() or 0)
+        cur_tid = int(_user32.GetCurrentThreadId())
+        fg_tid = int(_user32.GetWindowThreadProcessId(
+            wt.HWND(fg), None)) if fg else 0
+        attached = False
+        try:
+            if fg_tid and fg_tid != cur_tid:
+                attached = bool(_user32.AttachThreadInput(
+                    wt.DWORD(cur_tid), wt.DWORD(fg_tid), True))
+            _user32.SetWindowPos(
+                wt.HWND(hwnd), HWND_TOP, 0, 0, 0, 0,
+                SWP_NOSIZE | SWP_NOMOVE | SWP_SHOWWINDOW)
+            _user32.BringWindowToTop(wt.HWND(hwnd))
+            _user32.SetForegroundWindow(wt.HWND(hwnd))
+            _user32.SetFocus(wt.HWND(hwnd))
+        finally:
+            if attached:
+                _user32.AttachThreadInput(
+                    wt.DWORD(cur_tid), wt.DWORD(fg_tid), False)
+
+        return is_foreground()
     except Exception:
         return False
 
