@@ -43,3 +43,7 @@ brain/results/perf_study/*_completeness.csv
 # DigitalFlyLab transient dev sessions (regenerable; the canonical
 # dry-run evidence lives in runs/gate5_dryrun_canonical_20260929)
 runs/lab_*/
+
+
+# Local learned/runtime state: user-specific and regenerated across sessions
+runtime_state/
