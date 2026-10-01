@@ -17,7 +17,7 @@ import urllib.error
 import urllib.request
 
 
-DEFAULT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_MODEL = "gemini-3.1-flash-lite"
 
 
 def probe(model: str | None = None, timeout_s: float = 10.0) -> tuple[bool, str]:
