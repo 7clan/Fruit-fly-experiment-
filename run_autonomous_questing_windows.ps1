@@ -16,7 +16,7 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-Write-Host "== DIGITAL FLY AUTONOMOUS QUEST + STARTER PVE ==" -ForegroundColor Cyan
+Write-Host "== GATE 7B: DIGITAL FLY QUEST FOLLOWING + STARTER PVE ==" -ForegroundColor Cyan
 
 # Cheap structural preflight before the ~1 minute canonical brain startup.
 # SendInput requires cbSize to equal the native Win32 INPUT size.
@@ -27,8 +27,9 @@ if ($LASTEXITCODE -ne 0) {
 
 Write-Host "Fly brain owns turn/approach/retreat navigation." -ForegroundColor Green
 Write-Host "Quest helper: yellow QUEST = interact, green tracker = travel, red quest marker = starter PvE." -ForegroundColor Yellow
-Write-Host "Obstacle recovery: jump, climb, bounded camera search." -ForegroundColor Yellow
-Write-Host "Starter PvE gate: F block, Q evade, M1, E Gut Punch, R Ground Smash." -ForegroundColor Yellow
+Write-Host "Camera assist: bounded recenter on visible quest/enemy tracker; fly still owns locomotor direction." -ForegroundColor Yellow
+Write-Host "Obstacle recovery: jump, climb, bounded camera search; far APPROACH may double-W sprint." -ForegroundColor Yellow
+Write-Host "Starter PvE: F block, Q evade, M1, E Gut Punch, R Ground Smash; broader skill keys are catalogued but context-gated." -ForegroundColor Yellow
 Write-Host "Keep the observed default Melee loadout equipped for this Gate-7A run." -ForegroundColor Yellow
 Write-Host "Defense learning is ENGINEERED ValueTable learning, not biological MB learning." -ForegroundColor DarkYellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
