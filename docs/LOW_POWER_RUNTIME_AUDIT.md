@@ -136,3 +136,19 @@ the target laptop's actual canonical-brain wall time.
 The new configuration should reduce parent-process CPU, disk activity and
 RAM pressure. The next real session must determine how much this improves
 canonical chunk wall time. No numerical speedup is claimed before that run.
+
+
+### 8. Downsample before the full BGR ownership copy
+
+The Windows.Graphics.Capture callback now supports a stride downsample before
+OpenCV performs the required BGRA->BGR ownership copy. The i7-5500U launcher
+uses a factor of 2, so a native ~1920x1030 frame becomes ~960x515 before the
+BGR copy, then fast vision works at a maximum width of 384 px.
+
+This reduces memory bandwidth and the size of the shared latest-frame object.
+All current navigation/HUD/waypoint geometry uses normalized coordinates.
+The original native width/height and applied downsample factor are recorded
+with captured frames, and the session header records the capture profile.
+
+This is an engineered perception optimization only; it does not change the
+canonical brain or neural decoder.
