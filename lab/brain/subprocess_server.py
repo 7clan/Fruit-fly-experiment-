@@ -38,6 +38,7 @@ def main(argv=None) -> int:
         # Live control needs exact population/whole-brain counts, not every
         # individual spike timestamp. Avoid storing the full event stream.
         record_full_spikes=False,
+        enable_checkpoints=False,
     )
 
     try:
