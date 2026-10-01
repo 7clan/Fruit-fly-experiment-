@@ -113,9 +113,9 @@ SKILL_CARDS: tuple[SkillCard, ...] = (
         "Movement is not changing the scene or a physical obstacle blocks progress.",
         (
             "low ledge or step: JUMP once",
-            "plausibly climbable wall: CLIMB once",
             "open lateral route: GO_AROUND",
-            "after repeated failed contact: BACKTRACK then REOBSERVE",
+            "after another failed contact: BACKTRACK then REOBSERVE",
+            "CLIMB only when visual semantics explicitly identify a climbable wall",
         ),
         (
             "scene position changes",
@@ -261,14 +261,14 @@ def render_skill_cards(context: str, max_cards: int = 5) -> str:
 
 
 def procedural_skill_plan(obs: dict, quest: dict | None = None) -> dict | None:
-    """Return a high-confidence skill plan for obvious GPO situations.
+    """Return a high-confidence skill candidate for obvious GPO situations.
 
-    This is deliberately deterministic and cheap.  It turns the procedural
-    cards into executable *skills* so the tiny local VLM is not asked to
-    rediscover obvious yellow/green/red quest semantics from pixels.
+    These candidates are now fed to the local SmolVLM text skill selector.
+    They remain the fail-safe if local inference stalls.
 
-    Return None only when actual semantic visual interpretation is useful
-    (for example, an open dialog/menu whose buttons need reading).
+    Important live correction: a red NPC diamond is NOT sufficient proof of
+    an active quest target.  If a yellow quest-giver cue is simultaneously
+    visible, accepting/reacquiring the quest takes priority over combat.
     """
     obs = dict(obs or {})
     quest = dict(quest or {})
@@ -297,13 +297,9 @@ def procedural_skill_plan(obs: dict, quest: dict | None = None) -> dict | None:
     except (TypeError, ValueError):
         yellow_direction = None
 
-    # If the game has put up an actual dialog/menu, the VLM can add value by
-    # reading labels.  Do not let this router guess click coordinates.
     if bool(ui.get("dialogue")) or bool(ui.get("menu")):
         return None
 
-    # Immediate survival remains supervisor-owned, but tell the coach layer
-    # to defer if health is critically low.
     try:
         health = float(player.get("health"))
     except (TypeError, ValueError):
@@ -320,38 +316,16 @@ def procedural_skill_plan(obs: dict, quest: dict | None = None) -> dict | None:
             "skill_card": "survival_defense",
         }
 
-    if target_type == "quest_enemy_marker":
-        if proximity is not None and proximity >= 0.66:
-            return {
-                "scene": "quest_combat",
-                "objective": "defeat the confirmed quest enemy",
-                "target": "red quest enemy",
-                "skill": "FIGHT_QUEST_TARGET",
-                "confidence": 0.99,
-                "explanation": "A confirmed red quest enemy is in useful combat range.",
-                "next_after_success": "reobserve quest progress",
-                "skill_card": "quest_combat",
-            }
-        return {
-            "scene": "hunt_quest_enemy",
-            "objective": "approach the confirmed quest enemy",
-            "target": "red quest enemy",
-            "skill": "NAVIGATE_OBJECTIVE",
-            "confidence": 0.99,
-            "explanation": "The red quest enemy is confirmed but not yet close enough.",
-            "next_after_success": "fight when the enemy reaches useful range",
-            "skill_card": "quest_combat",
-        }
-
-    # Yellow quest giver can coexist with the green Recommended Quest marker.
-    # Interaction is only selected when the yellow cue is close and centered.
+    # A visible quest giver has priority over red NPC diamonds.  The user's
+    # live run showed red diamonds above non-quest Corrupt Marines before the
+    # Bandit quest was correctly established.
     if yellow:
         if (yellow_proximity is not None and yellow_proximity >= 0.68
                 and yellow_direction is not None
                 and abs(yellow_direction) <= 0.50):
             return {
                 "scene": "quest_giver",
-                "objective": "accept the visible quest",
+                "objective": "accept or confirm the visible quest",
                 "target": "yellow quest giver",
                 "skill": "TAKE_QUEST",
                 "confidence": 0.99,
@@ -382,20 +356,40 @@ def procedural_skill_plan(obs: dict, quest: dict | None = None) -> dict | None:
             "skill_card": "quest_travel",
         }
 
+    if target_type == "quest_enemy_marker":
+        if proximity is not None and proximity >= 0.66:
+            return {
+                "scene": "quest_combat",
+                "objective": "defeat the confirmed active objective enemy",
+                "target": "red objective NPC",
+                "skill": "FIGHT_QUEST_TARGET",
+                "confidence": 0.92,
+                "explanation": "A red objective marker is close enough for combat.",
+                "next_after_success": "reobserve quest progress",
+                "skill_card": "quest_combat",
+            }
+        return {
+            "scene": "hunt_quest_enemy",
+            "objective": "approach the active objective NPC",
+            "target": "red objective NPC",
+            "skill": "NAVIGATE_OBJECTIVE",
+            "confidence": 0.90,
+            "explanation": "A red objective marker is visible but not yet close enough.",
+            "next_after_success": "fight only at useful range",
+            "skill_card": "quest_combat",
+        }
+
     phase = str(quest.get("phase") or "")
     if phase in {"obstacle_recovery", "stuck"}:
         return {
             "scene": "movement_blocked",
-            "objective": "recover from the obstacle",
+            "objective": "recover from the obstacle without repeating the same failed move",
             "target": target_type,
-            "skill": "REOBSERVE",
+            "skill": "GO_AROUND",
             "confidence": 0.90,
-            "explanation": "The procedural obstacle skill should choose jump/climb/backtrack from progress signals.",
+            "explanation": "Progress stalled; prefer lateral recovery over blind climbing.",
             "next_after_success": "resume navigation after position changes",
             "skill_card": "obstacle_recovery",
         }
 
-    # No obvious semantic target.  This is where a visual model may help, but
-    # the local coach decides separately whether the expensive vision pass is
-    # worth doing.
     return None
