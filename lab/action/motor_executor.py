@@ -232,22 +232,22 @@ class MotorExecutor(Worker):
         out = snap.payload
         intention = Intention.from_dict(out["intention"])
         action = self._materialize(out, intention)
-        veto_reason = self._navigation_veto_reason(action, now)
-        if veto_reason is not None:
-            # Technical failsafe only: preserve the neural decision in the
-            # decision event, but materialize STOP rather than allowing stale
-            # vision to make the executor turn the wrong way. No alternate
-            # movement is selected from vision.
-            action = ConcreteAction(
-                intention="STOP", ability_id="", bindings=[], hold_s=0.0,
-                notes={"source": "navigation_safety_veto",
-                       "brain_intention": intention.name,
-                       "reason": veto_reason})
-            self.stats["navigation_vetoes"] += 1
         brain_out_ts = int(out.get("ts_ns", now))
         # one decision event per brain output (exact latency chain in replay)
         new_brain_decision = brain_out_ts != self._last_brain_out_ts
         if new_brain_decision:
+            veto_reason = self._navigation_veto_reason(action, now)
+            if veto_reason is not None:
+                # Technical failsafe only: preserve the neural decision in
+                # the decision event, but materialize STOP rather than
+                # allowing stale vision to steer the opposite way. Vision
+                # never selects an alternate movement.
+                action = ConcreteAction(
+                    intention="STOP", ability_id="", bindings=[], hold_s=0.0,
+                    notes={"source": "navigation_safety_veto",
+                           "brain_intention": intention.name,
+                           "reason": veto_reason})
+                self.stats["navigation_vetoes"] += 1
             self.action_state.write(action.to_dict() | {
                 "ts_ns": now, "brain_out_ts_ns": brain_out_ts,
                 "autonomy": self.autonomy_enabled,
