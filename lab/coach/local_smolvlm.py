@@ -15,7 +15,9 @@ import urllib.error
 import urllib.request
 
 from .semantic_coach import ALLOWED_SKILLS, SemanticCoachWorker, _compact
-from .gpo_skills import render_skill_cards, procedural_skill_plan
+from .gpo_skills import (
+    SKILL_CARDS, render_skill_cards, procedural_skill_plan,
+)
 
 
 DEFAULT_LOCAL_MODEL = "smolvlm2-256m"
@@ -50,6 +52,9 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
         self._sections = self._split_sections(self.knowledge)
         self._last_skill_signature = None
         self._last_skill_publish_ns = 0
+        self._last_ai_signature = None
+        self._last_ai_call_ns = 0
+        self._text_backoff_until_ns = 0
         self._vision_backoff_until_ns = 0
         self.stats.update({
             "provider": self.provider,
@@ -58,7 +63,9 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
             "local_only_inference": True,
             "min_call_interval_s": self.min_call_interval_s,
             "procedural_plans": 0,
-            "visual_calls_reserved_for_ui": True,
+            "text_skill_calls": 0,
+            "visual_calls": 0,
+            "visual_calls_reserved_for_semantic_uncertainty": True,
         })
 
     @staticmethod
@@ -231,8 +238,10 @@ Return ONLY compact JSON:
  "memory_updates":[]
 }}"""
 
-    def _publish_skill_plan(self, raw: dict, catalog: dict,
-                            now_ns: int) -> None:
+    def _publish_skill_plan(
+            self, raw: dict, catalog: dict, now_ns: int, *,
+            provider: str = "procedural_skill_router",
+            local_vlm_used: bool = False) -> None:
         raw = dict(raw or {})
         raw.setdefault("control_id", "")
         raw.setdefault("observed_ability", {"binding": "", "label": ""})
@@ -241,11 +250,18 @@ Return ONLY compact JSON:
             {"needed": False, "x_norm": 0.0, "y_norm": 0.0, "label": ""})
         raw.setdefault("memory_updates", [])
         raw.setdefault("knowledge_query", "")
+        raw.setdefault("confidence", 0.80)
+        raw.setdefault("scene", "unknown")
+        raw.setdefault("objective", "")
+        raw.setdefault("target", "none")
+        raw.setdefault("skill", "REOBSERVE")
+        raw.setdefault("explanation", "")
+        raw.setdefault("next_after_success", "")
         plan = self._validate_plan(raw, catalog)
-        plan["provider"] = "procedural_skill_router"
+        plan["provider"] = str(provider)
         plan["model"] = self.model
         plan["skill_card"] = raw.get("skill_card")
-        plan["local_vlm_used"] = False
+        plan["local_vlm_used"] = bool(local_vlm_used)
         plan["ts_ns"] = int(now_ns)
         self.plan_state.write(plan, ts_ns=now_ns)
         self.events.publish(
@@ -258,16 +274,129 @@ Return ONLY compact JSON:
             "skill": plan["skill"],
             "confidence": plan["confidence"],
             "skill_card": plan.get("skill_card"),
-            "local_vlm_used": False,
+            "local_vlm_used": bool(local_vlm_used),
         }
 
-    def step(self) -> None:
-        """Skill-first local coach.
+    @staticmethod
+    def _card_actions(card_id: str) -> set[str]:
+        for card in SKILL_CARDS:
+            if card.skill_id == str(card_id or ""):
+                return {str(x).upper() for x in card.actions}
+        return {"REOBSERVE", "WAIT"}
 
-        Obvious quest states use executable procedural skills immediately.
-        The 256M visual model is reserved for scenes where reading an actual
-        dialog/menu can add information.  If local inference stalls or dies,
-        gameplay continues through the skill/supervisor layers.
+    def _text_skill_prompt(
+            self, candidate: dict, obs: dict, quest: dict,
+            catalog: dict) -> str:
+        card_id = str(candidate.get("skill_card") or "")
+        card_text = ""
+        for card in SKILL_CARDS:
+            if card.skill_id == card_id:
+                card_text = card.compact()
+                break
+        target = dict(obs.get("target") or {})
+        notes = dict(obs.get("notes") or {})
+        player = dict(obs.get("player") or {})
+        compact_state = {
+            "candidate": {
+                "scene": candidate.get("scene"),
+                "skill": candidate.get("skill"),
+                "objective": candidate.get("objective"),
+                "skill_card": card_id,
+            },
+            "target": {
+                "type": target.get("type"),
+                "direction": target.get("direction"),
+                "distance": target.get("distance"),
+                "confidence": target.get("confidence"),
+            },
+            "quest_phase": quest.get("phase"),
+            "health": player.get("health"),
+            "stamina": player.get("stamina"),
+            "yellow_quest_visible": bool(notes.get("quest_marker_detected")),
+            "yellow_quest_proximity": notes.get("quest_marker_proximity"),
+            "yellow_quest_direction": notes.get("quest_marker_direction"),
+        }
+        allowed = sorted(self._card_actions(card_id))
+        return f"""You are the LOCAL GPO SKILL SELECTOR.
+This is a TEXT-ONLY planning call. Fast CV already extracted the game state.
+Choose exactly ONE action from ALLOWED_ACTIONS. Do not invent keys.
+
+SKILL CARD:
+{card_text}
+
+STATE:
+{json.dumps(compact_state, separators=(",", ":"), default=str)}
+
+ALLOWED_ACTIONS:
+{json.dumps(allowed)}
+
+Return ONLY JSON:
+{{
+ "scene":"short",
+ "objective":"short",
+ "target":"short",
+ "skill":"one allowed action",
+ "control_id":"",
+ "observed_ability":{{"binding":"","label":""}},
+ "ui_click":{{"needed":false,"x_norm":0.0,"y_norm":0.0,"label":""}},
+ "confidence":0.0,
+ "explanation":"one short sentence",
+ "next_after_success":"short",
+ "knowledge_query":"",
+ "memory_updates":[]
+}}"""
+
+    def _run_text_skill_selector(
+            self, candidate: dict, obs: dict, quest: dict,
+            catalog: dict, now_ns: int) -> bool:
+        prompt = self._text_skill_prompt(candidate, obs, quest, catalog)
+        t0 = time.perf_counter()
+        self.stats["calls"] = int(self.stats.get("calls", 0)) + 1
+        self.stats["text_skill_calls"] = int(
+            self.stats.get("text_skill_calls", 0)) + 1
+        try:
+            raw = self._call_gemini(prompt, None)
+            if not isinstance(raw, dict):
+                raise ValueError("local text skill selector returned non-object")
+            allowed = self._card_actions(candidate.get("skill_card"))
+            chosen = str(raw.get("skill") or "").upper()
+            if chosen not in allowed:
+                raise ValueError(
+                    f"local skill {chosen!r} not allowed by "
+                    f"{candidate.get('skill_card')!r}")
+            merged = dict(candidate)
+            for key in (
+                    "scene", "objective", "target", "skill", "confidence",
+                    "explanation", "next_after_success"):
+                if key in raw:
+                    merged[key] = raw[key]
+            merged["skill"] = chosen
+            merged["skill_card"] = candidate.get("skill_card")
+            self._publish_skill_plan(
+                merged, catalog, now_ns,
+                provider="local_smolvlm2_text_skill",
+                local_vlm_used=True)
+            self._last_ai_call_ns = now_ns
+            self._last_ai_signature = (
+                str(candidate.get("skill_card") or ""),
+                str(candidate.get("scene") or ""),
+                str((obs.get("target") or {}).get("type") or ""),
+            )
+            self._last_skill_publish_ns = now_ns
+            self._last_skill_signature = self._last_ai_signature
+            return True
+        finally:
+            self.stats["api_ms_total"] = round(
+                float(self.stats.get("api_ms_total", 0.0))
+                + (time.perf_counter() - t0) * 1000.0, 3)
+
+    def step(self) -> None:
+        """Hybrid local coach.
+
+        The 256M model now ACTUALLY selects high-level skills from compact
+        state.  Those text-only calls are cheap enough for the target laptop.
+        Procedural cards remain a fail-safe if the tiny model stalls.  Full
+        image inference is reserved for genuinely ambiguous semantic scenes.
         """
         now = self.clock.now_ns()
         meta = self._state(self.meta_state)
@@ -285,19 +414,40 @@ Return ONLY compact JSON:
         raw = procedural_skill_plan(obs, quest)
         if raw is not None:
             target = obs.get("target") or {}
-            notes = obs.get("notes") or {}
             signature = (
-                str(raw.get("skill") or ""),
+                str(raw.get("skill_card") or ""),
                 str(raw.get("scene") or ""),
                 str(target.get("type") or ""),
-                round(float(target.get("distance") or 0.0), 1),
-                bool(notes.get("quest_marker_detected")),
             )
-            due = (
-                signature != self._last_skill_signature
-                or now - self._last_skill_publish_ns >= int(8.0e9))
-            if due:
-                self._publish_skill_plan(raw, catalog, now)
+            ai_due = (
+                signature != self._last_ai_signature
+                or now - self._last_ai_call_ns >= int(30.0e9))
+            if ai_due and now >= self._text_backoff_until_ns:
+                try:
+                    if self._run_text_skill_selector(
+                            raw, obs, quest, catalog, now):
+                        return
+                except Exception as exc:
+                    self.stats["api_errors"] = int(
+                        self.stats.get("api_errors", 0)) + 1
+                    self.stats["last_error"] = repr(exc)
+                    self._text_backoff_until_ns = now + int(60.0e9)
+                    self.events.publish({
+                        "kind": "coach_error",
+                        "ts_ns": now,
+                        "model": self.model,
+                        "error": repr(exc),
+                        "fallback": "procedural_skill_router",
+                        "call_type": "text_skill",
+                    }, ts_ns=now)
+
+            # Cheap deterministic fallback only when the actual local model
+            # could not produce a valid skill.
+            if signature != self._last_skill_signature:
+                self._publish_skill_plan(
+                    raw, catalog, now,
+                    provider="procedural_skill_fallback",
+                    local_vlm_used=False)
                 self._last_skill_signature = signature
                 self._last_skill_publish_ns = now
                 self.stats["procedural_plans"] = (
@@ -308,31 +458,45 @@ Return ONLY compact JSON:
 
         ui = dict(obs.get("ui") or {})
         target = dict(obs.get("target") or {})
+        player = dict(obs.get("player") or {})
+        phase = str(quest.get("phase") or "")
+        try:
+            health = float(player.get("health"))
+        except (TypeError, ValueError):
+            health = None
+
         needs_visual_semantics = bool(
             ui.get("dialogue") or ui.get("menu")
+            or phase in {"obstacle_recovery", "stuck"}
+            or (health is not None and health <= 0.30)
         )
 
-        # Unknown outdoor scene: do not burn 45-180 seconds of old-laptop CPU
-        # trying to make a 256M VLM rediscover that no objective is visible.
-        # The CV/supervisor will continue reacquiring quest markers.
         if not needs_visual_semantics:
             fallback = {
                 "scene": "uncertain_no_visible_objective",
                 "objective": "wait for a reliable quest/objective cue",
                 "target": str(target.get("type") or "none"),
                 "skill": "REOBSERVE",
-                "confidence": 0.94,
+                "confidence": 0.92,
                 "explanation": (
-                    "No dialog/menu or reliable semantic target requires "
-                    "expensive local vision right now."),
-                "next_after_success": "resume the matching procedural skill",
+                    "No reliable semantic target is visible; preserve control "
+                    "until fast CV reacquires an objective."),
+                "next_after_success": "resume the matching skill",
                 "skill_card": "obstacle_recovery",
             }
-            if now - self._last_skill_publish_ns >= int(12.0e9):
-                self._publish_skill_plan(fallback, catalog, now)
+            if self._last_skill_signature != (
+                    "obstacle_recovery",
+                    "uncertain_no_visible_objective",
+                    str(target.get("type") or "")):
+                self._publish_skill_plan(
+                    fallback, catalog, now,
+                    provider="procedural_skill_fallback",
+                    local_vlm_used=False)
+                self._last_skill_signature = (
+                    "obstacle_recovery",
+                    "uncertain_no_visible_objective",
+                    str(target.get("type") or ""))
                 self._last_skill_publish_ns = now
-                self.stats["procedural_plans"] = (
-                    int(self.stats.get("procedural_plans", 0)) + 1)
             else:
                 self.stats["skips"] += 1
             return
@@ -341,12 +505,11 @@ Return ONLY compact JSON:
             self.stats["skips"] += 1
             return
 
+        before_calls = int(self.stats.get("calls", 0))
         before_errors = int(self.stats.get("api_errors", 0))
         try:
             super().step()
         except Exception as exc:
-            # A local VLM/server failure must never kill the game-control
-            # experiment.  Fall back to the executable skill layer.
             self.stats["api_errors"] = int(
                 self.stats.get("api_errors", 0)) + 1
             self.stats["last_error"] = repr(exc)
@@ -356,25 +519,15 @@ Return ONLY compact JSON:
                 "model": self.model,
                 "error": repr(exc),
                 "fallback": "procedural_skills",
+                "call_type": "vision",
             }, ts_ns=now)
+        finally:
+            if int(self.stats.get("calls", 0)) > before_calls:
+                self.stats["visual_calls"] = int(
+                    self.stats.get("visual_calls", 0)) + 1
 
         if int(self.stats.get("api_errors", 0)) > before_errors:
-            # Back off hard after an expensive failure.  The rest of the
-            # agent remains fully operational without the VLM.
             self._vision_backoff_until_ns = now + int(180.0e9)
-            fallback = {
-                "scene": "local_vision_unavailable",
-                "objective": "continue using procedural quest skills",
-                "target": str(target.get("type") or "none"),
-                "skill": "REOBSERVE",
-                "confidence": 0.98,
-                "explanation": (
-                    "Local vision timed out/unavailable; procedural skills "
-                    "remain active."),
-                "next_after_success": "retry visual semantics later",
-                "skill_card": "obstacle_recovery",
-            }
-            self._publish_skill_plan(fallback, catalog, now)
 
     def _call_gemini(
             self, prompt: str, image_b64: str | None,
