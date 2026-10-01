@@ -42,14 +42,25 @@ if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
 }
 Write-Host "Semantic coach API key: configured." -ForegroundColor Green
 $coachModel = $env:GEMINI_MODEL
-if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.1-flash-lite" }
+if ([string]::IsNullOrWhiteSpace($coachModel)) { $coachModel = "gemini-3.5-flash-lite" }
 Write-Host "Coach model: $coachModel" -ForegroundColor DarkCyan
 
-# Verify key/model before spending ~1 minute initializing the canonical brain.
-& $mainPython -m lab.coach.probe --model $coachModel
-if ($LASTEXITCODE -ne 0) {
-    throw "Semantic coach preflight failed. Fix the API key/model before starting the brain."
+# Verify key/project and resolve an actually available Flash-Lite model
+# before spending ~1 minute initializing the canonical brain.
+$probeOutput = @(& $mainPython -m lab.coach.probe --model $coachModel)
+$probeExit = $LASTEXITCODE
+$probeOutput | ForEach-Object { Write-Host $_ }
+if ($probeExit -ne 0) {
+    throw "Semantic coach preflight failed. The key/project/model is not usable."
 }
+$selectedModelLine = $probeOutput | Where-Object { $_ -like "COACH_MODEL=*" } | Select-Object -Last 1
+if ([string]::IsNullOrWhiteSpace($selectedModelLine)) {
+    throw "Semantic coach preflight passed but did not return a selected model."
+}
+$coachModel = $selectedModelLine.Substring("COACH_MODEL=".Length).Trim()
+$env:GEMINI_MODEL = $coachModel
+[Environment]::SetEnvironmentVariable("GEMINI_MODEL", $coachModel, "User")
+Write-Host "Resolved coach model: $coachModel" -ForegroundColor Green
 
 & $mainPython -m lab.app `
     --runtime canonical `
