@@ -1,9 +1,8 @@
-# DigitalFlyLab — a connectome-derived Drosophila brain learns to play a game
+# DigitalFlyLab — connectome-derived Drosophila simulation and closed-loop control research
 
-**A simulated Drosophila neural agent — derived as closely as practical
-from real fruit-fly neuroscience — eventually learns and plays Grand Piece
-Online, with the Drosophila brain model meaningfully in the
-control path.**
+**An experimental digital Drosophila research platform built around a pinned whole-brain connectome-derived model, reproducible neural I/O experiments, and gated closed-loop control.** The project explicitly separates connectome data and modeled neural dynamics from engineered perception, memory, planning, and game-control components. It does **not** claim biological equivalence, consciousness, or successful live-game learning.
+
+[![Windows navigation smoke](https://github.com/7clan/Fruit-fly-experiment-/actions/workflows/windows-navigation-smoke.yml/badge.svg)](https://github.com/7clan/Fruit-fly-experiment-/actions)
 
 > ### Project status — read this first
 >
