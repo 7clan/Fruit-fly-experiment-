@@ -258,3 +258,144 @@ def render_skill_cards(context: str, max_cards: int = 5) -> str:
     return "\n\n".join(
         card.compact() for card in select_skill_cards(context, max_cards)
     )
+
+
+def procedural_skill_plan(obs: dict, quest: dict | None = None) -> dict | None:
+    """Return a high-confidence skill plan for obvious GPO situations.
+
+    This is deliberately deterministic and cheap.  It turns the procedural
+    cards into executable *skills* so the tiny local VLM is not asked to
+    rediscover obvious yellow/green/red quest semantics from pixels.
+
+    Return None only when actual semantic visual interpretation is useful
+    (for example, an open dialog/menu whose buttons need reading).
+    """
+    obs = dict(obs or {})
+    quest = dict(quest or {})
+    target = dict(obs.get("target") or {})
+    notes = dict(obs.get("notes") or {})
+    ui = dict(obs.get("ui") or {})
+    player = dict(obs.get("player") or {})
+
+    target_type = str(target.get("type") or "none")
+    try:
+        proximity = float(target.get("distance"))
+    except (TypeError, ValueError):
+        proximity = None
+    try:
+        direction = float(target.get("direction"))
+    except (TypeError, ValueError):
+        direction = None
+
+    yellow = bool(notes.get("quest_marker_detected"))
+    try:
+        yellow_proximity = float(notes.get("quest_marker_proximity"))
+    except (TypeError, ValueError):
+        yellow_proximity = None
+    try:
+        yellow_direction = float(notes.get("quest_marker_direction"))
+    except (TypeError, ValueError):
+        yellow_direction = None
+
+    # If the game has put up an actual dialog/menu, the VLM can add value by
+    # reading labels.  Do not let this router guess click coordinates.
+    if bool(ui.get("dialogue")) or bool(ui.get("menu")):
+        return None
+
+    # Immediate survival remains supervisor-owned, but tell the coach layer
+    # to defer if health is critically low.
+    try:
+        health = float(player.get("health"))
+    except (TypeError, ValueError):
+        health = None
+    if health is not None and health <= 0.18:
+        return {
+            "scene": "critical_health",
+            "objective": "survive and create distance",
+            "target": target_type,
+            "skill": "REOBSERVE",
+            "confidence": 0.99,
+            "explanation": "Hard survival/reflex layer owns critical-health defense.",
+            "next_after_success": "resume the quest only after health is safe",
+            "skill_card": "survival_defense",
+        }
+
+    if target_type == "quest_enemy_marker":
+        if proximity is not None and proximity >= 0.66:
+            return {
+                "scene": "quest_combat",
+                "objective": "defeat the confirmed quest enemy",
+                "target": "red quest enemy",
+                "skill": "FIGHT_QUEST_TARGET",
+                "confidence": 0.99,
+                "explanation": "A confirmed red quest enemy is in useful combat range.",
+                "next_after_success": "reobserve quest progress",
+                "skill_card": "quest_combat",
+            }
+        return {
+            "scene": "hunt_quest_enemy",
+            "objective": "approach the confirmed quest enemy",
+            "target": "red quest enemy",
+            "skill": "NAVIGATE_OBJECTIVE",
+            "confidence": 0.99,
+            "explanation": "The red quest enemy is confirmed but not yet close enough.",
+            "next_after_success": "fight when the enemy reaches useful range",
+            "skill_card": "quest_combat",
+        }
+
+    # Yellow quest giver can coexist with the green Recommended Quest marker.
+    # Interaction is only selected when the yellow cue is close and centered.
+    if yellow:
+        if (yellow_proximity is not None and yellow_proximity >= 0.68
+                and yellow_direction is not None
+                and abs(yellow_direction) <= 0.50):
+            return {
+                "scene": "quest_giver",
+                "objective": "accept the visible quest",
+                "target": "yellow quest giver",
+                "skill": "TAKE_QUEST",
+                "confidence": 0.99,
+                "explanation": "The yellow quest cue is close and centered.",
+                "next_after_success": "verify the quest/objective changed",
+                "skill_card": "quest_accept",
+            }
+        return {
+            "scene": "approach_quest_giver",
+            "objective": "move closer to the yellow quest giver",
+            "target": "yellow quest giver",
+            "skill": "NAVIGATE_OBJECTIVE",
+            "confidence": 0.97,
+            "explanation": "A quest giver is visible but is not yet in safe interaction position.",
+            "next_after_success": "interact only when close and centered",
+            "skill_card": "quest_accept",
+        }
+
+    if target_type == "recommended_quest_waypoint":
+        return {
+            "scene": "quest_travel",
+            "objective": "follow the active green quest objective",
+            "target": "green recommended quest waypoint",
+            "skill": "NAVIGATE_OBJECTIVE",
+            "confidence": 0.99,
+            "explanation": "The green recommended quest waypoint is the current travel objective.",
+            "next_after_success": "reobserve when the marker changes or becomes close",
+            "skill_card": "quest_travel",
+        }
+
+    phase = str(quest.get("phase") or "")
+    if phase in {"obstacle_recovery", "stuck"}:
+        return {
+            "scene": "movement_blocked",
+            "objective": "recover from the obstacle",
+            "target": target_type,
+            "skill": "REOBSERVE",
+            "confidence": 0.90,
+            "explanation": "The procedural obstacle skill should choose jump/climb/backtrack from progress signals.",
+            "next_after_success": "resume navigation after position changes",
+            "skill_card": "obstacle_recovery",
+        }
+
+    # No obvious semantic target.  This is where a visual model may help, but
+    # the local coach decides separately whether the expensive vision pass is
+    # worth doing.
+    return None
