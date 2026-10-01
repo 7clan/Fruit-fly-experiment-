@@ -120,3 +120,16 @@ The first Gate-7C run should verify:
 Do not judge accessory/fruit/ship purchasing from this first starter-island
 test; those capabilities should be exercised only after the basic semantic
 loop is verified.
+
+
+## Persistent character profile
+
+The coach keeps a small local profile in
+`runtime_state/gpo_coach_profile.json` (gitignored). It remembers only
+high-confidence facts explicitly visible in the game or supplied by compact
+runtime state, such as level, Peli, island, active quest, current fruit/style,
+weapon/ship/Haki and equipment/hotbar observations.
+
+Inferred guesses are not persisted as ownership facts. This gives the coach
+continuity for progression planning across sessions without letting one model
+guess permanently rewrite the character state.
