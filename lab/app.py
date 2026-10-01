@@ -215,10 +215,18 @@ class DigitalFlyLab:
             warm()
         meta = {
             "app": "DigitalFlyLab", "version": __version__,
-            "mode": ("ACTIVE_REQUESTED_DISARMED"
-                     if self.autonomy_requested
-                     else ("PASSIVE" if not self.executor.autonomy_enabled
-                           else "ACTIVE")),
+            "mode": (
+                "QUEST_PVE_REQUESTED_DISARMED"
+                if self.autonomy_requested and self.quest_autonomy
+                else "ACTIVE_REQUESTED_DISARMED"
+                if self.autonomy_requested
+                else ("PASSIVE" if not self.executor.autonomy_enabled
+                      else "ACTIVE")),
+            "gpo_mode": (
+                "quest_pve_v1" if self.quest_autonomy
+                else "navigation_v1" if self.autonomy_requested
+                else "passive"),
+            "gpo_loadout": self.gpo_loadout,
             "runtime": self.brain.runtime.runtime_label,
             "chunk_ms": self.brain.chunk_ms,
             "capture_config": {
@@ -228,9 +236,14 @@ class DigitalFlyLab:
             },
             "low_power_profile": bool(self.autonomy_requested),
             "gpo_control_catalog": {
-                "count": len(CORE_CONTROLS),
-                "ids": [x.control_id for x in CORE_CONTROLS],
+                "count": len(CORE_CONTROLS) + len(
+                    loadout_controls(self.gpo_loadout)),
+                "ids": (
+                    [x.control_id for x in CORE_CONTROLS]
+                    + [x.control_id for x in
+                       loadout_controls(self.gpo_loadout)]),
                 "dynamic_equipped_moves": True,
+                "loadout": self.gpo_loadout,
             },
             "worker_targets_hz": {
                 "fast": self.fast_vision.governor.target_hz,
@@ -254,11 +267,18 @@ class DigitalFlyLab:
         self.action_meta.write({
             "movement_control_available": self.autonomy_requested,
             "autonomy": self.executor.autonomy_enabled,
+            "mode": (
+                "quest_pve_v1" if self.quest_autonomy
+                else "navigation_v1" if self.autonomy_requested
+                else "passive"),
+            "gpo_loadout": self.gpo_loadout,
             "ts_ns": SHARED_CLOCK.now_ns(),
         })
+        controls = list(CORE_CONTROLS) + loadout_controls(self.gpo_loadout)
         self.control_catalog_state.write({
-            "controls": [x.to_dict() for x in CORE_CONTROLS],
+            "controls": [x.to_dict() for x in controls],
             "dynamic_equipped_moves": True,
+            "loadout": self.gpo_loadout,
             "ts_ns": SHARED_CLOCK.now_ns(),
         })
         self.memory.start()
@@ -327,17 +347,32 @@ class DigitalFlyLab:
             self.action_meta.write({
                 "movement_control_available": True,
                 "autonomy": True,
+                "mode": (
+                    "quest_pve_v1" if self.quest_autonomy
+                    else "navigation_v1"),
+                "gpo_loadout": self.gpo_loadout,
                 "ts_ns": SHARED_CLOCK.now_ns(),
             })
-            print("[lab] MOVEMENT ENABLED", flush=True)
+            print(
+                "[lab] QUEST/PVE AGENT ENABLED"
+                if self.quest_autonomy else "[lab] MOVEMENT ENABLED",
+                flush=True)
         else:
             self.executor.set_autonomy(False, reason=reason)
             self.action_meta.write({
                 "movement_control_available": self.autonomy_requested,
                 "autonomy": False,
+                "mode": (
+                    "quest_pve_v1" if self.quest_autonomy
+                    else "navigation_v1" if self.autonomy_requested
+                    else "passive"),
+                "gpo_loadout": self.gpo_loadout,
                 "ts_ns": SHARED_CLOCK.now_ns(),
             })
-            print("[lab] MOVEMENT DISABLED", flush=True)
+            print(
+                "[lab] QUEST/PVE AGENT DISABLED"
+                if self.quest_autonomy else "[lab] MOVEMENT DISABLED",
+                flush=True)
 
     def _handle_dashboard_control(self, command: str) -> None:
         if command == "enable_movement":
@@ -443,14 +478,37 @@ class DigitalFlyLab:
                     except (TypeError, ValueError):
                         health = None
                     if health is not None and units == "fraction":
-                        if (last_health is not None
-                                and last_health - health >= 0.06
-                                and self.executor.autonomy_enabled):
+                        if self.quest_autonomy:
+                            # Gate-7 quest/PvE supervisor uses damage as a
+                            # defense-learning signal. Do not disable the
+                            # agent on every hit. A critically low-health
+                            # hard stop remains outside that learning loop.
+                            if (health <= 0.12
+                                    and self.executor.autonomy_enabled):
+                                self._set_navigation_enabled(
+                                    False, reason="critical_health_stop")
+                                self.action_meta.write({
+                                    "movement_control_available": True,
+                                    "autonomy": False,
+                                    "mode": "quest_pve_v1",
+                                    "last_safety_event":
+                                        "critical_health_stop",
+                                    "ts_ns": SHARED_CLOCK.now_ns(),
+                                })
+                                print(
+                                    f"[lab] CRITICAL HEALTH STOP: "
+                                    f"health={health:.2f}; agent disabled",
+                                    flush=True,
+                                )
+                        elif (last_health is not None
+                              and last_health - health >= 0.06
+                              and self.executor.autonomy_enabled):
                             self._set_navigation_enabled(
                                 False, reason="damage_safety_pause")
                             self.action_meta.write({
                                 "movement_control_available": True,
                                 "autonomy": False,
+                                "mode": "navigation_v1",
                                 "last_safety_event": "damage_pause",
                                 "ts_ns": SHARED_CLOCK.now_ns(),
                             })
@@ -519,6 +577,12 @@ class DigitalFlyLab:
             "workers": {w.name: dict(w.stats) for w in self.workers},
             "memory": self.memory.stats(),
             "input_backend": self.executor.backend.backend_health(),
+            "quest_state": (
+                (self.bus.state("quest.state").read().payload
+                 if self.bus.state("quest.state").read() is not None
+                 else None)
+                if self.quest_autonomy else None),
+            "engineered_values": self.value.snapshot(),
             "assessment": {
                 "started_ns": self.assessment_started_ns,
                 "wait_end_reason": self.wait_end_reason,
@@ -605,15 +669,23 @@ def main(argv=None) -> int:
     ap.add_argument("--autonomy", action="store_true",
                     help="generic autonomy remains blocked; use movement gate launcher")
     ap.add_argument("--movement-only-autonomy", action="store_true",
-                    help="Gate-6 only: arm hard-filtered W/A/D movement backend")
+                    help="Gate-6 only: hard-filtered navigation backend")
+    ap.add_argument("--quest-autonomy", action="store_true",
+                    help="Gate-7: low-power quest + starter-PvE hybrid agent")
+    ap.add_argument("--gpo-loadout", default="default_melee",
+                    help="observed equipped GPO loadout profile")
     args = ap.parse_args(argv)
 
     if args.autonomy:
         raise SystemExit(
             "generic autonomy is blocked; use the dedicated movement-only "
             "Gate-6 launcher")
-    if args.movement_only_autonomy and args.capture != "windows":
-        raise SystemExit("movement-only autonomy requires Windows capture")
+    if args.movement_only_autonomy and args.quest_autonomy:
+        raise SystemExit(
+            "choose either movement-only or quest-autonomy, not both")
+    if ((args.movement_only_autonomy or args.quest_autonomy)
+            and args.capture != "windows"):
+        raise SystemExit("active GPO autonomy requires Windows capture")
 
     if args.self_test:
         res = self_test(runtime_kind=args.runtime)
@@ -625,8 +697,12 @@ def main(argv=None) -> int:
     lab = DigitalFlyLab(capture_kind=args.capture,
                         capture_fps=args.capture_fps,
                         capture_downsample=args.capture_downsample,
-                        autonomy=bool(args.movement_only_autonomy),
+                        autonomy=bool(
+                            args.movement_only_autonomy
+                            or args.quest_autonomy),
                         movement_only=bool(args.movement_only_autonomy),
+                        quest_autonomy=bool(args.quest_autonomy),
+                        gpo_loadout=args.gpo_loadout,
                         runtime_kind=args.runtime, chunk_ms=args.chunk_ms,
                         brain_hz=args.brain_hz, fast_hz=args.fast_hz,
                         heavy_hz=args.heavy_hz,
@@ -646,24 +722,38 @@ def main(argv=None) -> int:
             print(
                 f"[lab] canonical brain READY: init={lab.brain.stats.get('init_ms')} ms "
                 f"prewarm={lab.brain.stats.get('prewarm_ms')} ms; "
-                + (("starting persistent movement-only run (F12/Ctrl+C to stop)"
-                    if args.movement_only_autonomy else
-                    "starting persistent passive run (Ctrl+C to stop)")
+                + ((
+                       "starting persistent quest/PvE run (F12/Ctrl+C to stop)"
+                       if args.quest_autonomy else
+                       "starting persistent movement-only run (F12/Ctrl+C to stop)"
+                       if args.movement_only_autonomy else
+                       "starting persistent passive run (Ctrl+C to stop)")
                    if args.seconds <= 0 else
-                   (f"starting {args.seconds}s movement-only test"
+                   (f"starting {args.seconds}s quest/PvE test"
+                    if args.quest_autonomy else
+                    f"starting {args.seconds}s movement-only test"
                     if args.movement_only_autonomy else
                     f"starting {args.seconds}s timed smoke test")),
                 flush=True,
             )
-        if args.movement_only_autonomy:
+        if args.movement_only_autonomy or args.quest_autonomy:
             lab.arm_windows_navigation()
             if lab.dashboard_ui is not None:
-                print("[lab] navigation controls ready; MOVEMENT DISABLED — "
-                      "click ENABLE MOVEMENT in DigitalFlyLab; F12 = EMERGENCY STOP",
-                      flush=True)
+                print(
+                    "[lab] quest/PvE controls ready; AGENT DISABLED — "
+                    "click ENABLE in DigitalFlyLab; F12 = EMERGENCY STOP"
+                    if args.quest_autonomy else
+                    "[lab] navigation controls ready; MOVEMENT DISABLED — "
+                    "click ENABLE in DigitalFlyLab; F12 = EMERGENCY STOP",
+                    flush=True)
             else:
-                print("[lab] navigation armed; Roblox focused; F12 = EMERGENCY STOP",
-                      flush=True)
+                print(
+                    "[lab] quest/PvE agent armed; Roblox focused; "
+                    "F12 = EMERGENCY STOP"
+                    if args.quest_autonomy else
+                    "[lab] navigation armed; Roblox focused; "
+                    "F12 = EMERGENCY STOP",
+                    flush=True)
         lab.assessment_started_ns = SHARED_CLOCK.now_ns()
         if isinstance(lab.capture, SyntheticCapture):
             lab.drive_synthetic(seconds=args.seconds, fps=30.0)
