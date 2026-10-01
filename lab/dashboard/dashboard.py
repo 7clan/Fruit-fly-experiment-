@@ -690,10 +690,16 @@ class OpenCVDashboardRenderer:
             else:
                 card = coach.get("skill_card")
                 provider = coach.get("provider")
+                used = coach.get("local_vlm_used")
+                ai_tag = (
+                    " AI=YES" if used is True
+                    else " AI=FALLBACK" if used is False
+                    else "")
                 coach_line = (
                     f"AI COACH: {coach.get('skill') or '-'} "
                     f"conf={coach.get('confidence')} "
                     f"scene={coach.get('scene') or '-'}"
+                    + ai_tag
                     + (f" skill={card}" if card else "")
                     + (f" via={provider}" if provider else ""))
             self._put(
