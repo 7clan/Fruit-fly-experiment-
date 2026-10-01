@@ -31,9 +31,11 @@ import time
 from pathlib import Path
 
 from . import __version__
-from .action.gpo_controls import CORE_CONTROLS
+from .action.gpo_controls import CORE_CONTROLS, loadout_controls
 from .action.motor_executor import (
-    MotorExecutor, SafeNoopBackend, create_windows_movement_only_backend)
+    MotorExecutor, SafeNoopBackend, create_windows_movement_only_backend,
+    create_windows_questing_backend)
+from .action.quest_combat_supervisor import QuestCombatSupervisor
 from .brain.worker import BrainWorker
 from .brain.runtime import CanonicalBrianRuntime
 from .brain.subprocess_runtime import CanonicalBrainSubprocessRuntime
@@ -65,6 +67,8 @@ class DigitalFlyLab:
                  mode: BusMode = BusMode.THREADED,
                  autonomy: bool = False,
                  movement_only: bool = False,
+                 quest_autonomy: bool = False,
+                 gpo_loadout: str = "default_melee",
                  dashboard: bool = True,
                  dashboard_renderer: str = "text",
                  brain_hz: float = 10.0,
@@ -95,11 +99,13 @@ class DigitalFlyLab:
         self.action_meta = self.bus.state("action.meta")
         self.control_catalog_state = self.bus.state("action.control_catalog")
 
+        self.quest_autonomy = bool(quest_autonomy)
+        self.gpo_loadout = str(gpo_loadout or "default_melee")
+        active_low_power = bool(movement_only or self.quest_autonomy)
+
         # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
-        # canonical Brian2 subprocess is the dominant workload. Movement-only
-        # autonomy therefore caps auxiliary polling rates so UI/logging do
-        # not steal a whole logical core from the brain/game.
-        if movement_only:
+        # canonical Brian2 subprocess is the dominant workload.
+        if active_low_power:
             executor_hz = min(float(executor_hz), 20.0)
             planner_hz = min(float(planner_hz), 0.5)
 
@@ -107,7 +113,9 @@ class DigitalFlyLab:
         self.fast_vision = FastVisionWorker(
             self.bus, target_hz=fast_hz,
             max_detect_width=int(fast_detect_width),
-            role_detection=not movement_only)
+            # Questing uses cheap explicit yellow/green/red objective markers
+            # instead of the expensive generic humanoid proposal pass.
+            role_detection=not active_low_power)
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
@@ -130,26 +138,35 @@ class DigitalFlyLab:
         self.brain = BrainWorker(self.bus, target_hz=brain_hz,
                                  runtime=runtime, runtime_kind=runtime_kind,
                                  chunk_ms=chunk_ms)
-        self.autonomy_requested = bool(autonomy and movement_only)
-        if self.autonomy_requested:
+        self.autonomy_requested = bool(
+            autonomy and (movement_only or self.quest_autonomy))
+        if self.autonomy_requested and self.quest_autonomy:
+            backend = create_windows_questing_backend()
+        elif self.autonomy_requested:
             backend = create_windows_movement_only_backend()
         else:
             backend = SafeNoopBackend()
         self.executor = MotorExecutor(
             self.bus, target_hz=executor_hz,
             backend=backend,
-            # Never emit active input during init/prewarm. Movement autonomy
-            # is armed only after brain READY and game-focus succeeds.
+            # Never emit active input during init/prewarm.
             autonomy_enabled=False if self.autonomy_requested else autonomy,
-            movement_only=movement_only)
+            movement_only=movement_only,
+            questing=self.quest_autonomy)
+
+        self.quest_supervisor = (
+            QuestCombatSupervisor(
+                self.bus, self.value, target_hz=4.0,
+                loadout=self.gpo_loadout)
+            if self.quest_autonomy else None)
         self.replay = ReplayRecorder(
             self.bus, self.session_dir,
-            target_hz=10.0 if movement_only else 30.0)
+            target_hz=10.0 if active_low_power else 30.0)
         self.evidence = (
             EvidenceRecorder(
                 self.bus, self.session_dir,
                 target_hz=1.0, save_raw=False)
-            if movement_only else None)
+            if active_low_power else None)
         self.dashboard_ui = None
         self.assessment_started_ns = None
         self.assessment_ended_ns = None
@@ -165,10 +182,10 @@ class DigitalFlyLab:
                 # when imshow/waitKey are pumped by the main thread.
                 self.dashboard_ui = OpenCVDashboardRenderer(
                     evidence_dir=(
-                        None if movement_only
+                        None if active_low_power
                         else self.session_dir / "evidence"),
                     control_handler=self._handle_dashboard_control,
-                    lightweight=movement_only,
+                    lightweight=active_low_power,
                     preview_interval_s=3.0)
                 renderer = None
             elif dashboard_renderer == "text":
@@ -181,8 +198,11 @@ class DigitalFlyLab:
         else:
             self.dashboard = None
         self.workers = [self.fast_vision, self.heavy_vision, self.planner,
-                        self.encoder, self.brain, self.executor,
-                        self.replay] + ([self.evidence] if self.evidence else []) + (
+                        self.encoder, self.brain] + (
+                            [self.quest_supervisor]
+                            if self.quest_supervisor else []) + [
+                        self.executor, self.replay] + (
+                            [self.evidence] if self.evidence else []) + (
                             [self.dashboard] if self.dashboard else [])
 
     # -- lifecycle ------------------------------------------------------------
