@@ -455,3 +455,63 @@ It must:
 
 The fruit fly remains the low-level biological orientation/navigation system.
 The semantic coach supplies game meaning and high-level objectives.
+
+
+## 18. Current equipment / style catalog highlights
+
+This is a compact planning index, not a substitute for on-demand wiki lookup.
+
+Fighting styles currently represented by the community catalog include:
+Default Combat, Black Leg, Demon Step, Rokushiki, Kamishiki, Dragon Claw,
+Electro, Moonlit Electro, Fishman Karate, Abyssal Karate, Cyborg, 1 Sword
+Style, 2 Sword Style, 3 Sword Style, Iron Fist, Vampire, Dullahan and related
+race/evolution styles.
+
+Useful acquisition examples:
+- Black Leg: Baratie trainer; low-cost early general-purpose style and grants
+  Geppo utility if not already owned.
+- Rokushiki: utility-heavy style; useful alongside a stronger primary damage
+  source.
+- Fishman Karate: race-gated and resource-gated; strong farming/damage when
+  the build supports it.
+- Cyborg: Second Sea / Rose Kingdom progression and race/gear gated.
+- 1SS -> 2SS -> 3SS is a Sword Mastery progression chain; do not invest in it
+  unless the profile is intentionally becoming a sword build.
+- Iron Fist and 3SS are later/high-level progression goals.
+
+Early/current sword examples:
+- Katana: cheap early Sword Mastery weapon from Roca Island / related quest.
+- Kiribachi: Arlong boss drop.
+- Ryu's Katana: Fishman Island boss drop.
+- Skyblue Katana / Golden Staff: Skypiea-related drops.
+- Gravity Blade: Gravito drop.
+- Neptune's Trident: Fishman Island boss drop.
+- Bisento: Marine Base G-1 boss drop.
+The full current sword catalog is large and update-sensitive; request an
+on-demand wiki lookup before committing a long farm.
+
+Accessory planning:
+- Accessories have separate slots (head/face/forehead/ear/neck/armor/back/
+  shoulder/waist/misc and special-eye slots). Compare the actual slot and
+  effective stats, not rarity alone.
+- Starter example: Bandit Eyepatch gives a small HP increase and drops from
+  Bandit Boss, so it is a reasonable free early survivability upgrade.
+- Later accessories commonly trade among HP, stamina, regen, elemental
+  resistance and build-specific damage.
+- If a new accessory conflicts with an equipped slot, compare visible/current
+  stats before replacing it.
+
+Ships:
+- Rowboat, Caravel and Galleon are normal Peli progression ships.
+- Ship HP loss slows travel. Hammers + wooden planks repair normal ships; each
+  plank repairs a small amount.
+- Rough Waters slow ships and can trigger sea threats.
+- When a normal ship is required for progression, prefer a reliable Peli ship
+  and repair supplies before rare/Robux mobility.
+- Never choose a Robux-only faster repair/item path autonomously.
+
+Sources:
+- https://grand-piece-online.fandom.com/wiki/Fighting_Styles
+- https://grand-piece-online.fandom.com/wiki/Swords
+- https://grand-piece-online.fandom.com/wiki/Accessories
+- https://grand-piece-online.fandom.com/wiki/Ships
