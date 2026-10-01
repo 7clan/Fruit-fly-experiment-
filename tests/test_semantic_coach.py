@@ -153,3 +153,28 @@ def test_coach_purchase_becomes_only_high_confidence_visible_ui_click():
     assert cmd.payload["purchase_intent"] is True
     assert 0.0 <= cmd.payload["x_norm"] <= 1.0
     assert 0.0 <= cmd.payload["y_norm"] <= 1.0
+
+
+def test_coach_persistent_memory_accepts_only_high_confidence_observed_facts():
+    bus = Bus()
+    coach = SemanticCoachWorker(bus, api_key="")
+    updates = coach._validated_memory_updates([
+        {
+            "key": "level", "value": 20,
+            "confidence": 0.97, "evidence": "visible",
+        },
+        {
+            "key": "fruit", "value": "Pika",
+            "confidence": 0.99, "evidence": "inferred",
+        },
+        {
+            "key": "totally_unknown", "value": "x",
+            "confidence": 1.0, "evidence": "visible",
+        },
+    ])
+    assert updates == [{
+        "key": "level",
+        "value": 20,
+        "confidence": 0.97,
+        "evidence": "visible",
+    }]
