@@ -2,7 +2,7 @@
 
 **An experimental digital Drosophila research platform built around a pinned whole-brain connectome-derived model, reproducible neural I/O experiments, and gated closed-loop control.** The project explicitly separates connectome data and modeled neural dynamics from engineered perception, memory, planning, and game-control components. It does **not** claim biological equivalence, consciousness, or successful live-game learning.
 
-[![Windows navigation smoke](https://github.com/7clan/Fruit-fly-experiment-/actions/workflows/windows-navigation-smoke.yml/badge.svg)](https://github.com/7clan/Fruit-fly-experiment-/actions)
+[![Windows navigation smoke](https://github.com/7clan/Fruit-fly-experiment-/actions/workflows/windows-smoke.yml/badge.svg)](https://github.com/7clan/Fruit-fly-experiment-/actions)
 
 > ### Project status — read this first
 >
