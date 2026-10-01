@@ -60,8 +60,8 @@ def test_questing_backend_is_hard_allowlisted_to_known_gpo_action_surface():
     assert "DELETE" not in allowed and "HOME" not in allowed
     assert ("mouse_down", "left") in fake.events
     assert ("mouse_down", "right") not in fake.events
-    # Camera yaw is bounded and routed through RMB drag internally.
-    assert ("camera", 90, 35) in fake.events
+    # Quest mode never takes over the user's mouse/camera.
+    assert not any(e[0] == "camera" for e in fake.events)
 
 
 def test_fly_questing_turn_uses_forward_steer_without_camera_drag():
