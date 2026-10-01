@@ -6,8 +6,8 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "== DigitalFlyLab semantic coach setup ==" -ForegroundColor Cyan
 Write-Host "Provider: Google Gemini API" -ForegroundColor Yellow
-Write-Host "Default model: gemini-3.5-flash-lite (Google's current new-project Flash-Lite)." -ForegroundColor Yellow
-Write-Host "If your existing Gemini project has 2.5 access, type gemini-2.5-flash-lite at the model prompt for the lowest token price." -ForegroundColor DarkYellow
+Write-Host "Default model: gemini-3.1-flash-lite (stable, multimodal, lower-cost current model)." -ForegroundColor Yellow
+Write-Host "Gemini 2.5 Flash-Lite is cheaper but Google limits it for new projects, so 3.1 is the practical default." -ForegroundColor DarkYellow
 Write-Host "The key is saved as a USER environment variable, not in the repository." -ForegroundColor DarkYellow
 Write-Host ""
 Write-Host "Opening Google AI Studio API-key page..." -ForegroundColor Cyan
@@ -26,9 +26,9 @@ if ([string]::IsNullOrWhiteSpace($key)) {
     throw "No API key entered."
 }
 
-$model = Read-Host "Model [gemini-3.5-flash-lite]"
+$model = Read-Host "Model [gemini-3.1-flash-lite]"
 if ([string]::IsNullOrWhiteSpace($model)) {
-    $model = "gemini-3.5-flash-lite"
+    $model = "gemini-3.1-flash-lite"
 }
 
 [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", $key, "User")
