@@ -688,10 +688,14 @@ class OpenCVDashboardRenderer:
                     "AI COACH: DISABLED - "
                     f"{coach.get('reason', 'API key missing')}")
             else:
+                card = coach.get("skill_card")
+                provider = coach.get("provider")
                 coach_line = (
                     f"AI COACH: {coach.get('skill') or '-'} "
                     f"conf={coach.get('confidence')} "
-                    f"scene={coach.get('scene') or '-'}")
+                    f"scene={coach.get('scene') or '-'}"
+                    + (f" skill={card}" if card else "")
+                    + (f" via={provider}" if provider else ""))
             self._put(
                 canvas, x0, 678, coach_line,
                 (190, 170, 245), scale=0.31)
