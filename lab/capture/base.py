@@ -196,7 +196,8 @@ def windows_capture_available() -> bool:
 
 def create_windows_capture(bus: Bus, channel: str = "capture.frames",
                            window_title_re: str = "Roblox",
-                           target_fps: float = 30.0) -> CaptureAdapter:
+                           target_fps: float = 30.0,
+                           downsample: int = 1) -> CaptureAdapter:
     """Factory for the Windows.Graphics.Capture adapter.
 
     WindowsGraphicsCaptureAdapter implementation lives in
@@ -212,4 +213,4 @@ def create_windows_capture(bus: Bus, channel: str = "capture.frames",
     from .windows_graphics_capture import WindowsGraphicsCaptureAdapter
     return WindowsGraphicsCaptureAdapter(
         bus, channel=channel, window_title_re=window_title_re,
-        target_fps=target_fps)
+        target_fps=target_fps, downsample=downsample)
