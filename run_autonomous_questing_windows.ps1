@@ -133,13 +133,13 @@ if (-not (Test-Health)) {
     }
 }
 
-Write-Host "Testing local visual coach before brain startup..." -ForegroundColor Cyan
-& $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 240
+Write-Host "Testing local coach model before brain startup..." -ForegroundColor Cyan
+& $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 30
 if ($LASTEXITCODE -ne 0) {
     if ($serverProc -and -not $serverProc.HasExited) {
         Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
     }
-    throw "Local semantic coach preflight failed; brain startup aborted."
+    throw "Local semantic coach model preflight failed; brain startup aborted."
 }
 
 Write-Host "Local coach READY: $modelAlias" -ForegroundColor Green
