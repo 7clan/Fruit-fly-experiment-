@@ -1,9 +1,14 @@
-"""Preflight for the local SmolVLM llama.cpp server."""
+"""Cheap preflight for the local SmolVLM llama.cpp server.
+
+This intentionally does NOT run the expensive vision encoder.  On the target
+i7-5500U the first cold visual request can take much longer than ordinary
+server/model readiness.  Vision inference runs asynchronously only after the
+canonical fly brain is READY and the user enables the agent.
+"""
 
 from __future__ import annotations
 
 import argparse
-import base64
 import json
 import urllib.error
 import urllib.request
@@ -38,20 +43,9 @@ def _post(url: str, payload: dict, timeout_s: float):
         return json.loads(resp.read().decode("utf-8"))
 
 
-def _tiny_jpeg_b64() -> str:
-    import cv2
-    import numpy as np
-    img = np.zeros((48, 48, 3), dtype=np.uint8)
-    img[12:36, 12:36] = 255
-    ok, enc = cv2.imencode(".jpg", img)
-    if not ok:
-        raise RuntimeError("could not encode local probe image")
-    return base64.b64encode(enc.tobytes()).decode("ascii")
-
-
 def probe(base_url: str = DEFAULT_URL,
           model: str = DEFAULT_MODEL,
-          timeout_s: float = 180.0) -> tuple[bool, str]:
+          timeout_s: float = 30.0) -> tuple[bool, str]:
     base_url = str(base_url).rstrip("/")
     try:
         models = _get(base_url + "/models", timeout_s)
@@ -65,34 +59,19 @@ def probe(base_url: str = DEFAULT_URL,
     except Exception as exc:
         return False, f"models endpoint failed: {type(exc).__name__}: {exc}"
 
+    # Tiny TEXT-ONLY generation verifies that the loaded model is callable.
+    # The expensive vision tower is intentionally not exercised here.
     try:
-        image_b64 = _tiny_jpeg_b64()
         payload = _post(
             base_url + "/chat/completions",
             {
                 "model": model,
                 "messages": [{
                     "role": "user",
-                    "content": [
-                        {
-                            "type": "text",
-                            "text": (
-                                "Look at the image. Reply only: OK"
-                            ),
-                        },
-                        {
-                            "type": "image_url",
-                            "image_url": {
-                                "url": (
-                                    "data:image/jpeg;base64,"
-                                    + image_b64
-                                ),
-                            },
-                        },
-                    ],
+                    "content": "Reply only: OK",
                 }],
                 "temperature": 0.0,
-                "max_tokens": 4,
+                "max_tokens": 2,
             },
             timeout_s,
         )
@@ -102,8 +81,11 @@ def probe(base_url: str = DEFAULT_URL,
              .get("content")) or ""
         ).strip()
         if not text:
-            return False, f"vision probe returned no text: {str(payload)[:500]}"
-        return True, f"model={model} local_url={base_url}"
+            return False, f"text probe returned no text: {str(payload)[:500]}"
+        return True, (
+            f"model={model} local_url={base_url} "
+            "text_ready=yes vision=cold_lazy"
+        )
     except urllib.error.HTTPError as exc:
         try:
             detail = exc.read().decode("utf-8", errors="replace")[:1000]
@@ -118,7 +100,7 @@ def main(argv=None) -> int:
     ap = argparse.ArgumentParser("DigitalFlyLab local coach preflight")
     ap.add_argument("--url", default=DEFAULT_URL)
     ap.add_argument("--model", default=DEFAULT_MODEL)
-    ap.add_argument("--timeout", type=float, default=180.0)
+    ap.add_argument("--timeout", type=float, default=30.0)
     args = ap.parse_args(argv)
     ok, detail = probe(args.url, args.model, args.timeout)
     print(f"[local-coach-probe] {'OK' if ok else 'FAILED'} {detail}")
