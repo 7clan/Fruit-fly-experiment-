@@ -99,6 +99,32 @@ class AbilityRegistry:
                                "registered (overwrite=True to replace)")
             self._abilities[record.ability_id] = record
 
+    def register_observed_binding(
+            self, ability_id: str, name: str, binding: str,
+            intent_tags: list[str], *, range: str = "unknown",
+            confidence: float = 0.5, provenance: str = "UNVERIFIED",
+            overwrite: bool = True) -> AbilityRecord:
+        """Register a move learned from the current GPO HUD/loadout.
+
+        Named fruit/fighting-style/sword moves change with the equipped
+        loadout and game updates, so the live system stores the observed
+        binding instead of assuming a global hotkey table.
+        """
+        from .gpo_controls import validate_observed_ability_binding
+
+        binding = validate_observed_ability_binding(binding)
+        rec = AbilityRecord(
+            ability_id=ability_id,
+            name=name,
+            input_binding=binding,
+            intent_tags=list(intent_tags),
+            range=range,
+            provenance=provenance,
+            confidence=float(max(0.0, min(1.0, confidence))),
+        )
+        self.register(rec, overwrite=overwrite)
+        return rec
+
     def get(self, ability_id: str) -> AbilityRecord:
         with self._lock:
             return self._abilities[ability_id]
