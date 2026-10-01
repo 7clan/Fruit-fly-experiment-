@@ -27,7 +27,7 @@ from ..clock import SHARED_CLOCK
 from ..worker import Worker
 
 
-DEFAULT_MODEL = "gemini-3.5-flash-lite"
+DEFAULT_MODEL = "gemini-2.5-flash-lite"
 
 ALLOWED_SKILLS = frozenset({
     "WAIT",
@@ -83,8 +83,8 @@ class SemanticCoachWorker(Worker):
         bus,
         target_hz: float = 1.0,
         model: str | None = None,
-        min_call_interval_s: float = 6.0,
-        unchanged_refresh_s: float = 18.0,
+        min_call_interval_s: float = 8.0,
+        unchanged_refresh_s: float = 30.0,
         timeout_s: float = 12.0,
         knowledge_path: Path | None = None,
         api_key: str | None = None,
