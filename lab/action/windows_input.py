@@ -41,6 +41,15 @@ _kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 _ULONG_PTR = ctypes.c_size_t
 
 
+class _POINT(ctypes.Structure):
+    _fields_ = [("x", wt.LONG), ("y", wt.LONG)]
+
+
+class _RECT(ctypes.Structure):
+    _fields_ = [("left", wt.LONG), ("top", wt.LONG),
+                ("right", wt.LONG), ("bottom", wt.LONG)]
+
+
 class _KEYBDINPUT(ctypes.Structure):
     _fields_ = [("wVk", wt.WORD), ("wScan", wt.WORD), ("dwFlags", wt.DWORD),
                 ("time", wt.DWORD), ("dwExtraInfo", _ULONG_PTR)]
@@ -97,6 +106,14 @@ _user32.SetWindowPos.argtypes = [
 _user32.SetWindowPos.restype = wt.BOOL
 _user32.SetFocus.argtypes = [wt.HWND]
 _user32.SetFocus.restype = wt.HWND
+_user32.GetClientRect.argtypes = [wt.HWND, ctypes.POINTER(_RECT)]
+_user32.GetClientRect.restype = wt.BOOL
+_user32.ClientToScreen.argtypes = [wt.HWND, ctypes.POINTER(_POINT)]
+_user32.ClientToScreen.restype = wt.BOOL
+_user32.GetCursorPos.argtypes = [ctypes.POINTER(_POINT)]
+_user32.GetCursorPos.restype = wt.BOOL
+_user32.SetCursorPos.argtypes = [ctypes.c_int, ctypes.c_int]
+_user32.SetCursorPos.restype = wt.BOOL
 _kernel32.GetCurrentThreadId.argtypes = []
 _kernel32.GetCurrentThreadId.restype = wt.DWORD
 
@@ -127,6 +144,7 @@ class WindowsInputBackend:
         self.successes = 0
         self.failures = 0
         self.last_error = None
+        self._target_hwnd = 0
 
     def _send(self, inp: _INPUT, label: str) -> None:
         ctypes.set_last_error(0)
@@ -215,6 +233,51 @@ class WindowsInputBackend:
     def mouse_button_up(self, button: str) -> None:
         self.mouse_up(button)
 
+    def set_target_window(self, hwnd: int) -> None:
+        hwnd = int(hwnd or 0)
+        if hwnd > 0 and bool(_user32.IsWindow(wt.HWND(hwnd))):
+            self._target_hwnd = hwnd
+        else:
+            self._target_hwnd = 0
+
+    def ui_click(self, x_norm: float, y_norm: float,
+                 button: str = "left", restore_cursor: bool = True) -> None:
+        """Click a normalized point inside the authorized Roblox client.
+
+        This is deliberately separate from camera movement. It is intended
+        only for an explicitly identified in-game UI button. The user's
+        cursor position is restored immediately after the click.
+        """
+        hwnd = int(self._target_hwnd or 0)
+        if hwnd <= 0 or not bool(_user32.IsWindow(wt.HWND(hwnd))):
+            raise RuntimeError("UI click blocked: authorized Roblox HWND missing")
+        if int(_user32.GetForegroundWindow() or 0) != hwnd:
+            raise RuntimeError("UI click blocked: Roblox is not foreground")
+
+        x_norm = max(0.0, min(1.0, float(x_norm)))
+        y_norm = max(0.0, min(1.0, float(y_norm)))
+        rect = _RECT()
+        if not bool(_user32.GetClientRect(wt.HWND(hwnd), ctypes.byref(rect))):
+            raise RuntimeError("UI click blocked: GetClientRect failed")
+        origin = _POINT(0, 0)
+        if not bool(_user32.ClientToScreen(
+                wt.HWND(hwnd), ctypes.byref(origin))):
+            raise RuntimeError("UI click blocked: ClientToScreen failed")
+        width = max(1, int(rect.right - rect.left))
+        height = max(1, int(rect.bottom - rect.top))
+        sx = int(origin.x + x_norm * (width - 1))
+        sy = int(origin.y + y_norm * (height - 1))
+
+        old = _POINT()
+        have_old = bool(_user32.GetCursorPos(ctypes.byref(old)))
+        if not bool(_user32.SetCursorPos(sx, sy)):
+            raise RuntimeError("UI click blocked: SetCursorPos failed")
+        try:
+            self.mouse_click(button)
+        finally:
+            if restore_cursor and have_old:
+                _user32.SetCursorPos(int(old.x), int(old.y))
+
     def release_all(self) -> None:
         for code in list(self._down):
             self.key_up(code)
@@ -235,6 +298,8 @@ class WindowsInputBackend:
             "held_mouse_buttons": sorted(self._mouse_down),
             "input_struct_size": ctypes.sizeof(_INPUT),
             "input_struct_expected": _EXPECTED_INPUT_SIZE,
+            "target_hwnd": int(self._target_hwnd or 0),
+            "ui_click_supported": True,
         }
 
 
