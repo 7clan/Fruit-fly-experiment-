@@ -279,6 +279,7 @@ class DigitalFlyLab:
                 else "navigation_v1" if self.autonomy_requested
                 else "passive"),
             "gpo_loadout": self.gpo_loadout,
+            "last_control_reason": "startup_disarmed",
             "ts_ns": SHARED_CLOCK.now_ns(),
         })
         controls = list(CORE_CONTROLS) + loadout_controls(self.gpo_loadout)
@@ -358,11 +359,14 @@ class DigitalFlyLab:
                     "quest_pve_v1" if self.quest_autonomy
                     else "navigation_v1"),
                 "gpo_loadout": self.gpo_loadout,
+                "last_control_reason": str(reason),
                 "ts_ns": SHARED_CLOCK.now_ns(),
             })
             print(
-                "[lab] QUEST/PVE AGENT ENABLED"
-                if self.quest_autonomy else "[lab] MOVEMENT ENABLED",
+                ("[lab] QUEST/PVE AGENT ENABLED "
+                 f"({reason})")
+                if self.quest_autonomy else
+                f"[lab] MOVEMENT ENABLED ({reason})",
                 flush=True)
         else:
             self.executor.set_autonomy(False, reason=reason)
@@ -374,11 +378,13 @@ class DigitalFlyLab:
                     else "navigation_v1" if self.autonomy_requested
                     else "passive"),
                 "gpo_loadout": self.gpo_loadout,
+                "last_control_reason": str(reason),
                 "ts_ns": SHARED_CLOCK.now_ns(),
             })
             print(
-                "[lab] QUEST/PVE AGENT DISABLED"
-                if self.quest_autonomy else "[lab] MOVEMENT DISABLED",
+                (f"[lab] QUEST/PVE AGENT DISABLED ({reason})"
+                 if self.quest_autonomy else
+                 f"[lab] MOVEMENT DISABLED ({reason})"),
                 flush=True)
 
     def _handle_dashboard_control(self, command: str) -> None:
@@ -443,9 +449,29 @@ class DigitalFlyLab:
         hwnd = int(target.get("handle") or 0)
         if hwnd <= 0:
             raise RuntimeError("cannot arm navigation: captured HWND missing")
-        if not focus_window(hwnd):
+        focused = bool(focus_window(hwnd))
+        if not focused and self.dashboard_ui is None:
             raise RuntimeError(
                 "cannot arm navigation: failed to focus authorized game window")
+        if not focused:
+            # Dashboard runs start disarmed anyway. A transient Windows
+            # foreground-lock failure must not throw away a minute-long brain
+            # prewarm; ENABLE/REFOCUS will retry focus when the user is ready.
+            self.action_meta.write({
+                "movement_control_available": True,
+                "autonomy": False,
+                "mode": (
+                    "quest_pve_v1" if self.quest_autonomy
+                    else "navigation_v1"),
+                "gpo_loadout": self.gpo_loadout,
+                "last_control_reason": "initial_focus_pending",
+                "ts_ns": SHARED_CLOCK.now_ns(),
+            })
+            print(
+                "[lab] Roblox focus pending — run remains safely DISABLED; "
+                "use REFOCUS or ENABLE to retry",
+                flush=True,
+            )
 
         def watch():
             # Dashboard-independent controls:
@@ -500,6 +526,8 @@ class DigitalFlyLab:
                                     "mode": "quest_pve_v1",
                                     "last_safety_event":
                                         "critical_health_stop",
+                                    "last_control_reason":
+                                        "critical_health_stop",
                                     "ts_ns": SHARED_CLOCK.now_ns(),
                                 })
                                 print(
@@ -517,6 +545,7 @@ class DigitalFlyLab:
                                 "autonomy": False,
                                 "mode": "navigation_v1",
                                 "last_safety_event": "damage_pause",
+                                "last_control_reason": "damage_safety_pause",
                                 "ts_ns": SHARED_CLOCK.now_ns(),
                             })
                             print(
