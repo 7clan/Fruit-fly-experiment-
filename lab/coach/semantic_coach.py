@@ -28,7 +28,7 @@ from ..worker import Worker
 from .wiki import GPOWikiRetriever
 
 
-DEFAULT_MODEL = "gemini-3.1-flash-lite"
+DEFAULT_MODEL = "gemini-3.5-flash-lite"
 
 ALLOWED_SKILLS = frozenset({
     "WAIT",
@@ -326,34 +326,55 @@ Return ONLY a JSON object with exactly these fields:
                     "data": image_b64,
                 }
             })
-        body = {
+        base_body = {
             "contents": [{"role": "user", "parts": parts}],
-            "generationConfig": {
-                "temperature": 0.15,
-                "maxOutputTokens": 420,
-                "responseMimeType": "application/json",
-            },
         }
-        raw = json.dumps(body).encode("utf-8")
-        req = urllib.request.Request(
-            endpoint,
-            data=raw,
-            headers={
-                "Content-Type": "application/json",
-                "x-goog-api-key": self.api_key,
-            },
-            method="POST",
-        )
-        with urllib.request.urlopen(
-                req, timeout=self.timeout_s) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        body = dict(base_body)
+        body["generationConfig"] = {
+            "maxOutputTokens": 520,
+            "responseMimeType": "application/json",
+        }
+
+        def send(request_body):
+            raw = json.dumps(request_body).encode("utf-8")
+            req = urllib.request.Request(
+                endpoint,
+                data=raw,
+                headers={
+                    "Content-Type": "application/json",
+                    "x-goog-api-key": self.api_key,
+                },
+                method="POST",
+            )
+            with urllib.request.urlopen(
+                    req, timeout=self.timeout_s) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+
+        try:
+            payload = send(body)
+        except urllib.error.HTTPError as exc:
+            # Gemini model generations have had slightly different structured
+            # output surfaces. A model/key that passes preflight should not
+            # lose the run merely because JSON-mode syntax changed.
+            if int(getattr(exc, "code", 0)) != 400:
+                raise
+            payload = send(base_body)
 
         parts_out = (((payload.get("candidates") or [{}])[0]
                       .get("content") or {}).get("parts") or [])
-        text = "".join(str(p.get("text") or "") for p in parts_out)
+        text = "".join(str(p.get("text") or "") for p in parts_out).strip()
         if not text:
             raise RuntimeError(
                 f"Gemini returned no text: {str(payload)[:400]}")
+        # Prompt already requires JSON. Accept fenced JSON as a compatibility
+        # fallback when structured-output mode was unavailable.
+        if text.startswith("```"):
+            lines = text.splitlines()
+            if lines and lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            text = "\n".join(lines).strip()
         return json.loads(text)
 
     _PROFILE_KEYS = frozenset({
