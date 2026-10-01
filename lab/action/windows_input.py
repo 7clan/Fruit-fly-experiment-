@@ -32,6 +32,12 @@ MOUSEEVENTF_RIGHTDOWN = 0x0008
 MOUSEEVENTF_RIGHTUP = 0x0010
 MOUSEEVENTF_MIDDLEDOWN = 0x0020
 MOUSEEVENTF_MIDDLEUP = 0x0040
+MOUSEEVENTF_LEFTDOWN = 0x0002
+MOUSEEVENTF_LEFTUP = 0x0004
+MOUSEEVENTF_RIGHTDOWN = 0x0008
+MOUSEEVENTF_RIGHTUP = 0x0010
+MOUSEEVENTF_MIDDLEDOWN = 0x0020
+MOUSEEVENTF_MIDDLEUP = 0x0040
 
 _user32 = ctypes.WinDLL("user32", use_last_error=True)
 
@@ -86,11 +92,10 @@ _SCAN = {
     "H": 0x23, "J": 0x24, "K": 0x25, "L": 0x26,
     "Z": 0x2C, "X": 0x2D, "C": 0x2E, "V": 0x2F, "B": 0x30,
     "N": 0x31, "M": 0x32,
-    # modifiers / utility
+    # common controls
     "ESC": 0x01, "TAB": 0x0F, "CTRL": 0x1D, "SHIFT": 0x2A,
     "ALT": 0x38, "SPACE": 0x39,
 }
-
 
 class WindowsInputBackend:
     name = "windows_sendinput"
@@ -142,6 +147,46 @@ class WindowsInputBackend:
         inp.union.mi = _MOUSEINPUT(
             int(dx), int(dy), 0, MOUSEEVENTF_MOVE, 0, 0)
         self._send(inp, f"mouse_move:{int(dx)},{int(dy)}")
+
+    def mouse_down(self, button: str) -> None:
+        button = str(button).lower()
+        flags = {
+            "left": MOUSEEVENTF_LEFTDOWN,
+            "right": MOUSEEVENTF_RIGHTDOWN,
+            "middle": MOUSEEVENTF_MIDDLEDOWN,
+        }
+        if button not in flags:
+            raise ValueError(f"unsupported mouse button {button!r}")
+        inp = _INPUT(type=INPUT_MOUSE)
+        inp.union.mi = _MOUSEINPUT(0, 0, 0, flags[button], 0, 0)
+        self._send(inp, f"mouse_down:{button}")
+        self._mouse_down.add(button)
+
+    def mouse_up(self, button: str) -> None:
+        button = str(button).lower()
+        flags = {
+            "left": MOUSEEVENTF_LEFTUP,
+            "right": MOUSEEVENTF_RIGHTUP,
+            "middle": MOUSEEVENTF_MIDDLEUP,
+        }
+        if button not in flags:
+            raise ValueError(f"unsupported mouse button {button!r}")
+        inp = _INPUT(type=INPUT_MOUSE)
+        inp.union.mi = _MOUSEINPUT(0, 0, 0, flags[button], 0, 0)
+        self._send(inp, f"mouse_up:{button}")
+        self._mouse_down.discard(button)
+
+    def mouse_click(self, button: str) -> None:
+        self.mouse_down(button)
+        self.mouse_up(button)
+
+    def camera_drag(self, dx: int, dy: int = 0) -> None:
+        """Roblox/GPO camera look: hold RMB while applying relative motion."""
+        self.mouse_down("right")
+        try:
+            self.mouse_move(int(dx), int(dy))
+        finally:
+            self.mouse_up("right")
 
     def mouse_button_down(self, button: str) -> None:
         button = str(button).lower()
