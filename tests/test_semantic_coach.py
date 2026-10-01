@@ -178,3 +178,42 @@ def test_coach_persistent_memory_accepts_only_high_confidence_observed_facts():
         "confidence": 0.97,
         "evidence": "visible",
     }]
+
+
+def test_coach_live_ability_requires_visible_binding_and_label():
+    bus = Bus()
+    coach = SemanticCoachWorker(bus, api_key="")
+    good = coach._validate_plan({
+        "scene": "combat",
+        "objective": "use observed move",
+        "target": "quest enemy",
+        "skill": "USE_OBSERVED_ABILITY",
+        "control_id": "",
+        "observed_ability": {"binding": "E", "label": "Gut Punch"},
+        "confidence": 0.91,
+        "ui_click": {"needed": False, "x_norm": 0, "y_norm": 0},
+        "explanation": "move is visible on current HUD",
+        "next_after_success": "reobserve",
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, _catalog())
+    assert good["skill"] == "USE_OBSERVED_ABILITY"
+    assert good["observed_ability"] == {
+        "binding": "E", "label": "Gut Punch"
+    }
+
+    bad = coach._validate_plan({
+        "scene": "combat",
+        "objective": "guess a move",
+        "target": "quest enemy",
+        "skill": "USE_OBSERVED_ABILITY",
+        "control_id": "",
+        "observed_ability": {"binding": "Z", "label": ""},
+        "confidence": 0.99,
+        "ui_click": {"needed": False, "x_norm": 0, "y_norm": 0},
+        "explanation": "guess",
+        "next_after_success": "",
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, _catalog())
+    assert bad["skill"] == "REOBSERVE"
