@@ -605,9 +605,12 @@ class OpenCVDashboardRenderer:
                 f"wall/chunk={self._safe_float(brain.get('chunk_wall_s')):.2f}s  "
                 f"transport={brain.get('transport')}",
                 (165, 165, 165), scale=0.34)
+            scope = brain.get("instrumentation_scope", "")
+            scope_tag = (
+                " [count-only]" if scope == "whole_brain_counts_only" else "")
             self._put(
                 canvas, x0, 100,
-                f"whole brain: spikes={brain.get('n_spikes_new', 0)}  "
+                f"whole brain{scope_tag}: spikes={brain.get('n_spikes_new', 0)}  "
                 f"active neurons={brain.get('n_active_new', 0)} / 138639",
                 (165, 215, 165), scale=0.38)
 
