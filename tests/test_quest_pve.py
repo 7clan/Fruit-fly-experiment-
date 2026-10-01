@@ -232,3 +232,19 @@ def test_red_route_arrow_does_not_become_enemy_marker():
     det = GPOHeuristicFastVision(role_detection=False).detect(img)
     assert det["_notes"]["quest_enemy_marker_detected"] is False
     assert det["target"]["type"] != "quest_enemy_marker"
+
+
+def test_current_gpo_control_catalog_covers_core_and_default_melee():
+    from lab.action.gpo_controls import CORE_CONTROLS, loadout_controls
+
+    core = {x.control_id: x for x in CORE_CONTROLS}
+    assert core["jump"].bindings == ("key:SPACE",)
+    assert core["block"].bindings == ("key:F",)
+    assert core["interact"].bindings == ("key:T",)
+    assert core["dash_forward"].bindings == ("key:W", "key:Q")
+    assert core["climb_or_dive"].bindings == ("key:CTRL",)
+    assert core["basic_attack"].bindings == ("mouse:left",)
+
+    melee = {x.control_id: x for x in loadout_controls("default_melee")}
+    assert melee["melee_gut_punch"].bindings == ("key:E",)
+    assert melee["melee_ground_smash"].bindings == ("key:R",)
