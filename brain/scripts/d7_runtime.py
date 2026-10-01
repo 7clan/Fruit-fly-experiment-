@@ -205,7 +205,7 @@ class DualModeBrain:
     def __init__(self, mode, seed=STUDY_SEED, version="783",
                  channel_ids=None, readout_pops=None,
                  comp=None, con=None, schedule=None, grid_ms=25.0,
-                 quiet=True):
+                 quiet=True, record_full_spikes=True):
         import brian2 as b2
 
         assert mode in ("reference", "interactive")
@@ -236,7 +236,28 @@ class DualModeBrain:
         self.params = params
 
         t0 = time.perf_counter()
-        self.neu, self.syn, self.mon = dbm.create_model(p_comp, p_con, params)
+        self.neu, self.syn, canonical_mon = dbm.create_model(
+            p_comp, p_con, params)
+
+        self.pop_names = []
+        self.pop_code = None
+        self.pop_sizes = {}
+        if readout_pops:
+            self._build_readout(readout_pops)
+
+        # Live closed-loop mode does not need every spike timestamp. Brian2
+        # SpikeMonitor(record=False) keeps exact per-neuron spike counts and
+        # total spike counts without storing the full event arrays. This is
+        # instrumentation-only: neuron/synapse dynamics are unchanged.
+        self.record_full_spikes = bool(record_full_spikes)
+        if mode == "interactive" and not self.record_full_spikes:
+            self.mon = b2.SpikeMonitor(
+                self.neu, record=False, name="live_count_mon")
+            self.instrumentation_scope = "whole_brain_counts_only"
+        else:
+            self.mon = canonical_mon
+            self.instrumentation_scope = "full_spike_recording"
+
         self.iface = None
         objs = [self.neu, self.syn, self.mon]
         if channel_ids:
@@ -252,18 +273,14 @@ class DualModeBrain:
         self.net = b2.Network(*objs)
         self.build_wall_s = time.perf_counter() - t0
 
-        self.pop_names = []
-        self.pop_code = None
-        self.pop_sizes = {}
-        if readout_pops:
-            self._build_readout(readout_pops)
-
         self.seed_all(seed)
         if not _is_standalone():
             # checkpoints are a runtime-mode feature; the C++ standalone
             # device does not support store/restore (offline replay only)
             self.net.store("ep0")               # pristine checkpoint
         self.cursor = 0
+        self._prev_spike_counts = np.zeros(
+            self.n_neurons, dtype=np.int64)
         self.chunk_walls = []
 
     # ---------------- setup helpers ----------------
@@ -295,6 +312,9 @@ class DualModeBrain:
         self.net.restore("ep0")
         self.seed_all(seed)
         self.cursor = 0
+        if not self.record_full_spikes:
+            self._prev_spike_counts = np.asarray(
+                self.mon.count[:], dtype=np.int64).copy()
         self.chunk_walls = []
 
     def step(self, rates=None, chunk_ms=50.0):
@@ -309,10 +329,39 @@ class DualModeBrain:
         wall = time.perf_counter() - t0
         self.chunk_walls.append(wall)
 
-        i_new = np.asarray(self.mon.i[self.cursor:])
-        # Read-only instrumentation for the live dashboard. This does not
-        # alter the network, RNG, equations, or spike stream.
-        active_new = np.unique(i_new)
+        if self.record_full_spikes:
+            i_new = np.asarray(self.mon.i[self.cursor:])
+            active_new = np.unique(i_new)
+            n_spikes_new = int(len(i_new))
+            if self.pop_code is not None:
+                pop_counts = np.bincount(
+                    self.pop_code[i_new] + 1,
+                    minlength=len(self.pop_names) + 1)[1:]
+            else:
+                pop_counts = None
+            if self.record_full_spikes:
+            self.cursor = int(len(np.asarray(self.mon.t[:])))
+        else:
+            self._prev_spike_counts = np.asarray(
+                self.mon.count[:], dtype=np.int64).copy()
+            self.cursor = int(self.mon.num_spikes)
+        else:
+            # Exact per-neuron deltas without storing individual spike times.
+            now_counts = np.asarray(self.mon.count[:], dtype=np.int64)
+            delta = now_counts - self._prev_spike_counts
+            active_new = np.flatnonzero(delta > 0)
+            n_spikes_new = int(delta.sum())
+            if self.pop_code is not None:
+                active_code = self.pop_code[active_new]
+                active_delta = delta[active_new]
+                pop_counts = np.bincount(
+                    active_code + 1, weights=active_delta,
+                    minlength=len(self.pop_names) + 1)[1:]
+            else:
+                pop_counts = None
+            self._prev_spike_counts = now_counts.copy()
+            self.cursor = int(self.mon.num_spikes)
+
         active_sample = [
             int(self.i2fly[int(i)]) for i in active_new[:24]
             if int(i) in self.i2fly
@@ -322,16 +371,15 @@ class DualModeBrain:
             chunk_ms=float(chunk_ms),
             wall_s=round(wall, 4),
             rss_kb=bl.rss_kb(),
-            n_spikes_new=int(len(i_new)),
+            n_spikes_new=n_spikes_new,
             n_active_new=int(len(active_new)),
             active_flywire_ids_sample=active_sample,
+            instrumentation_scope=self.instrumentation_scope,
         )
-        if self.pop_code is not None:
-            counts = np.bincount(self.pop_code[i_new] + 1,
-                                 minlength=len(self.pop_names) + 1)[1:]
-            rec["pop_counts"] = {n: int(c)
-                                 for n, c in zip(self.pop_names, counts)}
-        self.cursor = int(len(np.asarray(self.mon.t[:])))
+        if pop_counts is not None:
+            rec["pop_counts"] = {
+                n: int(v) for n, v in zip(self.pop_names, pop_counts)
+            }
         return rec
 
     def run_reference(self, duration_ms):
@@ -352,6 +400,10 @@ class DualModeBrain:
 
     # ---------------- readout / evidence ----------------
     def spike_trains(self):
+        if not self.record_full_spikes:
+            raise RuntimeError(
+                "individual spike times are disabled in live count-only "
+                "instrumentation; use full recording mode")
         tr = self.mon.spike_trains()
         return {int(k): [float(x) for x in v] for k, v in tr.items() if len(v)}
 
@@ -373,14 +425,24 @@ class DualModeBrain:
         self.net.restore(tag)
         if reseed is not None:
             self.seed_all(reseed)
-        self.cursor = int(len(np.asarray(self.mon.t[:])))
+        if self.record_full_spikes:
+            self.cursor = int(len(np.asarray(self.mon.t[:])))
+        else:
+            self._prev_spike_counts = np.asarray(
+                self.mon.count[:], dtype=np.int64).copy()
+            self.cursor = int(self.mon.num_spikes)
 
     def store_disk(self, path):
         self.net.store(filename=str(path))
 
     def load_disk(self, path):
         self.net.restore(filename=str(path))
-        self.cursor = int(len(np.asarray(self.mon.t[:])))
+        if self.record_full_spikes:
+            self.cursor = int(len(np.asarray(self.mon.t[:])))
+        else:
+            self._prev_spike_counts = np.asarray(
+                self.mon.count[:], dtype=np.int64).copy()
+            self.cursor = int(self.mon.num_spikes)
 
 
 # --------------------------------------------------------------------------
