@@ -176,6 +176,8 @@ class BrainWorker(Worker):
             "n_active_new": rec.get("n_active_new", 0),
             "active_flywire_ids_sample": rec.get(
                 "active_flywire_ids_sample", []),
+            "instrumentation_scope": rec.get(
+                "instrumentation_scope", "full_spike_recording"),
             "intention": intention.to_dict(),
             "decoder_config": self.decoder.decoder_config,
         }
@@ -187,3 +189,5 @@ class BrainWorker(Worker):
             self.bio_to_wall = (rec["chunk_ms"] / 1000.0) / rec["wall_s"]
         self.stats["bio_s_per_wall_s"] = round(self.bio_to_wall, 4)
         self.stats["last_chunk_wall_ms"] = round(rec["wall_s"] * 1000, 1)
+        self.stats["instrumentation_scope"] = rec.get(
+            "instrumentation_scope", "full_spike_recording")
