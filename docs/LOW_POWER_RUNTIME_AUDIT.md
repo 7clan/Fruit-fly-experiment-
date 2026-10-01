@@ -83,7 +83,7 @@ Navigation launcher:
 
 - Windows capture: 2 Hz
 - fast CV / fly-channel encoder: 2 Hz
-- detect width: 384 px
+- detect width: 480 px
 - heavy semantic worker: 0.05 Hz
 - dashboard snapshot: 0.25 Hz
 - executor polling cap: 20 Hz
@@ -143,7 +143,7 @@ canonical chunk wall time. No numerical speedup is claimed before that run.
 The Windows.Graphics.Capture callback now supports a stride downsample before
 OpenCV performs the required BGRA->BGR ownership copy. The i7-5500U launcher
 uses a factor of 2, so a native ~1920x1030 frame becomes ~960x515 before the
-BGR copy, then fast vision works at a maximum width of 384 px.
+BGR copy, then fast vision works at a maximum width of 480 px.
 
 This reduces memory bandwidth and the size of the shared latest-frame object.
 All current navigation/HUD/waypoint geometry uses normalized coordinates.
