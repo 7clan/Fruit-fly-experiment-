@@ -29,12 +29,14 @@ class QuestCombatSupervisor(Worker):
         self.obs: StateChannel = bus.state("world.observation")
         self.brain: StateChannel = bus.state("brain.output")
         self.action_meta: StateChannel = bus.state("action.meta")
+        self.coach: StateChannel = bus.state("coach.plan")
         self.command: StateChannel = bus.state("action.command")
         self.state: StateChannel = bus.state("quest.state")
         self.value = value_table
         self.loadout = str(loadout or "default_melee").lower()
 
         self._command_id = 0
+        self._last_coach_plan_id = -1
         self._phase = "observe"
         self._last_health = None
         self._last_damage_ns = 0
@@ -64,6 +66,8 @@ class QuestCombatSupervisor(Worker):
             "camera_recenters": 0,
             "sprints": 0,
             "defense_updates": 0,
+            "coach_commands": 0,
+            "coach_plans_seen": 0,
         })
 
     def _armed(self) -> bool:
@@ -193,6 +197,145 @@ class QuestCombatSupervisor(Worker):
             "ENGINEERED": True,
         }, ts_ns=now_ns)
 
+    def _consume_coach_plan(
+            self, now_ns: int, target: dict, notes: dict,
+            yellow_quest: bool, yellow_proximity: float | None,
+            yellow_direction: float | None) -> bool:
+        """Bridge ONE fresh semantic-coach plan into an approved command.
+
+        Immediate damage defense remains rule/reflex driven above this layer.
+        The coach never supplies raw keys. Navigation direction normally
+        remains the fly's job; EXEC_CONTROL is a bounded verified-control
+        escape hatch for explicit game semantics.
+        """
+        env = self.coach.read()
+        if env is None:
+            return False
+        plan = env.payload or {}
+        if plan.get("enabled") is False:
+            return False
+        try:
+            pid = int(plan.get("plan_id", -1))
+        except (TypeError, ValueError):
+            return False
+        if pid < 0 or pid == self._last_coach_plan_id:
+            return False
+
+        try:
+            confidence = float(plan.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            confidence = 0.0
+        plan_ts = int(plan.get("ts_ns", env.ts_ns))
+        if now_ns - plan_ts > int(20.0e9) or confidence < 0.62:
+            self._last_coach_plan_id = pid
+            return False
+
+        skill = str(plan.get("skill") or "WAIT").upper()
+        target_type = str(target.get("type") or "none")
+        proximity = self._f(target.get("distance"))
+        self._last_coach_plan_id = pid
+        self.stats["coach_plans_seen"] += 1
+
+        name = None
+        extra = {}
+        if skill in {"TAKE_QUEST", "INTERACT"}:
+            if (yellow_quest and yellow_proximity is not None
+                    and yellow_proximity >= 0.68
+                    and yellow_direction is not None
+                    and abs(yellow_direction) <= 0.50):
+                name = "INTERACT_QUEST"
+        elif skill == "FIGHT_QUEST_TARGET":
+            if (target_type == "quest_enemy_marker"
+                    and proximity is not None and proximity >= 0.66):
+                name = "ATTACK_LIGHT"
+        elif skill == "BLOCK" and target_type == "quest_enemy_marker":
+            name = "BLOCK"
+            extra["hold_s"] = 0.55
+        elif skill == "EVADE" and target_type == "quest_enemy_marker":
+            name = "EVADE_BACK"
+        elif skill == "JUMP":
+            name = "JUMP"
+        elif skill == "CLIMB":
+            name = "CLIMB"
+        elif skill == "SPRINT":
+            name = "SPRINT"
+        elif skill == "GEPPO":
+            name = "GEPPO"
+        elif skill == "USE_HAKI":
+            control_id = str(plan.get("control_id") or "")
+            name = (
+                "OBSERVATION_HAKI"
+                if control_id == "observation_haki"
+                else "BUSO_HAKI")
+        elif skill == "EQUIP_SLOT":
+            control_id = str(plan.get("control_id") or "")
+            if control_id.startswith("equip_slot_"):
+                slot = control_id.rsplit("_", 1)[-1]
+                if slot in set("0123456789"):
+                    name = "EQUIP_SLOT"
+                    extra["slot"] = slot
+        elif skill == "EXEC_CONTROL":
+            control_id = str(plan.get("control_id") or "")
+            if control_id:
+                name = "EXEC_CONTROL"
+                extra["control_id"] = control_id
+        elif skill == "BOARD_SHIP":
+            name = "BOARD_SHIP"
+        elif skill == "BACKTRACK":
+            # One bounded retreat/dash lets the next visual observation
+            # choose a different route without replacing normal fly steering.
+            name = "DASH_BACK"
+        elif skill == "UI_CLICK":
+            ui = plan.get("ui_click") or {}
+            if bool(ui.get("needed")) and confidence >= 0.85:
+                try:
+                    x = float(ui.get("x_norm"))
+                    y = float(ui.get("y_norm"))
+                except (TypeError, ValueError):
+                    x = y = -1.0
+                if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+                    name = "UI_CLICK"
+                    extra.update({
+                        "x_norm": x,
+                        "y_norm": y,
+                        "confidence": confidence,
+                        "ui_context": True,
+                        "ui_label": str(ui.get("label") or "")[:96],
+                    })
+
+        if not name:
+            return False
+        self._phase = "coach:" + skill.lower()
+        self._emit(
+            name, now_ns,
+            reason=(
+                f"semantic_coach:{plan.get('explanation', '')}"[:220]),
+            source="semantic_coach",
+            coach_plan_id=pid,
+            coach_confidence=confidence,
+            **extra,
+        )
+        self.stats["coach_commands"] += 1
+        if name == "ATTACK_LIGHT":
+            self.stats["attacks"] += 1
+            self._last_attack_ns = now_ns
+        elif name == "BLOCK":
+            self.stats["blocks"] += 1
+            self._last_block_ns = now_ns
+        elif name == "EVADE_BACK":
+            self.stats["evades"] += 1
+        elif name == "INTERACT_QUEST":
+            self.stats["quest_interacts"] += 1
+            self._last_interact_ns = now_ns
+        elif name == "JUMP":
+            self.stats["jumps"] += 1
+        elif name == "CLIMB":
+            self.stats["climbs"] += 1
+        elif name == "SPRINT":
+            self.stats["sprints"] += 1
+            self._last_sprint_ns = now_ns
+        return True
+
     def step(self) -> None:
         env = self.obs.read()
         if env is None:
@@ -252,6 +395,13 @@ class QuestCombatSupervisor(Worker):
                 self._publish_state(
                     now, target, health, stamina, fly_intention)
                 return
+
+        if self._consume_coach_plan(
+                now, target, notes, yellow_quest,
+                yellow_proximity, yellow_direction):
+            self._publish_state(
+                now, target, health, stamina, fly_intention)
+            return
 
         # Camera is part of the fly's sensory apparatus, not a locomotor
         # decision. Keep a visible navigation cue near the center so the slow
