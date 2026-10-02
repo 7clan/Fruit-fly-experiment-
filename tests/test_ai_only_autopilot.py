@@ -592,7 +592,7 @@ def test_jump_is_one_shot_per_ai_plan_not_spammed():
 
 def test_fast_model_candidates_precede_configured_model():
     models = _candidate_models("gemma4:31b", prefer_fast=True)
-    assert models[0] == "qwen3-vl:4b"
+    assert models[0] == "qwen3.5:4b"
     assert "gemma4:31b" in models
 
 
@@ -620,3 +620,182 @@ def test_attack_advance_physically_combines_w_and_m1():
     assert ("key_down", "W") in fake.events
     assert ("mouse_down", "left") in fake.events
     assert ("mouse_up", "left") in fake.events
+
+
+
+def test_ai_visual_quest_giver_can_trigger_interact_without_yellow_cv():
+    bus = _armed_bus(
+        {"type": "none", "direction": None, "distance": None,
+         "confidence": 0.0},
+        {
+            "plan_id": 120,
+            "skill": "TAKE_QUEST",
+            "target": "Robert",
+            "control_id": "interact",
+            "confidence": 0.97,
+            "explanation": "T Interact is visibly on screen",
+            "perception": {
+                "quest_state": "available",
+                "interaction_prompt_visible": True,
+                "dialogue_visible": False,
+                "enemy_actor_visible": False,
+            },
+            "visual_target": {
+                "kind": "quest_giver",
+                "x_norm": 0.51,
+                "y_norm": 0.45,
+                "confidence": 0.96,
+                "melee_ready": False,
+            },
+        },
+        notes={},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "INTERACT_QUEST"
+    assert cmd.payload["target_type"] == "quest_giver_ai_prompt"
+
+
+def test_ai_visual_enemy_can_attack_when_local_body_tracker_misses():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.15,
+            "distance": 0.52,
+            "confidence": 0.93,
+        },
+        {
+            "plan_id": 121,
+            "skill": "FIGHT_QUEST_TARGET",
+            "target": "Corrupt Marine",
+            "confidence": 0.96,
+            "explanation": "Corrupt Marine body is visibly in melee range",
+            "perception": {
+                "quest_state": "active",
+                "interaction_prompt_visible": False,
+                "dialogue_visible": False,
+                "enemy_actor_visible": True,
+            },
+            "visual_target": {
+                "kind": "quest_enemy_actor",
+                "x_norm": 0.52,
+                "y_norm": 0.49,
+                "confidence": 0.95,
+                "melee_ready": True,
+            },
+        },
+        notes={"quest_enemy_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert cmd.payload["target_type"] == "quest_enemy_actor_ai_visual"
+    assert sup.stats["combat_commands"] == 1
+
+
+def test_ai_visual_enemy_off_axis_steers_instead_of_clicking_empty_space():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.10,
+            "distance": 0.50,
+            "confidence": 0.93,
+        },
+        {
+            "plan_id": 122,
+            "skill": "FIGHT_QUEST_TARGET",
+            "target": "Corrupt Marine",
+            "confidence": 0.95,
+            "explanation": "enemy is visible on the right",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": True,
+            },
+            "visual_target": {
+                "kind": "quest_enemy_actor",
+                "x_norm": 0.91,
+                "y_norm": 0.50,
+                "confidence": 0.94,
+                "melee_ready": False,
+            },
+        },
+        notes={"quest_enemy_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["target_type"] == "quest_enemy_actor_ai_visual"
+
+
+def test_ambiguous_edge_quest_dialogue_click_is_suppressed():
+    bus = _armed_bus(
+        {
+            "type": "quest_marker",
+            "direction": 0.0,
+            "distance": 0.6,
+            "confidence": 0.9,
+        },
+        {
+            "plan_id": 123,
+            "skill": "UI_CLICK",
+            "target": "quest dialogue",
+            "confidence": 0.95,
+            "explanation": "click confirmation",
+            "perception": {
+                "quest_state": "pending_accept",
+                "dialogue_visible": True,
+            },
+            "ui_click": {
+                "needed": True,
+                "x_norm": 0.05,
+                "y_norm": 0.44,
+                "label": "QUIT/Accept",
+            },
+        },
+        notes={"quest_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    assert bus.state("action.command").read() is None
+    assert sup.stats["ui_clicks_suppressed"] == 1
+
+
+def test_ai_only_plan_validation_keeps_visual_target_grounding():
+    bus = Bus()
+    coach = AIOnlyOllamaCoachWorker(
+        bus, model="gemma4:cloud", api_key="test-only")
+    plan = coach._validate_plan({
+        "scene": "combat",
+        "objective": "fight",
+        "target": "Corrupt Marine",
+        "skill": "FIGHT_QUEST_TARGET",
+        "control_id": "",
+        "observed_ability": {"binding": "", "label": ""},
+        "visual_target": {
+            "kind": "quest_enemy_actor",
+            "x_norm": 0.62,
+            "y_norm": 0.48,
+            "confidence": 0.93,
+            "melee_ready": True,
+        },
+        "ui_click": {
+            "needed": False, "x_norm": 0, "y_norm": 0, "label": ""},
+        "confidence": 0.95,
+        "explanation": "visible quest NPC",
+        "next_after_success": "continue",
+        "perception": {
+            "quest_state": "active",
+            "enemy_actor_visible": True,
+        },
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, {"controls": []})
+    assert plan["visual_target"]["kind"] == "quest_enemy_actor"
+    assert plan["visual_target"]["x_norm"] == 0.62
+    assert plan["visual_target"]["melee_ready"] is True
