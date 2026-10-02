@@ -52,6 +52,8 @@ ALLOWED_SKILLS = frozenset({
     "UI_CLICK",
     "BOARD_SHIP",
     "TRAVEL",
+    "LOOK_LEFT",
+    "LOOK_RIGHT",
     "REOBSERVE",
 })
 
