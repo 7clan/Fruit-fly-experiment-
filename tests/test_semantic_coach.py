@@ -2,6 +2,8 @@ from lab.bus import Bus
 from lab.coach.semantic_coach import SemanticCoachWorker
 from lab.coach.local_smolvlm import LocalSmolVLMCoachWorker
 from lab.coach.local_smollm import LocalSmolLMCoachWorker
+from lab.coach.llama_api import LlamaApiCoachWorker
+from lab.coach.llama_probe import choose_model as choose_llama_model
 from lab.coach.gpo_skills import (
     select_skill_cards, render_skill_cards, procedural_skill_plan,
 )
@@ -535,3 +537,50 @@ def test_smollm_repeated_recovery_excludes_same_skill_after_two_uses():
     assert repeated in seen_choices[0]
     assert repeated in seen_choices[1]
     assert repeated not in seen_choices[2]
+
+
+
+def test_llama_probe_prefers_maverick_then_scout():
+    available = {
+        "Llama-4-Maverick-17B-128E-Instruct-FP8",
+        "Llama-4-Scout-17B-16E-Instruct-FP8",
+    }
+    assert choose_llama_model("auto", available) == (
+        "Llama-4-Maverick-17B-128E-Instruct-FP8"
+    )
+    assert choose_llama_model(
+        "Llama-4-Scout-17B-16E-Instruct-FP8", available
+    ) == "Llama-4-Scout-17B-16E-Instruct-FP8"
+
+
+def test_llama_cloud_coach_marks_ai_and_vision():
+    bus = Bus()
+    coach = LlamaApiCoachWorker(
+        bus,
+        model="Llama-4-Scout-17B-16E-Instruct-FP8",
+        api_key="test-only",
+    )
+    assert coach.provider == "meta_llama_api"
+    assert coach.supports_vision is True
+    plan = coach._validate_plan({
+        "scene": "quest_travel",
+        "objective": "follow objective",
+        "target": "green waypoint",
+        "skill": "NAVIGATE_OBJECTIVE",
+        "control_id": "",
+        "observed_ability": {"binding": "", "label": ""},
+        "ui_click": {
+            "needed": False,
+            "x_norm": 0.0,
+            "y_norm": 0.0,
+            "label": "",
+        },
+        "confidence": 0.91,
+        "explanation": "green objective is visible",
+        "next_after_success": "reobserve",
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, _catalog())
+    assert plan["ai_used"] is True
+    assert plan["cloud_ai_used"] is True
+    assert plan["provider"] == "meta_llama_api"
