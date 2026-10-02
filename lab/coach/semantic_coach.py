@@ -153,6 +153,8 @@ class SemanticCoachWorker(Worker):
             "api_errors": 0,
             "jpeg_ms_total": 0.0,
             "api_ms_total": 0.0,
+            "last_api_ms": None,
+            "avg_api_ms": None,
             "last_plan": None,
             "profile_claims": len(self.profile.get("claims", {})),
             "wiki_queries": 0,
@@ -646,10 +648,14 @@ Return ONLY a JSON object with exactly these fields:
         finally:
             if image_b64:
                 self._previous_image_b64 = image_b64
+            elapsed_ms = (time.perf_counter() - t0) * 1000.0
             self.stats["api_ms_total"] = round(
-                float(self.stats["api_ms_total"])
-                + (time.perf_counter() - t0) * 1000.0, 3)
+                float(self.stats["api_ms_total"]) + elapsed_ms, 3)
             self.stats["calls"] += 1
+            self.stats["last_api_ms"] = round(elapsed_ms, 1)
+            calls = max(1, int(self.stats.get("calls", 1)))
+            self.stats["avg_api_ms"] = round(
+                float(self.stats["api_ms_total"]) / calls, 1)
 
         self._apply_memory_updates(
             plan.get("memory_updates") or [], plan["ts_ns"])
