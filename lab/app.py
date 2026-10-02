@@ -55,6 +55,7 @@ from .dashboard.dashboard import (
 from .evidence import EvidenceRecorder
 from .perception.channel_encoder import FlyChannelEncoder
 from .perception.fast_vision import FastVisionWorker
+from .perception.ai_visual_tracker import AIVisualTracker
 from .perception.heavy_vision import HeavyVisionWorker
 from .replay import ReplayRecorder
 from .world.memory import MemoryStore
@@ -238,8 +239,11 @@ class DigitalFlyLab:
                     f"unknown semantic coach provider {coach_provider!r}")
         else:
             self.semantic_coach = None
+        self.ai_visual_tracker = (
+            AIVisualTracker(self.bus, target_hz=8.0, max_width=480)
+            if self.ai_only else None)
         self.ai_only_supervisor = (
-            AIOnlyAutopilotSupervisor(self.bus, target_hz=8.0)
+            AIOnlyAutopilotSupervisor(self.bus, target_hz=10.0)
             if self.ai_only else None)
         self.quest_supervisor = (
             QuestCombatSupervisor(
@@ -289,6 +293,8 @@ class DigitalFlyLab:
                             else [self.planner, self.encoder, self.brain]) + (
                             [self.semantic_coach]
                             if self.semantic_coach else []) + (
+                            [self.ai_visual_tracker]
+                            if self.ai_visual_tracker else []) + (
                             [self.ai_only_supervisor]
                             if self.ai_only_supervisor else []) + (
                             [self.quest_supervisor]
