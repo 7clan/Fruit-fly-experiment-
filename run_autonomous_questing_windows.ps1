@@ -17,7 +17,7 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-Write-Host "== GATE 7D CLOUD: DIGITAL FLY + OLLAMA GEMMA4 31B COACH ==" -ForegroundColor Cyan
+Write-Host "== GATE 7D CLOUD: DIGITAL FLY + OLLAMA DEEPSEEK V4.1 FLASH COACH ==" -ForegroundColor Cyan
 
 & $mainPython -c "from lab.action.windows_input import _INPUT,_EXPECTED_INPUT_SIZE; import ctypes; s=ctypes.sizeof(_INPUT); print(f'[preflight] Win32 INPUT size={s} expected={_EXPECTED_INPUT_SIZE}'); raise SystemExit(0 if s==_EXPECTED_INPUT_SIZE else 2)"
 if ($LASTEXITCODE -ne 0) {
@@ -34,10 +34,10 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_BASE)) {
     $env:OLLAMA_CLOUD_BASE = [Environment]::GetEnvironmentVariable("OLLAMA_CLOUD_BASE", "User")
 }
 if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_BASE)) {
-    $env:OLLAMA_CLOUD_BASE = "https://ollama.com/api"
+    $env:OLLAMA_CLOUD_BASE = "https://ollama.com/v1"
 }
 if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_MODEL)) {
-    $env:OLLAMA_CLOUD_MODEL = "gemma4:31b"
+    $env:OLLAMA_CLOUD_MODEL = "deepseek-v4.1-flash"
 }
 
 if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
@@ -49,8 +49,8 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
 }
 
 Write-Host "Fly brain owns biological approach/retreat/escape signals." -ForegroundColor Green
-Write-Host "CLOUD AI: Gemma 4 31B selects high-level skills and inspects occasional game frames." -ForegroundColor Green
-Write-Host "Model: gemma4:31b (included free usage; vision when cloud backend accepts it)." -ForegroundColor Yellow
+Write-Host "CLOUD AI: DeepSeek V4.1 Flash selects high-level skills and can inspect occasional game frames." -ForegroundColor Green
+Write-Host "Model: deepseek-v4.1-flash via Ollama OpenAI-compatible cloud API." -ForegroundColor Yellow
 Write-Host "No local language/vision model will run beside Roblox + Brian2." -ForegroundColor Yellow
 Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
 Write-Host "Combat: coach can EQUIP a verified hotbar slot; quest-target light attacks become real M1/left-clicks." -ForegroundColor Yellow
@@ -59,7 +59,7 @@ Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENC
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
 Write-Host "Persistent run: END RUN/F12 saves the report and ZIP." -ForegroundColor Red
 
-Write-Host "Testing Ollama Cloud model access before brain startup..." -ForegroundColor Cyan
+Write-Host "Testing Ollama Cloud OpenAI-compatible API before brain startup..." -ForegroundColor Cyan
 $probeArgs = @(
     "-m", "lab.coach.ollama_cloud_probe",
     "--model", $env:OLLAMA_CLOUD_MODEL,
