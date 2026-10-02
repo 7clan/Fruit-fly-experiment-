@@ -667,10 +667,24 @@ Return ONLY a JSON object with exactly these fields:
         why = str(plan.get("explanation") or "").replace("\n", " ")
         if len(why) > 160:
             why = why[:157] + "..."
-        print(
-            f"[AI->PLAN] skill={plan.get('skill')} "
-            f"target={plan.get('target')} "
-            f"source={plan.get('provider')} ai=yes "
-            f"why={why}",
-            flush=True,
+        plan_log_sig = (
+            str(plan.get("skill") or ""),
+            str(plan.get("target") or ""),
+            why,
         )
+        suppress_dupes = bool(
+            getattr(self, "suppress_duplicate_plan_logs", False))
+        if (not suppress_dupes
+                or plan_log_sig != getattr(
+                    self, "_last_printed_plan_sig", None)):
+            print(
+                f"[AI->PLAN] skill={plan.get('skill')} "
+                f"target={plan.get('target')} "
+                f"source={plan.get('provider')} ai=yes "
+                f"why={why}",
+                flush=True,
+            )
+            self._last_printed_plan_sig = plan_log_sig
+        else:
+            self.stats["suppressed_plan_logs"] = int(
+                self.stats.get("suppressed_plan_logs", 0)) + 1
