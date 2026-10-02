@@ -1,5 +1,5 @@
 # run_ai_only_windows.ps1
-# Experimental branch: Ollama Cloud AI is the sole gameplay decision-maker.
+# Experimental branch: a multimodal cloud AI is the sole gameplay decision-maker.
 # No canonical fruit-fly/Brian2 brain is started or consulted.
 # F12 = immediate emergency stop and end run.
 
@@ -17,7 +17,7 @@ $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
 Write-Host "== AI-ONLY AUTOPILOT EXPERIMENT ==" -ForegroundColor Cyan
-Write-Host "Decision owner: Ollama Cloud AI ONLY." -ForegroundColor Green
+Write-Host "Decision owner: multimodal cloud AI ONLY (Gemini preferred)." -ForegroundColor Green
 Write-Host "Fruit-fly brain: DISABLED / NOT STARTED." -ForegroundColor Yellow
 Write-Host "Local CV only measures the screen and realizes the AI-selected target." -ForegroundColor Yellow
 Write-Host "The AI owns quests, navigation goals, combat, equipment, abilities, shops and progression." -ForegroundColor Yellow
@@ -29,51 +29,94 @@ if ($LASTEXITCODE -ne 0) {
     throw "Windows input layout preflight failed."
 }
 
-if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
-    $env:OLLAMA_API_KEY = [Environment]::GetEnvironmentVariable("OLLAMA_API_KEY", "User")
+# Resolve the fastest usable multimodal provider. Gemini Flash-Lite is
+# preferred because it is lower-latency and the user already configured it.
+$provider = $null
+$selectedModel = $null
+$selectedBase = $null
+
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+    $env:GEMINI_API_KEY = [Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
 }
-if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_MODEL)) {
-    $env:OLLAMA_CLOUD_MODEL = [Environment]::GetEnvironmentVariable("OLLAMA_CLOUD_MODEL", "User")
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_MODEL)) {
+    $env:GEMINI_MODEL = [Environment]::GetEnvironmentVariable("GEMINI_MODEL", "User")
 }
-if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_BASE)) {
-    $env:OLLAMA_CLOUD_BASE = [Environment]::GetEnvironmentVariable("OLLAMA_CLOUD_BASE", "User")
-}
-if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_BASE)) {
-    $env:OLLAMA_CLOUD_BASE = "https://ollama.com/v1"
-}
-if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_MODEL)) {
-    $env:OLLAMA_CLOUD_MODEL = "gemma4:cloud"
+if ([string]::IsNullOrWhiteSpace($env:GEMINI_MODEL)) {
+    $env:GEMINI_MODEL = "gemini-3.5-flash-lite"
 }
 
-if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
-    Write-Host "Ollama Cloud key missing; opening one-time setup..." -ForegroundColor Yellow
-    & ".\setup_ollama_cloud_windows.ps1"
-    if ($LASTEXITCODE -ne 0) { throw "Ollama Cloud setup failed." }
+if (-not [string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+    Write-Host "Testing Gemini Flash-Lite text + REQUIRED image vision..." -ForegroundColor Cyan
+    $gemProbeArgs = @(
+        "-m", "lab.coach.probe",
+        "--model", $env:GEMINI_MODEL,
+        "--timeout", "15",
+        "--require-vision"
+    )
+    $gemProbe = @(& $mainPython @gemProbeArgs)
+    $gemExit = $LASTEXITCODE
+    $gemProbe | ForEach-Object { Write-Host $_ }
+    if ($gemExit -eq 0) {
+        $modelLine = $gemProbe | Where-Object { $_ -like "COACH_MODEL=*" } | Select-Object -Last 1
+        if (-not [string]::IsNullOrWhiteSpace($modelLine)) {
+            $provider = "gemini"
+            $selectedModel = $modelLine.Substring("COACH_MODEL=".Length).Trim()
+            $env:GEMINI_MODEL = $selectedModel
+            [Environment]::SetEnvironmentVariable("GEMINI_MODEL", $selectedModel, "User")
+        }
+    } else {
+        Write-Host "Gemini vision unavailable; trying Ollama Cloud fallback..." -ForegroundColor Yellow
+    }
 }
 
-Write-Host "Testing REQUIRED image vision; preferring a smaller/faster model when available..." -ForegroundColor Cyan
-$probeArgs = @(
-    "-m", "lab.coach.ollama_cloud_probe",
-    "--model", $env:OLLAMA_CLOUD_MODEL,
-    "--base-url", $env:OLLAMA_CLOUD_BASE,
-    "--timeout", "25",
-    "--require-vision",
-    "--prefer-fast"
-)
-$probeOutput = @(& $mainPython @probeArgs)
-$probeExit = $LASTEXITCODE
-$probeOutput | ForEach-Object { Write-Host $_ }
-if ($probeExit -ne 0) {
-    throw "Ollama Cloud vision preflight failed; AI-only run will not start blind."
+if ([string]::IsNullOrWhiteSpace($provider)) {
+    if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
+        $env:OLLAMA_API_KEY = [Environment]::GetEnvironmentVariable("OLLAMA_API_KEY", "User")
+    }
+    if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_MODEL)) {
+        $env:OLLAMA_CLOUD_MODEL = [Environment]::GetEnvironmentVariable("OLLAMA_CLOUD_MODEL", "User")
+    }
+    if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_BASE)) {
+        $env:OLLAMA_CLOUD_BASE = [Environment]::GetEnvironmentVariable("OLLAMA_CLOUD_BASE", "User")
+    }
+    if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_BASE)) {
+        $env:OLLAMA_CLOUD_BASE = "https://ollama.com/v1"
+    }
+    if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_MODEL)) {
+        $env:OLLAMA_CLOUD_MODEL = "gemma4:cloud"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
+        Write-Host "Testing Ollama Cloud text + REQUIRED image vision..." -ForegroundColor Cyan
+        $ollamaProbeArgs = @(
+            "-m", "lab.coach.ollama_cloud_probe",
+            "--model", $env:OLLAMA_CLOUD_MODEL,
+            "--base-url", $env:OLLAMA_CLOUD_BASE,
+            "--timeout", "25",
+            "--require-vision",
+            "--prefer-fast"
+        )
+        $ollamaProbe = @(& $mainPython @ollamaProbeArgs)
+        $ollamaExit = $LASTEXITCODE
+        $ollamaProbe | ForEach-Object { Write-Host $_ }
+        if ($ollamaExit -eq 0) {
+            $modelLine = $ollamaProbe | Where-Object { $_ -like "COACH_MODEL=*" } | Select-Object -Last 1
+            if (-not [string]::IsNullOrWhiteSpace($modelLine)) {
+                $provider = "ollama_cloud"
+                $selectedModel = $modelLine.Substring("COACH_MODEL=".Length).Trim()
+                $selectedBase = $env:OLLAMA_CLOUD_BASE
+                $env:OLLAMA_CLOUD_MODEL = $selectedModel
+                [Environment]::SetEnvironmentVariable("OLLAMA_CLOUD_MODEL", $selectedModel, "User")
+            }
+        }
+    }
 }
-$modelLine = $probeOutput | Where-Object { $_ -like "COACH_MODEL=*" } | Select-Object -Last 1
-if ([string]::IsNullOrWhiteSpace($modelLine)) {
-    throw "Cloud preflight passed but returned no model."
+
+if ([string]::IsNullOrWhiteSpace($provider)) {
+    throw "No working multimodal cloud controller. Gemini is preferred: run .\setup_semantic_coach_windows.ps1, then retry."
 }
-$selectedModel = $modelLine.Substring("COACH_MODEL=".Length).Trim()
-$env:OLLAMA_CLOUD_MODEL = $selectedModel
-[Environment]::SetEnvironmentVariable("OLLAMA_CLOUD_MODEL", $selectedModel, "User")
-Write-Host "AI controller READY: $selectedModel" -ForegroundColor Green
+
+Write-Host "AI controller READY: provider=$provider model=$selectedModel" -ForegroundColor Green
 
 $appArgs = @(
     "-m", "lab.app",
@@ -87,12 +130,14 @@ $appArgs = @(
     "--fast-detect-width", "560",
     "--ai-only-autonomy",
     "--semantic-coach",
-    "--coach-provider", "ollama_cloud",
+    "--coach-provider", $provider,
     "--coach-model", $selectedModel,
-    "--coach-url", $env:OLLAMA_CLOUD_BASE,
     "--coach-hz", "4.0",
     "--gpo-loadout", "default_melee"
 )
+if ($provider -eq "ollama_cloud" -and -not [string]::IsNullOrWhiteSpace($selectedBase)) {
+    $appArgs += @("--coach-url", $selectedBase)
+}
 
 Write-Host "Starting. Do not steer/click during the experiment if you want a clean AI-only result." -ForegroundColor Cyan
 Write-Host "The run auto-focuses Roblox and starts the autopilot. Press F12 at any time to stop and save the ZIP." -ForegroundColor Red
