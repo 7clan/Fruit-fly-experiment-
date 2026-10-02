@@ -315,14 +315,8 @@ Return ONLY a JSON object with exactly these fields:
             "https://generativelanguage.googleapis.com/"
             "v1beta/openai/chat/completions")
 
-        content = [{"type": "text", "text": prompt}]
+        content = []
         if previous_image_b64:
-            content.append({
-                "type": "text",
-                "text": (
-                    "PREVIOUS GAME FRAME from the prior coach observation. "
-                    "Use it only to infer motion/progress/stuck state."),
-            })
             content.append({
                 "type": "image_url",
                 "image_url": {
@@ -331,22 +325,31 @@ Return ONLY a JSON object with exactly these fields:
                         + previous_image_b64),
                 },
             })
-        if image_b64:
             content.append({
                 "type": "text",
-                "text": "CURRENT GAME FRAME. This is the authoritative view.",
+                "text": (
+                    "PREVIOUS GAME FRAME from the prior coach observation. "
+                    "Use it only to infer motion/progress/stuck state."),
             })
+        if image_b64:
+            # Put the authoritative current visual first. This improves
+            # grounding and trims latency on the AI-only fast path.
             content.append({
                 "type": "image_url",
                 "image_url": {
                     "url": "data:image/jpeg;base64," + image_b64,
                 },
             })
+            content.append({
+                "type": "text",
+                "text": "CURRENT GAME FRAME. This is the authoritative view.",
+            })
+        content.append({"type": "text", "text": prompt})
 
         body = {
             "model": self.model,
             "messages": [{"role": "user", "content": content}],
-            "max_tokens": 620,
+            "max_tokens": int(getattr(self, "max_output_tokens", 620)),
             "reasoning_effort": "minimal",
             # json_object is supported by the compatibility chat endpoint.
             "response_format": {"type": "json_object"},
@@ -380,7 +383,7 @@ Return ONLY a JSON object with exactly these fields:
             fallback = {
                 "model": self.model,
                 "messages": body["messages"],
-                "max_tokens": 620,
+                "max_tokens": int(getattr(self, "max_output_tokens", 620)),
             }
             payload = send(fallback)
 
