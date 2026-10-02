@@ -840,6 +840,8 @@ def main(argv=None) -> int:
                     help="Gate-6 only: hard-filtered navigation backend")
     ap.add_argument("--quest-autonomy", action="store_true",
                     help="Gate-7: low-power quest + starter-PvE hybrid agent")
+    ap.add_argument("--ai-only-autonomy", action="store_true",
+                    help="AI-only branch: cloud AI owns all gameplay decisions; fly brain is not started")
     ap.add_argument("--gpo-loadout", default="default_melee",
                     help="observed equipped GPO loadout profile")
     ap.add_argument("--semantic-coach", action="store_true",
@@ -859,14 +861,32 @@ def main(argv=None) -> int:
         raise SystemExit(
             "generic autonomy is blocked; use the dedicated movement-only "
             "Gate-6 launcher")
-    if args.movement_only_autonomy and args.quest_autonomy:
+    active_modes = sum(bool(x) for x in (
+        args.movement_only_autonomy,
+        args.quest_autonomy,
+        args.ai_only_autonomy,
+    ))
+    if active_modes > 1:
         raise SystemExit(
-            "choose either movement-only or quest-autonomy, not both")
-    if ((args.movement_only_autonomy or args.quest_autonomy)
+            "choose exactly one active mode: movement-only, quest-autonomy, "
+            "or ai-only-autonomy")
+    if ((args.movement_only_autonomy or args.quest_autonomy
+         or args.ai_only_autonomy)
             and args.capture != "windows"):
         raise SystemExit("active GPO autonomy requires Windows capture")
-    if args.semantic_coach and not args.quest_autonomy:
-        raise SystemExit("--semantic-coach requires --quest-autonomy")
+    if args.semantic_coach and not (
+            args.quest_autonomy or args.ai_only_autonomy):
+        raise SystemExit(
+            "--semantic-coach requires --quest-autonomy or --ai-only-autonomy")
+    if args.ai_only_autonomy and not args.semantic_coach:
+        raise SystemExit("--ai-only-autonomy requires --semantic-coach")
+    if args.ai_only_autonomy and args.coach_provider != "ollama_cloud":
+        raise SystemExit(
+            "--ai-only-autonomy currently requires --coach-provider ollama_cloud")
+    if args.ai_only_autonomy and args.runtime != "mock":
+        raise SystemExit(
+            "--ai-only-autonomy deliberately uses --runtime mock; "
+            "the fly brain is not started")
 
     if args.self_test:
         res = self_test(runtime_kind=args.runtime)
@@ -880,9 +900,11 @@ def main(argv=None) -> int:
                         capture_downsample=args.capture_downsample,
                         autonomy=bool(
                             args.movement_only_autonomy
-                            or args.quest_autonomy),
+                            or args.quest_autonomy
+                            or args.ai_only_autonomy),
                         movement_only=bool(args.movement_only_autonomy),
                         quest_autonomy=bool(args.quest_autonomy),
+                        ai_only=bool(args.ai_only_autonomy),
                         gpo_loadout=args.gpo_loadout,
                         semantic_coach=bool(args.semantic_coach),
                         coach_provider=args.coach_provider,
@@ -900,7 +922,13 @@ def main(argv=None) -> int:
                         brain_transport=args.brain_transport)
     lab.start()
     try:
-        if args.runtime == "canonical":
+        if args.ai_only_autonomy:
+            print(
+                "[lab] AI-ONLY mode: fruit-fly brain is NOT started; "
+                "cloud AI is the sole gameplay decision-maker",
+                flush=True,
+            )
+        elif args.runtime == "canonical":
             print("[lab] waiting for canonical brain init/prewarm ...", flush=True)
             if not lab.wait_for_brain_ready(timeout_s=180.0):
                 raise RuntimeError(
@@ -922,10 +950,14 @@ def main(argv=None) -> int:
                     f"starting {args.seconds}s timed smoke test")),
                 flush=True,
             )
-        if args.movement_only_autonomy or args.quest_autonomy:
+        if (args.movement_only_autonomy or args.quest_autonomy
+                or args.ai_only_autonomy):
             lab.arm_windows_navigation()
             if lab.dashboard_ui is not None:
                 print(
+                    "[lab] AI-ONLY controls ready; AUTOPILOT DISABLED — "
+                    "click ENABLE in DigitalFlyLab; F12 = EMERGENCY STOP"
+                    if args.ai_only_autonomy else
                     "[lab] quest/PvE controls ready; AGENT DISABLED — "
                     "click ENABLE in DigitalFlyLab; F12 = EMERGENCY STOP"
                     if args.quest_autonomy else
@@ -934,6 +966,9 @@ def main(argv=None) -> int:
                     flush=True)
             else:
                 print(
+                    "[lab] AI-ONLY autopilot armed; Roblox focused; "
+                    "F12 = EMERGENCY STOP"
+                    if args.ai_only_autonomy else
                     "[lab] quest/PvE agent armed; Roblox focused; "
                     "F12 = EMERGENCY STOP"
                     if args.quest_autonomy else
