@@ -133,9 +133,11 @@ class DigitalFlyLab:
         self.fast_vision = FastVisionWorker(
             self.bus, target_hz=fast_hz,
             max_detect_width=int(fast_detect_width),
-            # Questing uses cheap explicit yellow/green/red objective markers
-            # instead of the expensive generic humanoid proposal pass.
-            role_detection=not active_low_power)
+            # Hybrid low-power mode uses marker-only CV. AI-only has no
+            # Brian2 workload, so spend that CPU budget on tracked humanoid
+            # roles; the cloud controller needs a real enemy BODY distinct
+            # from the red quest objective marker.
+            role_detection=(self.ai_only or not active_low_power))
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
