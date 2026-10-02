@@ -7,6 +7,80 @@ conflict.
 
 Last researched: 2026-10-01.
 
+## AI-only runtime contract (binding for the experimental branch)
+
+This section overrides older helper-coach assumptions when `mode=AI_ONLY`.
+
+Perception meanings:
+- Yellow QUEST / ! marker = a quest giver is available at that screen location.
+- Green recommended marker + distance = travel guidance toward the recommended
+  quest/objective area. It does not prove a quest is already active.
+- Red quest objective marker = the active quest's target LOCATION/DIRECTION.
+  It is not, by itself, proof that an enemy body is in melee range.
+- `quest_enemy_actor_visible=true` = the fast tracker has a persistent hostile
+  NPC body spatially associated with the red quest objective. This is the
+  local evidence required for M1 combat.
+- `quest_status=active` is sticky perception state from a red objective/actor.
+  Do not walk back to a yellow giver or try to take another quest while active.
+- `quest_status=pending_accept` means T was already pressed; wait for the
+  quest/dialogue state to change instead of pressing T repeatedly.
+- `stuck=true` / `circling=true` means forward navigation is not producing
+  measurable visual progress. Recover before repeating the same route.
+
+Quest acceptance sequence:
+1. Approach the yellow quest giver until centered and close.
+2. Press T ONCE.
+3. Wait for the dialogue/UI change.
+4. If an in-game Accept/Yes/Confirm-quest button is visibly present, click its
+   normalized center with UI_CLICK.
+5. Verify acceptance from a red quest objective, changed quest HUD/counter, or
+   other explicit current evidence before moving to combat.
+
+Combat sequence:
+1. If only the red objective marker is visible, navigate toward it.
+2. When a tracked `quest_enemy_actor` is visible, close distance.
+3. At melee range use repeated M1/basic attack. Block/evade or a verified HUD
+   ability as the current fight requires.
+4. Do not attack ordinary players or unrelated humanoids.
+5. The on-screen SAFEZONE/PROTECTED label must NOT be used as an excuse to
+   postpone quest-NPC PvE. In this experiment it is treated as PvP protection,
+   while quest NPC combat remains a separate objective.
+6. If defeated, WAIT through respawn, reacquire the active quest/objective and
+   resume from current evidence instead of inventing an enemy location.
+
+Movement/recovery binding:
+- SPACE = jump.
+- Left CTRL while contacting a wall/object = climb. The runtime CLIMB macro
+  performs a short jump, then holds forward + CTRL to establish/maintain wall
+  contact.
+- Double W = sprint.
+- Direction + Q = roll/dash.
+- Repeated airborne SPACE = Geppo only if the character has it unlocked.
+- AI-only target following may rotate the Roblox camera with a bounded RMB drag
+  to center the AI-selected target before moving forward. This is actuator
+  alignment, not a hidden goal selector.
+
+Equipment/UI:
+- 0-9 select hotbar slots. The current screenshot is authoritative for what is
+  actually in each slot; never assume a permanent slot after the player changes
+  inventory.
+- `last_equipped_slot` is the last slot the automation physically selected.
+- Default Melee currently exposes Gut Punch (E) and Ground Smash (R) in the
+  observed project loadout, but only use loadout abilities when the current HUD
+  / verified control catalog supports them.
+- UI_CLICK may operate ordinary in-game quest, inventory, menu and Peli-shop
+  buttons when the model can see the button and has a reliable normalized
+  center. Never automate Robux/gamepass, account/security, external-link or
+  trade confirmations.
+
+Shell's Town progression facts relevant to the current level-20 test:
+- Robert gives the level-20+ quest to defeat 8 Corrupt Marines.
+- Kevin gives the level-25+ Shell's Bandit quest.
+- Corrupt Marines are NPC enemies; the red objective should guide travel until
+  a real tracked Corrupt Marine body is visible.
+Sources: current GPO community NPC/Shell's Town references plus live project
+observations from the 2026-10-02 AI-only run.
+
 ## 0. Core play loop
 
 1. Understand the current scene before acting.
@@ -14,8 +88,9 @@ Last researched: 2026-10-01.
    approach it, interact with T, and verify that the quest UI/objective changed.
 3. If a green recommended-quest waypoint is visible, treat it as the current
    travel objective.
-4. If a red quest/enemy marker is visible, treat that marked NPC as the quest
-   combat target. Do not attack ordinary players or unrelated humanoids.
+4. If a red quest objective marker is visible, navigate toward it. Treat it
+   as a location cue until a persistent quest_enemy_actor body is resolved;
+   only that body is eligible for melee attacks.
 5. When the quest counter completes, stop attacking, reacquire the next quest
    objective, and repeat.
 6. If motion stops changing the scene for several seconds, classify the
@@ -54,10 +129,11 @@ Quest/world:
   assume that E/R/Z/X/C/V/B/N/Q/F/G/J name the same move for every loadout.
 
 Camera:
-- The autonomous agent does NOT rotate the user's camera. Character steering
-  uses movement controls. UI clicks are only permitted when the coach
-  explicitly identifies an open UI/dialog and supplies a high-confidence
-  normalized button location.
+- Hybrid fly mode does not rotate the user's camera.
+- AI-only mode may use bounded RMB camera drags for explicit LOOK actions and
+  for target-centering while realizing an AI-selected navigation goal.
+- UI clicks are permitted only when the controller explicitly identifies an
+  open in-game UI/dialog and supplies a high-confidence normalized location.
 
 Sources:
 - https://grand-piece-online.fandom.com/wiki/Controls
