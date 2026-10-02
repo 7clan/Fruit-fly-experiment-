@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "== DigitalFlyLab Ollama Cloud setup ==" -ForegroundColor Cyan
 Write-Host "Provider: Ollama Cloud" -ForegroundColor Yellow
-Write-Host "Preferred model: deepseek-v4.1-flash (cloud vision + reasoning)" -ForegroundColor Yellow
+Write-Host "Preferred model: gemma4:cloud (official Ollama Cloud multimodal alias)" -ForegroundColor Yellow
 Write-Host "The key is stored in your Windows USER environment, not the repository." -ForegroundColor DarkYellow
 Write-Host ""
 
@@ -38,7 +38,7 @@ $staleModels = @(
     "qwen3.8", "kimi-k3", "gemma4:31b", "gemma4"
 )
 if ($ReplaceKey -or [string]::IsNullOrWhiteSpace($model) -or $staleModels -contains $model) {
-    $model = "deepseek-v4.1-flash"
+    $model = "gemma4:cloud"
     [Environment]::SetEnvironmentVariable("OLLAMA_CLOUD_MODEL", $model, "User")
 }
 $env:OLLAMA_CLOUD_MODEL = $model
