@@ -261,6 +261,11 @@ class AIOnlyBackend(QuestingBackend):
     name = "windows_ai_only_v1"
 
     def mouse_move(self, dx: int, dy: int) -> None:
+        # Roblox camera look is a RMB drag, not an arbitrary cursor move.
+        dragger = getattr(self.inner, "camera_drag", None)
+        if dragger is not None:
+            dragger(int(dx), int(dy))
+            return
         mover = getattr(self.inner, "mouse_move", None)
         if mover is not None:
             mover(int(dx), int(dy))
