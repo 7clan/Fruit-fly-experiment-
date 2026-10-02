@@ -564,7 +564,7 @@ def test_ai_visual_enemy_confirmation_relaxes_marker_melee_gate():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert cmd.payload["name"] in {"ATTACK_LIGHT", "ATTACK_ADVANCE"}
     assert sup.stats["marker_melee_fallbacks"] == 1
 
 
@@ -594,3 +594,29 @@ def test_fast_model_candidates_precede_configured_model():
     models = _candidate_models("gemma4:31b", prefer_fast=True)
     assert models[0] == "qwen3-vl:4b"
     assert "gemma4:31b" in models
+
+
+
+def test_attack_advance_physically_combines_w_and_m1():
+    bus = Bus()
+    fake = _FakeCameraInput()
+    backend = AIOnlyBackend(fake)
+    ex = MotorExecutor(
+        bus,
+        backend=backend,
+        autonomy_enabled=True,
+        questing=True,
+        command_only=True,
+    )
+    now = ex.clock.now_ns()
+    bus.state("action.command").write({
+        "command_id": 99,
+        "name": "ATTACK_ADVANCE",
+        "source": "test",
+        "ts_ns": now,
+        "expires_ns": now + int(2e9),
+    })
+    ex.step()
+    assert ("key_down", "W") in fake.events
+    assert ("mouse_down", "left") in fake.events
+    assert ("mouse_up", "left") in fake.events
