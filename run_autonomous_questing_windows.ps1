@@ -70,10 +70,10 @@ if (-not $serverExe) {
 
 Write-Host "Fly brain contributes approach/retreat/escape; local AI selects skills and fresh CV servo handles time-critical target steering." -ForegroundColor Green
 Write-Host "LOCAL AI: SmolVLM2-256M Q4_K_M via llama.cpp; no Gemini/API key." -ForegroundColor Green
-Write-Host "Local AI now performs real text skill-selection on scene changes/~30s; expensive image reasoning remains rare." -ForegroundColor Yellow
+Write-Host "Local AI performs token-only skill selection on scene changes/~90s; expensive image reasoning remains rare." -ForegroundColor Yellow
 Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
 Write-Host "Local AI may reason about quests, obstacles, combat, visible shops, equipment and ships using the offline GPO playbook." -ForegroundColor Yellow
-Write-Host "CPU policy: llama.cpp uses 2 low-priority CPU threads in short bursts; zero GPU layers." -ForegroundColor Yellow
+Write-Host "CPU policy: llama.cpp uses ONE low-priority CPU thread in short bursts; zero GPU layers." -ForegroundColor Yellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
 Write-Host "Persistent run: END RUN/F12 saves the report and ZIP." -ForegroundColor Red
@@ -83,11 +83,11 @@ if (-not (Test-Health)) {
     $stdout = Join-Path $logDir "live_server.stdout.log"
     $stderr = Join-Path $logDir "live_server.stderr.log"
     Remove-Item $stdout,$stderr -Force -ErrorAction SilentlyContinue
-    $serverArgs = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "2", "--threads-batch", "2", "--ctx-size", "2048", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-warmup", "--no-webui")
+    $serverArgs = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "1", "--threads-batch", "1", "--ctx-size", "2048", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-warmup", "--no-webui")
     Write-Host "Starting local SmolVLM server..." -ForegroundColor Cyan
     $serverProc = Start-Process -FilePath $serverExe -ArgumentList $serverArgs -PassThru -WindowStyle Minimized -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     try {
-        $serverProc.PriorityClass = "BelowNormal"
+        $serverProc.PriorityClass = "Idle"
     } catch {
         Write-Host "[local-ai] could not lower process priority; continuing." -ForegroundColor DarkYellow
     }
@@ -143,7 +143,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Local coach READY: $modelAlias" -ForegroundColor Green
-Write-Host "Low-power profile: capture/CV 3 Hz, x2 downsample, AI skill calls scene-gated/~30s, visual reasoning rare." -ForegroundColor Yellow
+Write-Host "Low-power profile: capture/CV 3 Hz, x2 downsample, AI skill calls scene-gated/~90s, visual reasoning rare." -ForegroundColor Yellow
 
 $exitCode = 1
 try {
