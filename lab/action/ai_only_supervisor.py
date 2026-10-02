@@ -31,6 +31,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         self.meta: StateChannel = bus.state("action.meta")
         self.command: StateChannel = bus.state("action.command")
         self.state: StateChannel = bus.state("quest.state")
+        self.ai_track: StateChannel = bus.state("ai.visual.track")
 
         self._command_id = 0
         self._last_emit_ns = 0
@@ -79,6 +80,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             "quest_interact_suppressed": 0,
             "ui_clicks_suppressed": 0,
             "marker_melee_fallbacks": 0,
+            "visual_track_steers": 0,
+            "visual_track_attacks": 0,
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
         })
@@ -272,6 +275,9 @@ class AIOnlyAutopilotSupervisor(Worker):
             "ai_skill": (plan or {}).get("skill"),
             "ai_target": (plan or {}).get("target"),
             "ai_visual_target": (plan or {}).get("visual_target"),
+            "ai_visual_track": (
+                (self.ai_track.read().payload
+                 if self.ai_track.read() is not None else None)),
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
             "AI_ONLY": True,
@@ -344,6 +350,31 @@ class AIOnlyAutopilotSupervisor(Worker):
         ai_visual_dir = (
             (float(ai_visual_x) - 0.5) * 2.8
             if ai_visual_x is not None else None)
+
+        # A cloud response can be 1-3 seconds old. If the AI supplied a
+        # bounding box, AIVisualTracker follows that SAME AI-selected target
+        # locally at ~8 Hz. It does not choose a different target.
+        track_env = self.ai_track.read()
+        track = (track_env.payload or {}) if track_env is not None else {}
+        try:
+            track_pid = int(track.get("plan_id", -1))
+            track_conf = float(track.get("confidence", 0.0))
+        except (TypeError, ValueError):
+            track_pid, track_conf = -1, 0.0
+        track_kind = str(track.get("kind") or "none").strip().lower()
+        track_dir = self._f(track.get("direction"))
+        track_prox = self._f(track.get("proximity_hint"))
+        track_fresh = bool(
+            track_pid == pid
+            and track_conf >= 0.42
+            and track_kind != "none"
+            and track_dir is not None)
+        if (track_fresh
+                and (ai_visual_kind == "none"
+                     or track_kind == ai_visual_kind)):
+            ai_visual_kind = track_kind
+            ai_visual_dir = track_dir
+            ai_visual_conf = max(ai_visual_conf, track_conf)
         ai_qstate = str(
             ai_perception.get("quest_state") or "unknown").lower()
         ai_equipped = str(
@@ -399,6 +430,8 @@ class AIOnlyAutopilotSupervisor(Worker):
                     reason=reason,
                     target_type="ai_visual_" + ai_visual_kind,
                     hold_s=0.78)
+                if track_fresh:
+                    self.stats["visual_track_steers"] += 1
 
         elif skill in {"TAKE_QUEST", "INTERACT"}:
             # Never retake while perception says an objective is already live.
@@ -457,6 +490,8 @@ class AIOnlyAutopilotSupervisor(Worker):
                         confidence=min(confidence, ai_visual_conf),
                         reason=reason,
                         target_type="quest_giver_ai_visual")
+                    if track_fresh:
+                        self.stats["visual_track_steers"] += 1
 
         elif skill == "FIGHT_QUEST_TARGET":
             # Never M1 a red objective dot. Require the persistent NPC body
@@ -494,15 +529,18 @@ class AIOnlyAutopilotSupervisor(Worker):
                         target_type="quest_enemy_actor",
                         hold_s=0.92)
             elif (ai_visual_kind == "quest_enemy_actor"
-                  and ai_visual_conf >= 0.84
+                  and ai_visual_conf >= 0.72
                   and ai_visual_dir is not None
                   and self._quest_status == "active"):
-                # Cloud vision can resolve the actual NPC body when the cheap
-                # local role tracker misses it. The AI already chose FIGHT;
-                # use the grounded screen coordinate immediately instead of
-                # waiting several more cloud seconds for local reacquisition.
-                if ai_visual_melee and abs(ai_visual_dir) <= 0.72:
-                    if now - self._last_emit_ns >= int(0.34e9):
+                # Cloud chose this NPC. The local tracker keeps its direction
+                # fresh between replies, fixing the "AI saw it three seconds
+                # ago" latency problem without selecting a new target.
+                tracked_melee = bool(
+                    track_fresh and track_kind == "quest_enemy_actor"
+                    and track_prox is not None and track_prox >= 0.68)
+                if ((ai_visual_melee or tracked_melee)
+                        and abs(ai_visual_dir) <= 0.72):
+                    if now - self._last_emit_ns >= int(0.30e9):
                         self._emit(
                             "ATTACK_LIGHT", now, reason=reason,
                             ttl_s=0.8,
@@ -510,6 +548,8 @@ class AIOnlyAutopilotSupervisor(Worker):
                             coach_confidence=confidence,
                             target_type="quest_enemy_actor_ai_visual")
                         self.stats["combat_commands"] += 1
+                        if track_fresh:
+                            self.stats["visual_track_attacks"] += 1
                 elif abs(ai_visual_dir) <= 0.88:
                     if now - self._last_emit_ns >= int(0.34e9):
                         self._emit(
@@ -519,13 +559,17 @@ class AIOnlyAutopilotSupervisor(Worker):
                             coach_confidence=confidence,
                             target_type="quest_enemy_actor_ai_visual")
                         self.stats["combat_commands"] += 1
+                        if track_fresh:
+                            self.stats["visual_track_steers"] += 1
                 else:
                     self._steer(
                         now, direction=ai_visual_dir, pid=pid,
                         confidence=min(confidence, ai_visual_conf),
                         reason=reason,
                         target_type="quest_enemy_actor_ai_visual",
-                        hold_s=0.85)
+                        hold_s=0.82)
+                    if track_fresh:
+                        self.stats["visual_track_steers"] += 1
 
             elif (bool(notes.get("quest_enemy_marker_detected"))
                   and direction is not None and proximity is not None):
