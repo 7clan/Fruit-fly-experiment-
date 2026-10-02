@@ -320,7 +320,13 @@ class WindowsInputBackend:
         if not bool(_user32.SetCursorPos(sx, sy)):
             raise RuntimeError("UI click blocked: SetCursorPos failed")
         try:
+            # Roblox UI sometimes misses a click if SetCursorPos and the
+            # button event land in the same scheduler slice. Give the client
+            # one short frame to observe hover, then click, then leave the
+            # pointer in place briefly before restoring/recentering.
+            time.sleep(0.035)
             self.mouse_click(button)
+            time.sleep(0.025)
         finally:
             if restore_cursor and have_old:
                 bounds = self._client_screen_rect()
