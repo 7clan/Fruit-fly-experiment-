@@ -724,7 +724,7 @@ class MotorExecutor(Worker):
             "SPRINT", "DASH_FORWARD", "DASH_BACK", "DASH_LEFT",
             "DASH_RIGHT", "GEPPO",
             "BLOCK", "PERFECT_BLOCK", "EVADE_BACK", "ATTACK_LIGHT",
-            "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
+            "ATTACK_ADVANCE", "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
             "BUSO_HAKI", "OBSERVATION_HAKI", "EQUIP_SLOT",
             "USE_OBSERVED_ABILITY", "EXEC_CONTROL", "UI_CLICK",
             "BOARD_SHIP", "STEER_TARGET",
@@ -737,7 +737,8 @@ class MotorExecutor(Worker):
             # and camera search may coexist with the current locomotor goal.
             if name in {
                 "INTERACT_QUEST", "BLOCK", "PERFECT_BLOCK", "EVADE_BACK",
-                "ATTACK_LIGHT", "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
+                "ATTACK_LIGHT", "ATTACK_ADVANCE", "AIR_COMBO",
+                "GUT_PUNCH", "GROUND_SMASH",
                 "USE_OBSERVED_ABILITY", "EQUIP_SLOT",
                 "EXEC_CONTROL", "UI_CLICK", "BOARD_SHIP",
                 "STEER_TARGET",
@@ -848,6 +849,13 @@ class MotorExecutor(Worker):
                 self.backend.mouse_button_down("left")
                 self.backend.mouse_button_up("left")
                 self.action_lock_until_ns = now_ns + int(0.16e9)
+            elif name == "ATTACK_ADVANCE":
+                # Realize the AI's persistent FIGHT skill while the quest NPC
+                # is visible but just outside reliable melee geometry.
+                self._hold_key_locked("W", now_ns, 0.24)
+                self.backend.mouse_button_down("left")
+                self.backend.mouse_button_up("left")
+                self.action_lock_until_ns = now_ns + int(0.18e9)
             elif name == "AIR_COMBO":
                 self._hold_key_locked("SPACE", now_ns, 0.16)
                 self.backend.mouse_button_down("left")
