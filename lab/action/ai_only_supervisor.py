@@ -51,6 +51,11 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._last_action_ns = 0
         self._last_action_name = None
         self._last_equipped_slot = None
+        self._action_epoch = 0
+        self._ui_epoch = 0
+        self._last_ui_click_ns = 0
+        self._last_ui_sig = None
+        self._ai_enemy_confirmed_until_ns = 0
 
         # Progress/circling monitor. Proximity is the detector contract where
         # larger values mean visually closer.
@@ -70,6 +75,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             "ignored_plans": 0,
             "suppressed_duplicate_logs": 0,
             "quest_interact_suppressed": 0,
+            "ui_clicks_suppressed": 0,
+            "marker_melee_fallbacks": 0,
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
         })
@@ -111,7 +118,6 @@ class AIOnlyAutopilotSupervisor(Worker):
         repeat = name in {"STEER_TARGET", "ATTACK_LIGHT"}
         log_due = (
             sig != self._last_log_sig
-            or now_ns - self._last_log_ns >= int(3.5e9)
             or not repeat
         )
         if log_due:
@@ -250,6 +256,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             "last_action_age_s": action_age,
             "last_quest_interact_age_s": interact_age,
             "last_equipped_slot": self._last_equipped_slot,
+            "action_epoch": int(self._action_epoch),
+            "ui_epoch": int(self._ui_epoch),
             "ai_plan_id": (plan or {}).get("plan_id"),
             "ai_skill": (plan or {}).get("skill"),
             "ai_target": (plan or {}).get("target"),
@@ -312,6 +320,22 @@ class AIOnlyAutopilotSupervisor(Worker):
         direction = self._f(target.get("direction"))
         proximity = self._f(target.get("distance"))
         reason = "ai_only:" + str(plan.get("explanation") or skill)
+        ai_perception = plan.get("perception") or {}
+        ai_qstate = str(
+            ai_perception.get("quest_state") or "unknown").lower()
+        if confidence >= 0.85:
+            if ai_qstate == "active":
+                self._quest_status = "active"
+                self._await_quest_until_ns = 0
+            elif (ai_qstate == "pending_accept"
+                  and self._quest_status != "active"):
+                self._quest_status = "pending_accept"
+            elif (ai_qstate == "available"
+                  and self._quest_status not in {"active", "pending_accept"}):
+                self._quest_status = "available"
+            if bool(ai_perception.get("enemy_actor_visible")):
+                self._ai_enemy_confirmed_until_ns = (
+                    now + int(8.0e9))
 
         if skill in {"NAVIGATE_OBJECTIVE", "TRAVEL"}:
             if (ttype in {
@@ -334,20 +358,26 @@ class AIOnlyAutopilotSupervisor(Worker):
                 ydir = self._f(notes.get("quest_marker_direction"))
                 yprox = self._f(notes.get("quest_marker_proximity"))
                 if yellow and ydir is not None and yprox is not None:
-                    # The old 0.70 threshold kept orbiting Robert forever.
-                    # At >=0.48 and reasonably centered, T is the useful next
-                    # physical primitive. Then wait for dialogue/red objective.
-                    if yprox >= 0.48 and abs(ydir) <= 0.72:
+                    prompt_seen = bool(
+                        ai_perception.get("interaction_prompt_visible"))
+                    explicit_interact = (
+                        str(plan.get("control_id") or "") == "interact")
+                    ready = (
+                        (prompt_seen and explicit_interact
+                         and confidence >= 0.85)
+                        or (yprox >= 0.46 and abs(ydir) <= 0.76))
+                    if ready:
                         if (not self._last_interact_ns
-                                or now - self._last_interact_ns >= int(4.0e9)):
+                                or now - self._last_interact_ns >= int(3.0e9)):
                             self._emit(
                                 "INTERACT_QUEST", now, reason=reason,
                                 coach_plan_id=pid,
                                 coach_confidence=confidence,
                                 target_type="quest_marker")
                             self._last_interact_ns = now
-                            self._await_quest_until_ns = now + int(5.5e9)
+                            self._await_quest_until_ns = now + int(5.0e9)
                             self._quest_status = "pending_accept"
+                            self._action_epoch += 1
                             self.stats["interaction_commands"] += 1
                     else:
                         self._steer(
@@ -393,8 +423,13 @@ class AIOnlyAutopilotSupervisor(Worker):
                 marker_stable_s = (
                     (now - self._enemy_marker_since_ns) / 1e9
                     if self._enemy_marker_since_ns else 0.0)
-                if (proximity >= 0.78 and abs(direction) <= 0.42
-                        and marker_stable_s >= 0.80):
+                ai_recent_enemy = (
+                    now <= self._ai_enemy_confirmed_until_ns)
+                marker_melee = (
+                    proximity >= (0.62 if ai_recent_enemy else 0.74)
+                    and abs(direction) <= (0.55 if ai_recent_enemy else 0.40)
+                    and marker_stable_s >= 0.65)
+                if marker_melee:
                     if now - self._last_emit_ns >= int(0.34e9):
                         self._emit(
                             "ATTACK_LIGHT", now, reason=reason,
@@ -403,6 +438,7 @@ class AIOnlyAutopilotSupervisor(Worker):
                             coach_confidence=confidence,
                             target_type="quest_enemy_marker_close_fallback")
                         self.stats["combat_commands"] += 1
+                        self.stats["marker_melee_fallbacks"] += 1
                 else:
                     # Objective not yet in verified melee geometry: approach.
                     self._steer(
@@ -427,18 +463,20 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "JUMP":
-            if now - self._last_emit_ns >= int(0.95e9):
+            if self._one_shot(pid):
                 self._emit(
                     "JUMP", now, reason=reason,
                     coach_plan_id=pid, coach_confidence=confidence)
+                self._action_epoch += 1
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "CLIMB":
-            if now - self._last_emit_ns >= int(1.15e9):
+            if self._one_shot(pid):
                 self._emit(
-                    "CLIMB", now, reason=reason, ttl_s=1.8,
-                    hold_s=1.15,
+                    "CLIMB", now, reason=reason, ttl_s=2.0,
+                    hold_s=1.20,
                     coach_plan_id=pid, coach_confidence=confidence)
+                self._action_epoch += 1
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "GEPPO":
@@ -449,10 +487,11 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "SPRINT":
-            if now - self._last_emit_ns >= int(3.0e9):
+            if self._one_shot(pid):
                 self._emit(
                     "SPRINT", now, reason=reason,
                     coach_plan_id=pid, coach_confidence=confidence)
+                self._action_epoch += 1
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "BOARD_SHIP":
@@ -552,15 +591,28 @@ class AIOnlyAutopilotSupervisor(Worker):
                     except (TypeError, ValueError):
                         x = y = -1.0
                     if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
-                        self._emit(
-                            "UI_CLICK", now, reason=reason,
-                            x_norm=x, y_norm=y, confidence=confidence,
-                            ui_context=True,
-                            ui_label=str(ui.get("label") or "")[:96],
-                            purchase_intent=(skill == "BUY_ITEM"),
-                            coach_plan_id=pid,
-                            coach_confidence=confidence)
-                        self.stats["one_shot_commands"] += 1
+                        label = str(ui.get("label") or "")[:96]
+                        sig = (
+                            label.strip().lower(),
+                            round(x, 2), round(y, 2))
+                        if (sig == self._last_ui_sig
+                                and self._last_ui_click_ns
+                                and now - self._last_ui_click_ns < int(2.5e9)):
+                            self.stats["ui_clicks_suppressed"] += 1
+                        else:
+                            self._emit(
+                                "UI_CLICK", now, reason=reason,
+                                x_norm=x, y_norm=y, confidence=confidence,
+                                ui_context=True,
+                                ui_label=label,
+                                purchase_intent=(skill == "BUY_ITEM"),
+                                coach_plan_id=pid,
+                                coach_confidence=confidence)
+                            self._last_ui_sig = sig
+                            self._last_ui_click_ns = now
+                            self._ui_epoch += 1
+                            self._action_epoch += 1
+                            self.stats["one_shot_commands"] += 1
 
         # WAIT and REOBSERVE intentionally emit no physical command.
         self._publish_state(now, obs, plan)
