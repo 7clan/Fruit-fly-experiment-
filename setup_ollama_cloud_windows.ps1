@@ -1,3 +1,5 @@
+param([switch]$ReplaceKey)
+
 # setup_ollama_cloud_windows.ps1
 # One-time Ollama Cloud API setup.
 # Stores the API key in the Windows USER environment, never in git.
@@ -6,7 +8,7 @@ $ErrorActionPreference = "Stop"
 
 Write-Host "== DigitalFlyLab Ollama Cloud setup ==" -ForegroundColor Cyan
 Write-Host "Provider: Ollama Cloud" -ForegroundColor Yellow
-Write-Host "Preferred model: qwen3-vl:235b-cloud" -ForegroundColor Yellow
+Write-Host "Preferred model: qwen3.5" -ForegroundColor Yellow
 Write-Host "The key is stored in your Windows USER environment, not the repository." -ForegroundColor DarkYellow
 Write-Host ""
 
@@ -14,7 +16,7 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
     $env:OLLAMA_API_KEY = [Environment]::GetEnvironmentVariable("OLLAMA_API_KEY", "User")
 }
 
-if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
+if ($ReplaceKey -or [string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
     $secure = Read-Host "Paste your Ollama API key here (input hidden)" -AsSecureString
     $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
     try {
@@ -32,7 +34,7 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
 
 $model = [Environment]::GetEnvironmentVariable("OLLAMA_CLOUD_MODEL", "User")
 if ([string]::IsNullOrWhiteSpace($model)) {
-    $model = "qwen3-vl:235b-cloud"
+    $model = "qwen3.5"
     [Environment]::SetEnvironmentVariable("OLLAMA_CLOUD_MODEL", $model, "User")
 }
 $env:OLLAMA_CLOUD_MODEL = $model
