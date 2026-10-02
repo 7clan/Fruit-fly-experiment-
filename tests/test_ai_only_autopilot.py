@@ -1,5 +1,7 @@
 from lab.action.ai_only_supervisor import AIOnlyAutopilotSupervisor
-from lab.action.motor_executor import MotorExecutor, SafeNoopBackend
+from lab.action.motor_executor import (
+    AIOnlyBackend, MotorExecutor, SafeNoopBackend,
+)
 from lab.bus import Bus
 from lab.coach.ai_only import AIOnlyOllamaCoachWorker
 
@@ -186,3 +188,60 @@ def test_ai_only_prompt_declares_cloud_ai_as_sole_controller():
     assert "NAVIGATE_OBJECTIVE" in prompt
     assert coach.stats["decision_owner"] == "cloud_ai"
     assert coach.stats["fruit_fly_control"] is False
+
+
+
+class _FakeCameraInput:
+    def __init__(self):
+        self.events = []
+
+    def mouse_move(self, dx, dy):
+        self.events.append(("mouse_move", int(dx), int(dy)))
+
+    def key_down(self, key):
+        self.events.append(("key_down", key))
+
+    def key_up(self, key):
+        self.events.append(("key_up", key))
+
+    def mouse_button_down(self, button):
+        self.events.append(("mouse_down", button))
+
+    def mouse_button_up(self, button):
+        self.events.append(("mouse_up", button))
+
+    def release_all(self):
+        self.events.append(("release",))
+
+    def backend_health(self):
+        return {"ok": True}
+
+
+def test_ai_only_explicit_look_plan_becomes_bounded_camera_command():
+    bus = _armed_bus(
+        {"type": "none", "direction": None, "distance": None,
+         "confidence": 0.0},
+        {
+            "plan_id": 5,
+            "skill": "LOOK_RIGHT",
+            "target": "search right",
+            "confidence": 0.91,
+            "explanation": "objective is off-screen to the right",
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "SEARCH_CAMERA"
+    assert cmd.payload["dx"] == 90
+
+
+def test_ai_only_backend_forwards_relative_camera_motion():
+    fake = _FakeCameraInput()
+    backend = AIOnlyBackend(fake)
+    backend.mouse_move(-90, 0)
+    assert ("mouse_move", -90, 0) in fake.events
+    health = backend.backend_health()
+    assert health["camera_drag"] is True
+    assert health["mouse_move_enabled"] is True
