@@ -204,6 +204,13 @@ class AIOnlyAutopilotSupervisor(Worker):
                 coach_plan_id=pid, coach_confidence=confidence)
             self.stats["one_shot_commands"] += 1
 
+        elif skill in {"LOOK_LEFT", "LOOK_RIGHT"} and self._one_shot(pid):
+            self._emit(
+                "SEARCH_CAMERA", now, reason=reason,
+                dx=(-90 if skill == "LOOK_LEFT" else 90),
+                coach_plan_id=pid, coach_confidence=confidence)
+            self.stats["one_shot_commands"] += 1
+
         elif skill == "GO_AROUND" and self._one_shot(pid):
             control_id = str(plan.get("control_id") or "")
             if control_id in {"move_left", "move_right", "move_backward",
