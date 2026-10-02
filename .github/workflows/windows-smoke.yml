@@ -54,6 +54,16 @@ jobs:
           if ($errors) { $errors | Format-List; exit 1 }
           $errors = $null
           [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\setup_ollama_cloud_windows.ps1",
+            [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
+            "$PWD\run_autonomous_questing_meta_windows.ps1",
+            [ref]$null, [ref]$errors) | Out-Null
+          if ($errors) { $errors | Format-List; exit 1 }
+          $errors = $null
+          [System.Management.Automation.Language.Parser]::ParseFile(
             "$PWD\run_autonomous_questing_local_windows.ps1",
             [ref]$null, [ref]$errors) | Out-Null
           if ($errors) { $errors | Format-List; exit 1 }
