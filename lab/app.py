@@ -631,11 +631,11 @@ class DigitalFlyLab:
                     except (TypeError, ValueError):
                         health = None
                     if health is not None and units == "fraction":
-                        if self.quest_autonomy or self.ai_only:
-                            # Active quest/AI mode keeps running through ordinary
-                            # damage; only the critical-health hard stop lives
-                            # in this safety watcher.
-                            # Do not disable the agent on every hit.
+                        if self.quest_autonomy:
+                            # Legacy hybrid mode retains its critical-health
+                            # safety stop. AI-only intentionally does not: the
+                            # cloud AI owns the gameplay choice to retreat,
+                            # defend, die, or recover/respawn.
                             if (health <= 0.12
                                     and self.executor.autonomy_enabled):
                                 self._set_navigation_enabled(
@@ -643,9 +643,7 @@ class DigitalFlyLab:
                                 self.action_meta.write({
                                     "movement_control_available": True,
                                     "autonomy": False,
-                                    "mode": (
-                                        "ai_only_v1" if self.ai_only
-                                        else "quest_pve_v1"),
+                                    "mode": "quest_pve_v1",
                                     "last_safety_event":
                                         "critical_health_stop",
                                     "last_control_reason":
@@ -657,6 +655,11 @@ class DigitalFlyLab:
                                     f"health={health:.2f}; agent disabled",
                                     flush=True,
                                 )
+                        elif self.ai_only:
+                            # Record the health sample but do not make a
+                            # deterministic gameplay decision on the AI's
+                            # behalf.
+                            pass
                         elif (last_health is not None
                               and last_health - health >= 0.06
                               and self.executor.autonomy_enabled):
