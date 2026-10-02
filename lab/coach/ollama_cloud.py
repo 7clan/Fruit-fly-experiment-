@@ -231,11 +231,9 @@ Return ONLY JSON with exactly:
         if previous_image_b64:
             content.append({
                 "type": "image_url",
-                "image_url": {
-                    "url": (
-                        "data:image/jpeg;base64,"
-                        + previous_image_b64),
-                },
+                "image_url": (
+                    "data:image/jpeg;base64," + previous_image_b64
+                ),
             })
             content.append({
                 "type": "text",
@@ -246,9 +244,7 @@ Return ONLY JSON with exactly:
         if image_b64:
             content.append({
                 "type": "image_url",
-                "image_url": {
-                    "url": "data:image/jpeg;base64," + image_b64,
-                },
+                "image_url": "data:image/jpeg;base64," + image_b64,
             })
             content.append({
                 "type": "text",
