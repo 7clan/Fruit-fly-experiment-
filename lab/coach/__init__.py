@@ -9,5 +9,6 @@ from .semantic_coach import SemanticCoachWorker
 from .local_smolvlm import LocalSmolVLMCoachWorker
 from .local_smollm import LocalSmolLMCoachWorker
 from .llama_api import LlamaApiCoachWorker
+from .meta_model_api import MetaModelApiCoachWorker
 
-__all__ = ["SemanticCoachWorker", "LocalSmolVLMCoachWorker", "LocalSmolLMCoachWorker", "LlamaApiCoachWorker"]
+__all__ = ["SemanticCoachWorker", "LocalSmolVLMCoachWorker", "LocalSmolLMCoachWorker", "LlamaApiCoachWorker", "MetaModelApiCoachWorker"]
