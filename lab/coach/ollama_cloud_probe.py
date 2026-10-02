@@ -31,8 +31,10 @@ PREFERRED_MODELS = (
 )
 
 FAST_VISION_MODELS = (
-    "qwen3-vl:4b",
+    # Qwen3.5 advertises an efficient hybrid architecture and strong
+    # multimodal agent capability; try its 4B model first for low latency.
     "qwen3.5:4b",
+    "qwen3-vl:4b",
     "gemma3:4b",
 )
 
@@ -84,8 +86,15 @@ def _normalize_model(model: str) -> str:
 
 def _candidate_models(requested: str, prefer_fast: bool = False) -> list[str]:
     out = []
-    prefix = FAST_VISION_MODELS if prefer_fast else ()
-    for name in prefix + (_normalize_model(requested),) + PREFERRED_MODELS:
+    if prefer_fast:
+        # AI-only prioritizes response latency over preserving a stale model
+        # saved from a previous run. Try the fast multimodal candidates, then
+        # Ollama's current cloud vision aliases, and only then the old request.
+        sequence = FAST_VISION_MODELS + PREFERRED_MODELS + (
+            _normalize_model(requested),)
+    else:
+        sequence = (_normalize_model(requested),) + PREFERRED_MODELS
+    for name in sequence:
         name = _normalize_model(name)
         if name and name not in out:
             out.append(name)
