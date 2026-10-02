@@ -41,7 +41,7 @@ class AIVisualTracker(Worker):
         self._scale = 1.0
         self._bbox = None
         self._misses = 0
-        self._last_frame_ts = -1
+        self._last_frame_seq = -1
         self._initialized_ns = 0
 
         self.stats.update({
@@ -75,7 +75,10 @@ class AIVisualTracker(Worker):
         if env is None:
             return None, -1
         payload = env.payload or {}
-        return payload.get("data_ref"), int(env.ts_ns)
+        # StateChannel timestamps can collide in very fast tests or on coarse
+        # timer resolutions. Sequence is strictly monotonic per channel and is
+        # the correct freshness key.
+        return payload.get("data_ref"), int(env.envelope.seq)
 
     def _prepare(self, frame):
         import cv2
@@ -169,10 +172,10 @@ class AIVisualTracker(Worker):
         import cv2
 
         penv = self.plan.read()
-        frame, frame_ts = self._frame()
-        if penv is None or frame is None or frame_ts == self._last_frame_ts:
+        frame, frame_seq = self._frame()
+        if penv is None or frame is None or frame_seq == self._last_frame_seq:
             return
-        self._last_frame_ts = frame_ts
+        self._last_frame_seq = frame_seq
         plan = penv.payload or {}
         try:
             pid = int(plan.get("plan_id", -1))
