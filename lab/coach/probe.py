@@ -25,6 +25,12 @@ PREFERRED_MODELS = (
     "gemini-3.8-flash",
 )
 
+# Valid 1x1 PNG used only to verify that this exact key/model accepts images.
+TINY_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC"
+    "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
+)
+
 
 def _request(url: str, key: str, *, data: dict | None = None,
              timeout_s: float = 10.0) -> dict:
@@ -96,6 +102,38 @@ def _probe_chat(model: str, key: str, timeout_s: float) -> bool:
     return bool(str(content).strip())
 
 
+def _probe_vision(model: str, key: str, timeout_s: float) -> bool:
+    payload = _request(
+        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
+        key,
+        data={
+            "model": model,
+            "messages": [{
+                "role": "user",
+                "content": [
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/png;base64," + TINY_PNG_B64,
+                        },
+                    },
+                    {
+                        "type": "text",
+                        "text": "Reply with exactly: OK",
+                    },
+                ],
+            }],
+            "max_tokens": 16,
+        },
+        timeout_s=timeout_s,
+    )
+    choices = payload.get("choices") or []
+    if not choices:
+        return False
+    content = (((choices[0].get("message") or {}).get("content")) or "")
+    return bool(str(content).strip())
+
+
 def _error_detail(exc: urllib.error.HTTPError) -> str:
     try:
         raw = exc.read().decode("utf-8", errors="replace")[:1200]
@@ -105,7 +143,8 @@ def _error_detail(exc: urllib.error.HTTPError) -> str:
 
 
 def probe(model: str | None = None,
-          timeout_s: float = 10.0) -> tuple[bool, str, str | None]:
+          timeout_s: float = 10.0,
+          require_vision: bool = False) -> tuple[bool, str, str | None]:
     key = str(os.getenv("GEMINI_API_KEY") or "").strip()
     requested = str(
         model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL).strip()
@@ -142,16 +181,34 @@ def probe(model: str | None = None,
         if available and candidate not in available:
             continue
         try:
-            if _probe_chat(candidate, key, timeout_s):
-                note = ""
-                if candidate != requested:
-                    note = f" fallback_from={requested}"
-                return (
-                    True,
-                    f"model={candidate}{note} transport=openai_compat{list_note}",
-                    candidate,
-                )
-            errors.append(f"{candidate}:empty_response")
+            if not _probe_chat(candidate, key, timeout_s):
+                errors.append(f"{candidate}:empty_response")
+                continue
+            vision_note = ""
+            if require_vision:
+                try:
+                    if not _probe_vision(candidate, key, timeout_s):
+                        errors.append(f"{candidate}:vision_empty_response")
+                        continue
+                    vision_note = " vision=yes"
+                except urllib.error.HTTPError as exc:
+                    errors.append(
+                        f"{candidate}:vision_HTTP{exc.code}:"
+                        f"{_error_detail(exc)[:260]}")
+                    continue
+                except Exception as exc:
+                    errors.append(
+                        f"{candidate}:vision_{type(exc).__name__}:{exc}")
+                    continue
+            note = ""
+            if candidate != requested:
+                note = f" fallback_from={requested}"
+            return (
+                True,
+                f"model={candidate}{note} transport=openai_compat"
+                f"{vision_note}{list_note}",
+                candidate,
+            )
         except urllib.error.HTTPError as exc:
             errors.append(
                 f"{candidate}:HTTP{exc.code}:{_error_detail(exc)[:350]}")
@@ -173,8 +230,14 @@ def probe(model: str | None = None,
 def main(argv=None) -> int:
     ap = argparse.ArgumentParser("DigitalFlyLab semantic-coach preflight")
     ap.add_argument("--model", default=None)
+    ap.add_argument("--timeout", type=float, default=12.0)
+    ap.add_argument(
+        "--require-vision", action="store_true",
+        help="only accept a model that successfully processes image input")
     args = ap.parse_args(argv)
-    ok, detail, selected = probe(args.model)
+    ok, detail, selected = probe(
+        args.model, timeout_s=args.timeout,
+        require_vision=bool(args.require_vision))
     print(f"[coach-probe] {'OK' if ok else 'FAILED'} {detail}")
     if ok and selected:
         print(f"COACH_MODEL={selected}")
