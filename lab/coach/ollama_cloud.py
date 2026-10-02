@@ -33,7 +33,7 @@ class OllamaCloudCoachWorker(SemanticCoachWorker):
                          timeout_s=timeout_s, api_key=key)
         self.base_url = str(base_url or os.getenv("OLLAMA_CLOUD_BASE")
                             or DEFAULT_OLLAMA_BASE).rstrip("/")
-        self.provider = "ollama_cloud_deepseek_v4_1_flash"
+        self.provider = "ollama_cloud"
         self.api_key = key
         self.model = selected
         self.supports_vision = True
@@ -44,6 +44,9 @@ class OllamaCloudCoachWorker(SemanticCoachWorker):
             "provider": self.provider,
             "base_url": self.base_url,
             "supports_vision": True,
+            "vision_attempts": 0,
+            "vision_successes": 0,
+            "vision_fallbacks": 0,
             "cloud_ai_used": True,
             "disabled_reason": (None if self.api_key
                                 else "OLLAMA_API_KEY_missing"),
@@ -255,14 +258,20 @@ Return ONLY JSON with exactly:
                     req, timeout=float(self.timeout_s)) as resp:
                 return json.loads(resp.read().decode("utf-8"))
 
+        if image_b64:
+            self.stats["vision_attempts"] += 1
         try:
             payload = send(body)
+            if image_b64:
+                self.stats["vision_successes"] += 1
         except urllib.error.HTTPError as exc:
             code = int(getattr(exc, "code", 0))
             if code not in {400, 500, 502, 503, 504}:
                 raise
             # Keep cloud reasoning alive even if hosted image handling is
             # degraded; structured CV state remains in the prompt.
+            if image_b64:
+                self.stats["vision_fallbacks"] += 1
             fallback = {
                 "model": self.model,
                 "messages": [{"role": "user", "content": prompt}],
