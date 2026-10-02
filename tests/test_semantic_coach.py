@@ -636,10 +636,10 @@ def test_ollama_cloud_coach_marks_ai_and_vision():
     bus = Bus()
     coach = OllamaCloudCoachWorker(
         bus,
-        model="qwen3.5",
+        model="gemma4:31b",
         api_key="test-only",
     )
-    assert coach.provider == "ollama_cloud_qwen3_5"
+    assert coach.provider == "ollama_cloud_gemma4_31b"
     assert coach.supports_vision is True
     assert coach.allow_remote_wiki is True
     plan = coach._validate_plan({
@@ -663,7 +663,7 @@ def test_ollama_cloud_coach_marks_ai_and_vision():
     }, _catalog())
     assert plan["cloud_ai_used"] is True
     assert plan["local_ai_used"] is False
-    assert plan["provider"] == "ollama_cloud_qwen3_5"
+    assert plan["provider"] == "ollama_cloud_gemma4_31b"
     assert plan["skill"] == "FIGHT_QUEST_TARGET"
 
 
@@ -671,7 +671,7 @@ def test_ollama_cloud_prompt_explicitly_supports_equip_then_m1_combat():
     bus = Bus()
     coach = OllamaCloudCoachWorker(
         bus,
-        model="qwen3.5",
+        model="gemma4:31b",
         api_key="test-only",
     )
     prompt = coach._prompt(
