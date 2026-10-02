@@ -659,3 +659,13 @@ Return ONLY a JSON object with exactly these fields:
             "skill": plan["skill"],
             "confidence": plan["confidence"],
         }
+        why = str(plan.get("explanation") or "").replace("\n", " ")
+        if len(why) > 160:
+            why = why[:157] + "..."
+        print(
+            f"[AI->FLY] skill={plan.get('skill')} "
+            f"target={plan.get('target')} "
+            f"source={plan.get('provider')} ai=yes "
+            f"why={why}",
+            flush=True,
+        )
