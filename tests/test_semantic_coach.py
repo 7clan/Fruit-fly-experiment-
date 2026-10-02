@@ -336,20 +336,12 @@ def test_local_coach_common_quest_step_uses_text_model_skill_selector():
     bus = Bus()
     coach = LocalSmolVLMCoachWorker(bus)
 
-    def fake_local_model(prompt, image_b64, previous_image_b64=None):
-        assert image_b64 is None
-        assert "LOCAL GPO SKILL SELECTOR" in prompt
-        return {
-            "scene": "quest_travel",
-            "objective": "follow green objective",
-            "target": "green waypoint",
-            "skill": "NAVIGATE_OBJECTIVE",
-            "confidence": 0.93,
-            "explanation": "The waypoint is visible and travel is the active skill.",
-            "next_after_success": "reobserve on target change",
-        }
+    def fake_local_action(prompt, allowed):
+        assert "GPO skill selector" in prompt
+        assert "NAVIGATE_OBJECTIVE" in allowed
+        return "NAVIGATE_OBJECTIVE"
 
-    coach._call_gemini = fake_local_model
+    coach._call_text_action = fake_local_action
     bus.state("action.meta").write({
         "autonomy": True,
         "gpo_loadout": "default_melee",
@@ -396,3 +388,31 @@ def test_procedural_candidate_prioritizes_yellow_quest_giver_over_red_npc():
     assert plan is not None
     assert plan["skill_card"] == "quest_accept"
     assert plan["skill"] == "NAVIGATE_OBJECTIVE"
+
+
+def test_local_text_selector_prompt_is_tiny_and_label_only():
+    bus = Bus()
+    coach = LocalSmolVLMCoachWorker(bus)
+    candidate = {
+        "scene": "quest_travel",
+        "skill": "NAVIGATE_OBJECTIVE",
+        "skill_card": "quest_travel",
+    }
+    prompt = coach._text_skill_prompt(
+        candidate,
+        {
+            "target": {
+                "type": "recommended_quest_waypoint",
+                "distance": 0.4,
+                "direction": -0.2,
+                "confidence": 0.92,
+            },
+            "player": {"health": 1.0, "stamina": 1.0},
+            "notes": {"quest_marker_detected": False},
+        },
+        {"phase": "travel"},
+        _catalog(),
+    )
+    assert "ANSWER=" in prompt
+    assert "ALLOWED=" in prompt
+    assert len(prompt) < 900
