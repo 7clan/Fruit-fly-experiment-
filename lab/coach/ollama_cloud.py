@@ -12,7 +12,7 @@ import urllib.request
 
 from .semantic_coach import ALLOWED_SKILLS, SemanticCoachWorker, _compact
 
-DEFAULT_OLLAMA_MODEL = "qwen3-vl:235b-cloud"
+DEFAULT_OLLAMA_MODEL = "qwen3.5"
 DEFAULT_OLLAMA_BASE = "https://ollama.com/api"
 
 
@@ -33,7 +33,7 @@ class OllamaCloudCoachWorker(SemanticCoachWorker):
                          timeout_s=timeout_s, api_key=key)
         self.base_url = str(base_url or os.getenv("OLLAMA_CLOUD_BASE")
                             or DEFAULT_OLLAMA_BASE).rstrip("/")
-        self.provider = "ollama_cloud_qwen3_vl"
+        self.provider = "ollama_cloud_qwen3_5"
         self.api_key = key
         self.model = selected
         self.supports_vision = True
@@ -222,15 +222,32 @@ Return ONLY JSON with exactly:
             "format": self._json_schema(),
             "options": {"temperature": 0.0, "num_predict": 520},
         }
-        req = urllib.request.Request(
-            endpoint, data=json.dumps(body).encode("utf-8"),
-            headers={"Accept": "application/json",
-                     "Content-Type": "application/json",
-                     "Authorization": f"Bearer {self.api_key}",
-                     "User-Agent": "DigitalFlyLab/1.0"},
-            method="POST")
-        with urllib.request.urlopen(req, timeout=float(self.timeout_s)) as resp:
-            payload = json.loads(resp.read().decode("utf-8"))
+        def send(payload_body: dict) -> dict:
+            req = urllib.request.Request(
+                endpoint, data=json.dumps(payload_body).encode("utf-8"),
+                headers={"Accept": "application/json",
+                         "Content-Type": "application/json",
+                         "Authorization": f"Bearer {self.api_key}",
+                         "User-Agent": "DigitalFlyLab/1.0"},
+                method="POST")
+            with urllib.request.urlopen(
+                    req, timeout=float(self.timeout_s)) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+
+        try:
+            payload = send(body)
+        except urllib.error.HTTPError as exc:
+            # Some hosted model revisions may reject schema/options even
+            # though ordinary chat + vision works. Keep one plain fallback.
+            if int(getattr(exc, "code", 0)) != 400:
+                raise
+            fallback = {
+                "model": self.model,
+                "messages": [msg],
+                "stream": False,
+            }
+            payload = send(fallback)
+
         text = str(((payload.get("message") or {}).get("content")) or "").strip()
         if not text:
             raise RuntimeError("Ollama Cloud returned no message content: "
