@@ -278,7 +278,7 @@ def test_ai_only_prompt_contains_state_contract_and_no_safezone_excuse():
     assert "NO fruit-fly controller" in prompt
     assert "quest_status=active" in prompt
     assert "SAFEZONE / PROTECTED" in prompt
-    assert "NOT a reason" in prompt
+    assert "reason to avoid" in prompt
     assert "quest_enemy_actor_visible" in prompt
     assert coach.stats["decision_owner"] == "cloud_ai"
     assert coach.stats["fruit_fly_control"] is False
