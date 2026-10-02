@@ -271,9 +271,13 @@ CONTROL DISCIPLINE:
   when the actual NPC body is visibly close enough to hit now. This visual
   grounding lets the fast local actuator keep control between cloud replies
   when the handcrafted body tracker temporarily misses the NPC.
-- EQUIP_SLOT: use a visible hotbar slot or a verified equip_slot_N control.
-  state.last_equipped_slot tells you what the agent last physically selected.
-  Equip before combat when the fighting tool/style is not ready.
+- EQUIP_SLOT: inspect the CURRENT hotbar/hand/ability HUD. Report the visibly
+  selected hotbar slot in perception.equipped_slot_visible when readable.
+  Set perception.melee_ready_visible=true only when the current hand/loadout
+  is visibly ready to M1/use melee moves. If combat is required and melee is
+  not visibly ready, choose EQUIP_SLOT before FIGHT_QUEST_TARGET. Use a
+  verified equip_slot_N control; state.last_equipped_slot records the last
+  slot physically selected by the actuator.
 - USE_OBSERVED_ABILITY requires BOTH a move label and binding visible on the
   CURRENT HUD. Never guess fruit/style/sword ability keys.
 - Verified movement mechanics: SPACE jumps; CTRL climbs while contacting a
@@ -324,7 +328,9 @@ Return ONLY JSON with exactly:
     "interaction_prompt_visible": false,
     "enemy_actor_visible": false,
     "player_dead": false,
-    "safezone_visible": false
+    "safezone_visible": false,
+    "equipped_slot_visible": "0-9 or unknown",
+    "melee_ready_visible": false
   }},
   "knowledge_query": "short GPO wiki query or empty",
   "memory_updates": []
@@ -348,6 +354,9 @@ Return ONLY JSON with exactly:
             "enemy_actor_visible": bool(p.get("enemy_actor_visible")),
             "player_dead": bool(p.get("player_dead")),
             "safezone_visible": bool(p.get("safezone_visible")),
+            "equipped_slot_visible": (
+                str(p.get("equipped_slot_visible") or "unknown").strip()),
+            "melee_ready_visible": bool(p.get("melee_ready_visible")),
         }
 
         vt = raw.get("visual_target") or {}
