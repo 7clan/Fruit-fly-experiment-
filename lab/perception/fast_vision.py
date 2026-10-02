@@ -690,7 +690,11 @@ class GPOHeuristicFastVision:
         # gameplay area so the health bar, roofs and damage text cannot win.
         red_obj_roi = np.zeros_like(red)
         ry0, ry1 = int(0.10 * h), int(0.70 * h)
-        rx0, rx1 = int(0.05 * w), int(0.995 * w)
+        # Keep objective-dot detection out of the persistent HUD sidebands.
+        # The 2026-10-02 live run repeatedly selected x~34/502 from the
+        # left-side Recommended Quest notification as a fake enemy marker.
+        # Real actionable enemy markers need to enter the gameplay viewport.
+        rx0, rx1 = int(0.12 * w), int(0.90 * w)
         red_obj_roi[ry0:ry1, rx0:rx1] = red[ry0:ry1, rx0:rx1]
         nr, _rrlab, rrstats, rrcents = cv2.connectedComponentsWithStats(
             red_obj_roi)
