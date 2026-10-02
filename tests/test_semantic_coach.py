@@ -1,6 +1,7 @@
 from lab.bus import Bus
 from lab.coach.semantic_coach import SemanticCoachWorker
 from lab.coach.local_smolvlm import LocalSmolVLMCoachWorker
+from lab.coach.local_smollm import LocalSmolLMCoachWorker
 from lab.coach.gpo_skills import (
     select_skill_cards, render_skill_cards, procedural_skill_plan,
 )
@@ -416,3 +417,78 @@ def test_local_text_selector_prompt_is_tiny_and_label_only():
     assert "ANSWER=" in prompt
     assert "ALLOWED=" in prompt
     assert len(prompt) < 900
+
+
+
+def test_smollm_135m_coach_is_text_only_and_offline():
+    bus = Bus()
+    coach = LocalSmolLMCoachWorker(bus)
+    assert coach.provider == "local_smollm2_135m_llamacpp"
+    assert coach.allow_remote_wiki is False
+    assert coach.stats["text_only"] is True
+    assert coach.stats["vision_encoder"] is False
+    assert coach.stats["model_parameters"] == "135M"
+
+
+def test_smollm_135m_prompt_is_tiny_structured_state():
+    bus = Bus()
+    coach = LocalSmolLMCoachWorker(bus)
+    candidate = {
+        "scene": "quest_travel",
+        "skill": "NAVIGATE_OBJECTIVE",
+        "skill_card": "quest_travel",
+    }
+    prompt = coach._skill_prompt(
+        candidate,
+        {
+            "target": {
+                "type": "recommended_quest_waypoint",
+                "distance": 0.4,
+                "direction": -0.2,
+                "confidence": 0.92,
+            },
+            "player": {"health": 1.0, "stamina": 1.0},
+            "notes": {"quest_marker_detected": False},
+        },
+        {"phase": "travel"},
+    )
+    assert "NAVIGATE_OBJECTIVE" in prompt
+    assert "ALLOWED=" in prompt
+    assert len(prompt) < 800
+
+
+def test_smollm_135m_selects_skill_without_any_image():
+    bus = Bus()
+    coach = LocalSmolLMCoachWorker(bus)
+
+    def fake_skill(prompt, allowed):
+        assert "NAVIGATE_OBJECTIVE" in allowed
+        assert "image" not in prompt.lower()
+        return "NAVIGATE_OBJECTIVE"
+
+    coach._call_skill = fake_skill
+    bus.state("action.meta").write({
+        "autonomy": True,
+        "gpo_loadout": "default_melee",
+    })
+    bus.state("action.control_catalog").write(_catalog())
+    bus.state("quest.state").write({"phase": "travel"})
+    bus.state("world.observation").write({
+        "target": {
+            "type": "recommended_quest_waypoint",
+            "distance": 0.30,
+            "direction": -0.5,
+            "confidence": 0.92,
+        },
+        "player": {"health": 1.0, "stamina": 1.0},
+        "ui": {"dialogue": False, "menu": False},
+        "notes": {"recommended_waypoint_detected": True},
+    })
+    coach.step()
+    env = bus.state("coach.plan").read()
+    assert env is not None
+    assert env.payload["skill"] == "NAVIGATE_OBJECTIVE"
+    assert env.payload["provider"] == "local_smollm2_135m_skill"
+    assert env.payload["local_ai_used"] is True
+    assert env.payload["text_only"] is True
+    assert coach.stats["text_skill_calls"] == 1
