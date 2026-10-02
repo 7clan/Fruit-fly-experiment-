@@ -797,16 +797,21 @@ class GPOHeuristicFastVision:
         # hostile humanoid spatially associated with that marker is promoted
         # to quest_enemy_actor.
         quest_enemy_actor = None
-        hostile_tracks = [
+        actor_candidates = [
             t for t in stable_tracks
-            if t.get("kind") == "hostile_candidate"
-            and float(t.get("confidence", 0.0)) >= 0.58
+            if (
+                (t.get("kind") == "hostile_candidate"
+                 and float(t.get("confidence", 0.0)) >= 0.58)
+                or
+                (t.get("kind") == "humanoid_unknown"
+                 and float(t.get("confidence", 0.0)) >= 0.42)
+            )
         ]
-        if enemy_marker_found and enemy_marker_xy and hostile_tracks:
+        if enemy_marker_found and enemy_marker_xy and actor_candidates:
             emx = float(enemy_marker_xy[0]) / max(float(w), 1.0)
             emy = float(enemy_marker_xy[1]) / max(float(h), 1.0)
             ranked = []
-            for tr in hostile_tracks:
+            for tr in actor_candidates:
                 box = list(tr.get("bbox") or [])
                 if len(box) != 4:
                     continue
@@ -817,9 +822,13 @@ class GPOHeuristicFastVision:
             if ranked:
                 association, tr, cx, cy, box = min(
                     ranked, key=lambda x: x[0])
-                # Marker text/diamond can sit above the body; allow a useful
-                # vertical offset but reject unrelated red-marked players.
-                if association <= 0.24:
+                # A track with its own red hostile cue gets a wider gate.
+                # A generic humanoid can still be promoted when the quest
+                # objective sits almost directly on that persistent body.
+                association_limit = (
+                    0.24 if tr.get("kind") == "hostile_candidate"
+                    else 0.13)
+                if association <= association_limit:
                     qx, qy = cx * w, cy * h
                     actor_bearing = self._bearing(px, py, qx, qy, w, h)
                     center_d = math.hypot(
@@ -835,7 +844,10 @@ class GPOHeuristicFastVision:
                             0.62 * center_prox + 0.38 * scale_prox))
                     actor_conf = min(
                         0.95,
-                        max(0.70, float(tr.get("confidence", 0.0)))
+                        max(
+                            0.70 if tr.get("kind") == "hostile_candidate"
+                            else 0.66,
+                            float(tr.get("confidence", 0.0)))
                         + 0.08)
                     quest_enemy_actor = {
                         "track_id": tr.get("track_id"),
@@ -844,6 +856,7 @@ class GPOHeuristicFastVision:
                         "distance": float(actor_proximity),
                         "confidence": float(actor_conf),
                         "association_to_objective": float(association),
+                        "role_evidence": str(tr.get("kind") or "unknown"),
                     }
                     target = {
                         "type": "quest_enemy_actor",
