@@ -791,11 +791,81 @@ class GPOHeuristicFastVision:
             stable_tracks = []
             role_mode = "disabled_navigation_light"
 
+        # Resolve an actual quest-enemy BODY separately from the red
+        # objective marker. The marker tells us where the quest wants us to
+        # go; it is not proof that M1 is in range. Only a persistent tracked
+        # hostile humanoid spatially associated with that marker is promoted
+        # to quest_enemy_actor.
+        quest_enemy_actor = None
+        hostile_tracks = [
+            t for t in stable_tracks
+            if t.get("kind") == "hostile_candidate"
+            and float(t.get("confidence", 0.0)) >= 0.58
+        ]
+        if enemy_marker_found and enemy_marker_xy and hostile_tracks:
+            emx = float(enemy_marker_xy[0]) / max(float(w), 1.0)
+            emy = float(enemy_marker_xy[1]) / max(float(h), 1.0)
+            ranked = []
+            for tr in hostile_tracks:
+                box = list(tr.get("bbox") or [])
+                if len(box) != 4:
+                    continue
+                cx = (float(box[0]) + float(box[2])) * 0.5
+                cy = (float(box[1]) + float(box[3])) * 0.5
+                association = math.hypot(cx - emx, cy - emy)
+                ranked.append((association, tr, cx, cy, box))
+            if ranked:
+                association, tr, cx, cy, box = min(
+                    ranked, key=lambda x: x[0])
+                # Marker text/diamond can sit above the body; allow a useful
+                # vertical offset but reject unrelated red-marked players.
+                if association <= 0.24:
+                    qx, qy = cx * w, cy * h
+                    actor_bearing = self._bearing(px, py, qx, qy, w, h)
+                    center_d = math.hypot(
+                        cx - float(px / w), cy - float(py / h))
+                    center_prox = max(
+                        0.0, min(1.0, 1.0 - center_d / 0.52))
+                    body_h = max(0.0, float(box[3]) - float(box[1]))
+                    scale_prox = max(
+                        0.0, min(1.0, body_h / 0.24))
+                    actor_proximity = max(
+                        0.0, min(
+                            1.0,
+                            0.62 * center_prox + 0.38 * scale_prox))
+                    actor_conf = min(
+                        0.95,
+                        max(0.70, float(tr.get("confidence", 0.0)))
+                        + 0.08)
+                    quest_enemy_actor = {
+                        "track_id": tr.get("track_id"),
+                        "bbox": box,
+                        "direction": float(actor_bearing),
+                        "distance": float(actor_proximity),
+                        "confidence": float(actor_conf),
+                        "association_to_objective": float(association),
+                    }
+                    target = {
+                        "type": "quest_enemy_actor",
+                        "direction": float(actor_bearing),
+                        "distance": float(actor_proximity),
+                        "confidence": float(actor_conf),
+                    }
+                    enemies = [{
+                        "direction": float(actor_bearing),
+                        "distance": float(actor_proximity),
+                        "attacking": False,
+                        "threat": float(max(
+                            0.0, (actor_proximity - 0.40) / 0.60)),
+                        "confidence": float(actor_conf),
+                        "type": "quest_enemy_actor",
+                    }]
+
         ui = {
             "loading": False,
             "dialogue": False,
             "menu": False,
-            "combat": bool(enemy_marker_found),
+            "combat": bool(quest_enemy_actor is not None),
         }
         return {
             "player": player,
@@ -814,6 +884,8 @@ class GPOHeuristicFastVision:
                 "recommended_waypoint_xy": waypoint_xy,
                 "quest_enemy_marker_detected": enemy_marker_found,
                 "quest_enemy_marker_xy": enemy_marker_xy,
+                "quest_enemy_actor_visible": quest_enemy_actor is not None,
+                "quest_enemy_actor": quest_enemy_actor,
                 "quest_phase_hint": (
                     "hunt_enemy" if enemy_marker_found
                     else "quest_giver" if target_found
