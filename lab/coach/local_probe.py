@@ -1,9 +1,7 @@
-"""Cheap preflight for the local SmolVLM llama.cpp server.
+"""Cheap preflight for the local SmolLM2-135M llama.cpp server.
 
-This intentionally does NOT run the expensive vision encoder.  On the target
-i7-5500U the first cold visual request can take much longer than ordinary
-server/model readiness.  Vision inference runs asynchronously only after the
-canonical fly brain is READY and the user enables the agent.
+The local coach is text-only. OpenCV/engineered perception owns vision, so
+there is no vision tower to warm up or contend with Brian2.
 """
 
 from __future__ import annotations
@@ -16,7 +14,7 @@ import urllib.request
 
 
 DEFAULT_URL = "http://127.0.0.1:18080/v1"
-DEFAULT_MODEL = "smolvlm2-256m"
+DEFAULT_MODEL = "smollm2-135m"
 
 
 def _get(url: str, timeout_s: float):
@@ -60,9 +58,7 @@ def probe(base_url: str = DEFAULT_URL,
     except Exception as exc:
         return False, f"models endpoint failed: {type(exc).__name__}: {exc}"
 
-    # Exercise the SAME tiny label-only pattern used during gameplay.
-    # This catches a server that can emit two tokens but stalls on the actual
-    # selector request, without paying the cost of the visual tower.
+    # Exercise the exact schema-constrained one-field decision used in play.
     try:
         t0 = time.perf_counter()
         payload = _post(
@@ -72,16 +68,31 @@ def probe(base_url: str = DEFAULT_URL,
                 "messages": [{
                     "role": "user",
                     "content": (
-                        "GPO skill selector. Choose ONE exact label from "
-                        "ALLOWED. STATE={\"candidate\":"
-                        "\"NAVIGATE_OBJECTIVE\",\"target\":"
-                        "\"recommended_quest_waypoint\"} "
-                        "ALLOWED=NAVIGATE_OBJECTIVE|REOBSERVE ANSWER="
+                        "GPO controller. Pick one ALLOWED skill. "
+                        "STATE={\"candidate\":\"NAVIGATE_OBJECTIVE\","
+                        "\"target\":\"recommended_quest_waypoint\"} "
+                        "ALLOWED=NAVIGATE_OBJECTIVE|REOBSERVE"
                     ),
                 }],
                 "temperature": 0.0,
-                "max_tokens": 12,
-                "stop": ["\n"],
+                "max_tokens": 24,
+                "response_format": {
+                    "type": "json_object",
+                    "schema": {
+                        "type": "object",
+                        "properties": {
+                            "skill": {
+                                "type": "string",
+                                "enum": [
+                                    "NAVIGATE_OBJECTIVE",
+                                    "REOBSERVE",
+                                ],
+                            },
+                        },
+                        "required": ["skill"],
+                        "additionalProperties": False,
+                    },
+                },
             },
             timeout_s,
         )
@@ -93,13 +104,13 @@ def probe(base_url: str = DEFAULT_URL,
         ).strip()
         if not text:
             return False, f"text probe returned no text: {str(payload)[:500]}"
-        upper = text.upper()
-        if ("NAVIGATE_OBJECTIVE" not in upper
-                and "REOBSERVE" not in upper):
-            return False, f"selector probe returned unexpected text: {text!r}"
+        parsed = json.loads(text)
+        skill = str(parsed.get("skill") or "").upper()
+        if skill not in {"NAVIGATE_OBJECTIVE", "REOBSERVE"}:
+            return False, f"selector probe returned unexpected JSON: {text!r}"
         return True, (
             f"model={model} local_url={base_url} "
-            f"selector_ms={elapsed_ms:.0f} vision=cold_lazy"
+            f"selector_ms={elapsed_ms:.0f} text_only=yes"
         )
     except urllib.error.HTTPError as exc:
         try:
