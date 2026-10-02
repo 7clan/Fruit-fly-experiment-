@@ -354,3 +354,20 @@ def test_semantic_servo_uses_yellow_geometry_when_red_marker_coexists():
     assert cmd.payload["name"] == "STEER_TARGET"
     assert cmd.payload["direction"] == 0.40
     assert cmd.payload["target_type"] == "quest_marker"
+
+
+def test_left_hud_red_notification_is_not_enemy_marker():
+    import cv2
+
+    img = np.zeros((360, 640, 3), dtype=np.uint8)
+    cv2.rectangle(img, (300, 170), (340, 240), (245, 245, 245), -1)
+    # Reproduce the 2026-10-02 false positive: a compact red HUD badge near
+    # x ~= 0.07w in the left Recommended Quest notification band.
+    cv2.circle(img, (44, 190), 8, (0, 0, 255), -1)
+    cv2.putText(
+        img, "1", (40, 214), cv2.FONT_HERSHEY_SIMPLEX,
+        0.45, (0, 0, 255), 1, cv2.LINE_AA)
+
+    det = GPOHeuristicFastVision(role_detection=False).detect(img)
+    assert det["_notes"]["quest_enemy_marker_detected"] is False
+    assert det["target"]["type"] != "quest_enemy_marker"
