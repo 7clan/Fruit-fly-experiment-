@@ -21,6 +21,7 @@ Write-Host "Decision owner: Ollama Cloud AI ONLY." -ForegroundColor Green
 Write-Host "Fruit-fly brain: DISABLED / NOT STARTED." -ForegroundColor Yellow
 Write-Host "Local CV only measures the screen and realizes the AI-selected target." -ForegroundColor Yellow
 Write-Host "The AI owns quests, navigation goals, combat, equipment, abilities, shops and progression." -ForegroundColor Yellow
+Write-Host "Vision profile: full game capture -> 960px cloud frames; local detector stays 560px/5Hz." -ForegroundColor Yellow
 Write-Host "F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Red
 
 & $mainPython -c "from lab.action.windows_input import _INPUT,_EXPECTED_INPUT_SIZE; import ctypes; s=ctypes.sizeof(_INPUT); print(f'[preflight] Win32 INPUT size={s} expected={_EXPECTED_INPUT_SIZE}'); raise SystemExit(0 if s==_EXPECTED_INPUT_SIZE else 2)"
@@ -79,7 +80,7 @@ $appArgs = @(
     "--capture", "windows",
     "--seconds", "0",
     "--capture-fps", "5",
-    "--capture-downsample", "2",
+    "--capture-downsample", "1",
     "--fast-hz", "5",
     "--heavy-hz", "0.10",
     "--fast-detect-width", "560",
