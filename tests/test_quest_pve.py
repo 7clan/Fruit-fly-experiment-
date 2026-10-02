@@ -371,3 +371,41 @@ def test_left_hud_red_notification_is_not_enemy_marker():
     det = GPOHeuristicFastVision(role_detection=False).detect(img)
     assert det["_notes"]["quest_enemy_marker_detected"] is False
     assert det["target"]["type"] != "quest_enemy_marker"
+
+
+def test_explicit_coach_fight_plan_overrides_visible_yellow_giver():
+    bus = Bus()
+    sup = QuestCombatSupervisor(bus, ValueTable())
+    bus.state("action.meta").write({"autonomy": True})
+    now = sup.clock.now_ns()
+    bus.state("coach.plan").write({
+        "plan_id": 88,
+        "ts_ns": now,
+        "skill": "FIGHT_QUEST_TARGET",
+        "confidence": 0.96,
+        "explanation": "confirmed quest enemy is in melee range",
+    }, ts_ns=now)
+    bus.state("world.observation").write({
+        "target": {
+            "type": "quest_enemy_marker",
+            "distance": 0.82,
+            "direction": 0.0,
+            "confidence": 0.94,
+        },
+        "player": {
+            "health": 1.0,
+            "health_units": "fraction",
+            "stamina": 1.0,
+        },
+        # A nearby quest giver may remain visible in town during combat.
+        "notes": {
+            "quest_marker_detected": True,
+            "quest_marker_proximity": 0.45,
+            "quest_marker_direction": -0.7,
+        },
+    }, ts_ns=now)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert cmd.payload["source"] == "semantic_coach"
