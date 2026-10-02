@@ -36,12 +36,24 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         self.min_call_interval_s = 2.0
         self.unchanged_refresh_s = 16.0
         self.provider = "ollama_cloud_ai_only"
+        # One frame + compact JSON is enough for this controller. Sending the
+        # previous frame doubled vision work while local CV already measures
+        # progress/stuck state.
+        self.max_output_tokens = 320
         self.stats.update({
             "provider": self.provider,
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
             "ai_only": True,
         })
+
+    def _call_gemini(self, prompt: str, image_b64: str | None,
+                     previous_image_b64: str | None = None) -> dict:
+        # Latency path: one CURRENT frame only. Temporal progress is supplied
+        # by quest.state (stuck/circling/action epochs), so a second image is
+        # redundant and expensive.
+        return super()._call_gemini(
+            prompt, image_b64, previous_image_b64=None)
 
     def _signature(self, obs: dict, quest: dict, brain: dict) -> tuple:
         """Event signature for cloud replanning.
