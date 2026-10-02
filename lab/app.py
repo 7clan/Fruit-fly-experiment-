@@ -44,7 +44,8 @@ from .capture.base import (CaptureAdapter, SyntheticCapture,
                            create_windows_capture)
 from .clock import SHARED_CLOCK
 from .coach import (
-    SemanticCoachWorker, LocalSmolVLMCoachWorker, LocalSmolLMCoachWorker)
+    SemanticCoachWorker, LocalSmolVLMCoachWorker, LocalSmolLMCoachWorker,
+    LlamaApiCoachWorker)
 from .dashboard.dashboard import (
     DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
 from .evidence import EvidenceRecorder
@@ -172,6 +173,12 @@ class DigitalFlyLab:
             provider = str(coach_provider or "gemini").strip().lower()
             if provider == "local":
                 self.semantic_coach = LocalSmolLMCoachWorker(
+                    self.bus,
+                    target_hz=float(coach_hz),
+                    model=coach_model,
+                    base_url=coach_url)
+            elif provider == "llama":
+                self.semantic_coach = LlamaApiCoachWorker(
                     self.bus,
                     target_hz=float(coach_hz),
                     model=coach_model,
@@ -778,7 +785,7 @@ def main(argv=None) -> int:
     ap.add_argument("--semantic-coach", action="store_true",
                     help="low-rate multimodal game coach (quest mode)")
     ap.add_argument("--coach-provider",
-                    choices=["gemini", "local"], default="gemini",
+                    choices=["gemini", "llama", "local"], default="llama",
                     help="semantic coach provider")
     ap.add_argument("--coach-model", default=None,
                     help="provider model id")
