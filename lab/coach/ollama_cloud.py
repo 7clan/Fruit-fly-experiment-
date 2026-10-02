@@ -12,7 +12,7 @@ import urllib.request
 
 from .semantic_coach import ALLOWED_SKILLS, SemanticCoachWorker, _compact
 
-DEFAULT_OLLAMA_MODEL = "qwen3.5"
+DEFAULT_OLLAMA_MODEL = "gemma4:31b"
 DEFAULT_OLLAMA_BASE = "https://ollama.com/api"
 
 
@@ -33,7 +33,7 @@ class OllamaCloudCoachWorker(SemanticCoachWorker):
                          timeout_s=timeout_s, api_key=key)
         self.base_url = str(base_url or os.getenv("OLLAMA_CLOUD_BASE")
                             or DEFAULT_OLLAMA_BASE).rstrip("/")
-        self.provider = "ollama_cloud_qwen3_5"
+        self.provider = "ollama_cloud_gemma4_31b"
         self.api_key = key
         self.model = selected
         self.supports_vision = True
@@ -124,8 +124,10 @@ class OllamaCloudCoachWorker(SemanticCoachWorker):
             playbook += "\n\nCURRENT WIKI CONTEXT:\n" + retrieved_context[:6000]
         skills = ", ".join(sorted(ALLOWED_SKILLS))
         return f"""You are the visual semantic coach for a Grand Piece Online
-research agent. The CURRENT screenshot is authoritative. Choose exactly ONE
-high-level skill. The fruit-fly brain/fresh CV servo owns low-level steering.
+research agent. If a CURRENT screenshot is attached, it is authoritative.
+If no screenshot is attached, rely only on CURRENT STRUCTURED STATE and do
+not invent pixel-level details. Choose exactly ONE high-level skill. The
+fruit-fly brain/fresh CV servo owns low-level steering.
 
 CRITICAL COMBAT RULES:
 - Combat only against a quest-marked NPC or immediate hostile NPC threat.
@@ -237,13 +239,17 @@ Return ONLY JSON with exactly:
         try:
             payload = send(body)
         except urllib.error.HTTPError as exc:
-            # Some hosted model revisions may reject schema/options even
-            # though ordinary chat + vision works. Keep one plain fallback.
-            if int(getattr(exc, "code", 0)) != 400:
+            code = int(getattr(exc, "code", 0))
+            if code not in {400, 500, 502, 503, 504}:
                 raise
+
+            # Retry without hosted-image processing. OpenCV/engineered state
+            # is already in the prompt, so the cloud model can still provide
+            # high-level reasoning without touching the laptop CPU.
+            text_msg = {"role": "user", "content": prompt}
             fallback = {
                 "model": self.model,
-                "messages": [msg],
+                "messages": [text_msg],
                 "stream": False,
             }
             payload = send(fallback)
