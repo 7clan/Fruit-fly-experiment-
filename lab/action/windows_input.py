@@ -114,6 +114,9 @@ _user32.GetCursorPos.argtypes = [ctypes.POINTER(_POINT)]
 _user32.GetCursorPos.restype = wt.BOOL
 _user32.SetCursorPos.argtypes = [ctypes.c_int, ctypes.c_int]
 _user32.SetCursorPos.restype = wt.BOOL
+# c_void_p accepts either byref(RECT) or NULL to release the clip.
+_user32.ClipCursor.argtypes = [ctypes.c_void_p]
+_user32.ClipCursor.restype = wt.BOOL
 _kernel32.GetCurrentThreadId.argtypes = []
 _kernel32.GetCurrentThreadId.restype = wt.DWORD
 
@@ -254,6 +257,7 @@ class WindowsInputBackend:
         center, clamp the drag to a fraction of that client, then recenter.
         """
         bounds = self._client_screen_rect()
+        clip_active = False
         if bounds is not None:
             left, top, right, bottom = bounds
             width = max(1, right - left + 1)
@@ -261,6 +265,15 @@ class WindowsInputBackend:
             dx = max(-int(width * 0.18), min(int(width * 0.18), int(dx)))
             dy = max(-int(height * 0.14), min(int(height * 0.14), int(dy)))
             self.center_cursor_in_target()
+            # Strong guarantee for AI-only camera turns: while RMB is down,
+            # Windows itself confines the cursor to the authorized Roblox
+            # client. Always release this in finally so a crash in SendInput
+            # cannot leave the desktop pointer trapped.
+            clip_rect = _RECT(left, top, right + 1, bottom + 1)
+            clip_active = bool(
+                _user32.ClipCursor(
+                    ctypes.cast(
+                        ctypes.byref(clip_rect), ctypes.c_void_p)))
         else:
             dx = max(-140, min(140, int(dx)))
             dy = max(-90, min(90, int(dy)))
@@ -270,6 +283,8 @@ class WindowsInputBackend:
             self.mouse_move(int(dx), int(dy))
         finally:
             self.mouse_up("right")
+            if clip_active:
+                _user32.ClipCursor(None)
             # Leave the pointer in a deterministic safe place inside Roblox.
             self.center_cursor_in_target()
 
@@ -341,6 +356,11 @@ class WindowsInputBackend:
                     _user32.SetCursorPos(int(old.x), int(old.y))
 
     def release_all(self) -> None:
+        # Fail-safe: release any temporary AI-only camera confinement first.
+        try:
+            _user32.ClipCursor(None)
+        except Exception:
+            pass
         for code in list(self._down):
             self.key_up(code)
         for button in list(self._mouse_down):
