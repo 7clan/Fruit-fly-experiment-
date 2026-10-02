@@ -272,9 +272,9 @@ class DigitalFlyLab:
                 self.bus, target_hz=dashboard_hz, renderer=renderer)
         else:
             self.dashboard = None
-        self.workers = [self.fast_vision, self.heavy_vision, self.planner] + (
+        self.workers = [self.fast_vision, self.heavy_vision] + (
                             [] if self.ai_only
-                            else [self.encoder, self.brain]) + (
+                            else [self.planner, self.encoder, self.brain]) + (
                             [self.semantic_coach]
                             if self.semantic_coach else []) + (
                             [self.ai_only_supervisor]
@@ -350,7 +350,8 @@ class DigitalFlyLab:
                 "fast": self.fast_vision.governor.target_hz,
                 "fast_role_detection": self.fast_vision.role_detection,
                 "heavy": self.heavy_vision.governor.target_hz,
-                "planner": self.planner.governor.target_hz,
+                "planner": (
+                    None if self.ai_only else self.planner.governor.target_hz),
                 "encoder": (
                     None if self.ai_only else self.encoder.governor.target_hz),
                 "executor": self.executor.governor.target_hz,
