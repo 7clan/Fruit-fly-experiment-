@@ -9,7 +9,7 @@ Set-Location $root
 $mainPython = ".\.venv\Scripts\python.exe"
 if (-not (Test-Path $mainPython)) { throw "Main venv missing" }
 
-$modelSpec = "ggml-org/SmolLM2-135M-Instruct-GGUF:Q4_K_M"
+$modelSpec = "lmstudio-community/SmolLM2-135M-Instruct-GGUF:Q4_K_M"
 $modelAlias = "smollm2-135m"
 $port = 18080
 $baseUrl = "http://127.0.0.1:$port"
