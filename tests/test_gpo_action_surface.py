@@ -73,3 +73,17 @@ def test_quest_backend_never_moves_or_drags_user_camera():
     b = QuestingBackend(fake)
     b.mouse_move(999, -999)
     assert not any(e[0] in {"move", "camera"} for e in fake.events)
+
+
+
+def test_quest_backend_allows_left_click_combat_and_hotbar_equip():
+    fake = _FakeBackend()
+    b = QuestingBackend(fake)
+    b.key_down("1")
+    b.key_up("1")
+    b.mouse_button_down("left")
+    b.mouse_button_up("left")
+    assert ("down", "1") in fake.events
+    assert ("up", "1") in fake.events
+    assert ("mdown", "left") in fake.events
+    assert ("mup", "left") in fake.events
