@@ -35,7 +35,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # Keep decisions event-driven and let the local skill executor react
         # at 8-20 Hz. 2 s does not cause a 2 s cadence because unchanged
         # scenes are still held for the longer refresh interval.
-        self.min_call_interval_s = 1.0
+        self.min_call_interval_s = 0.45
         self.unchanged_refresh_s = 20.0
         self.provider = "ollama_cloud_ai_only"
         self.suppress_duplicate_plan_logs = True
@@ -432,7 +432,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
             self, bus,
             target_hz=target_hz,
             model=model,
-            min_call_interval_s=1.0,
+            min_call_interval_s=0.45,
             unchanged_refresh_s=20.0,
             timeout_s=timeout_s,
             api_key=api_key,
@@ -441,7 +441,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         # selector provided by OllamaCloudCoachWorker; initialize the same
         # cached section index without using its network transport.
         self._sections = self._split_sections(self.knowledge)
-        self.min_call_interval_s = 1.0
+        self.min_call_interval_s = 0.45
         self.unchanged_refresh_s = 20.0
         self.provider = "gemini_ai_only"
         self.suppress_duplicate_plan_logs = True
