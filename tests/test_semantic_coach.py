@@ -4,6 +4,7 @@ from lab.coach.local_smolvlm import LocalSmolVLMCoachWorker
 from lab.coach.local_smollm import LocalSmolLMCoachWorker
 from lab.coach.llama_api import LlamaApiCoachWorker
 from lab.coach.meta_model_api import MetaModelApiCoachWorker
+from lab.coach.ollama_cloud import OllamaCloudCoachWorker
 from lab.coach.meta_probe import choose_model as choose_meta_model
 from lab.coach.llama_probe import choose_model as choose_llama_model
 from lab.coach.gpo_skills import (
@@ -628,3 +629,73 @@ def test_meta_cloud_coach_marks_ai_and_vision():
     assert plan["ai_used"] is True
     assert plan["cloud_ai_used"] is True
     assert plan["provider"] == "meta_model_api"
+
+
+
+def test_ollama_cloud_coach_marks_ai_and_vision():
+    bus = Bus()
+    coach = OllamaCloudCoachWorker(
+        bus,
+        model="qwen3-vl:235b-cloud",
+        api_key="test-only",
+    )
+    assert coach.provider == "ollama_cloud_qwen3_vl"
+    assert coach.supports_vision is True
+    assert coach.allow_remote_wiki is True
+    plan = coach._validate_plan({
+        "scene": "quest_combat",
+        "objective": "defeat quest enemy",
+        "target": "red quest enemy",
+        "skill": "FIGHT_QUEST_TARGET",
+        "control_id": "",
+        "observed_ability": {"binding": "", "label": ""},
+        "ui_click": {
+            "needed": False,
+            "x_norm": 0.0,
+            "y_norm": 0.0,
+            "label": "",
+        },
+        "confidence": 0.93,
+        "explanation": "quest-marked enemy is in melee range",
+        "next_after_success": "reobserve",
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, _catalog())
+    assert plan["cloud_ai_used"] is True
+    assert plan["local_ai_used"] is False
+    assert plan["provider"] == "ollama_cloud_qwen3_vl"
+    assert plan["skill"] == "FIGHT_QUEST_TARGET"
+
+
+def test_ollama_cloud_prompt_explicitly_supports_equip_then_m1_combat():
+    bus = Bus()
+    coach = OllamaCloudCoachWorker(
+        bus,
+        model="qwen3-vl:235b-cloud",
+        api_key="test-only",
+    )
+    prompt = coach._prompt(
+        {
+            "target": {
+                "type": "quest_enemy_marker",
+                "distance": 0.82,
+                "direction": 0.0,
+                "confidence": 0.95,
+            },
+            "player": {"health": 1.0, "stamina": 1.0},
+            "notes": {"quest_enemy_marker_detected": True},
+        },
+        {"phase": "combat"},
+        {"intention": {"name": "APPROACH"}},
+        {
+            "controls": [
+                {"control_id": "equip_slot_1", "name": "Equip slot 1"},
+                {"control_id": "basic_attack", "name": "Basic attack"},
+            ],
+        },
+        {"autonomy": True, "gpo_loadout": "default_melee"},
+        {},
+    )
+    assert "EQUIP_SLOT" in prompt
+    assert "left-mouse clicks (M1)" in prompt
+    assert "FIGHT_QUEST_TARGET" in prompt
