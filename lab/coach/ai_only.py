@@ -274,13 +274,16 @@ CONTROL DISCIPLINE:
   melee_ready=true only when the actual NPC body is visibly close enough to
   hit now. The local visual tracker follows YOUR selected box between cloud
   replies; it does not choose a target by itself.
-- EQUIP_SLOT: inspect the CURRENT hotbar/hand/ability HUD. Report the visibly
-  selected hotbar slot in perception.equipped_slot_visible when readable.
-  Set perception.melee_ready_visible=true only when the current hand/loadout
-  is visibly ready to M1/use melee moves. If combat is required and melee is
-  not visibly ready, choose EQUIP_SLOT before FIGHT_QUEST_TARGET. Use a
-  verified equip_slot_N control; state.last_equipped_slot records the last
-  slot physically selected by the actuator.
+- EQUIPMENT FOR COMBAT: inspect the CURRENT hotbar/hand/ability HUD. Report
+  the visibly selected hotbar slot in perception.equipped_slot_visible when
+  readable. Set perception.melee_ready_visible=true only when the current
+  hand/loadout is visibly ready to M1/use melee moves.
+  * If you only need to equip, choose EQUIP_SLOT with verified equip_slot_N.
+  * If the quest enemy is already present and you know the needed slot, you
+    may choose FIGHT_QUEST_TARGET AND set control_id="equip_slot_N". The local
+    macro will equip that exact AI-selected slot once, then continue YOUR
+    fight plan immediately without waiting another cloud round-trip.
+  state.last_equipped_slot records the last slot physically selected.
 - USE_OBSERVED_ABILITY requires BOTH a move label and binding visible on the
   CURRENT HUD. Never guess fruit/style/sword ability keys.
 - Verified movement mechanics: SPACE jumps; CTRL climbs while contacting a
