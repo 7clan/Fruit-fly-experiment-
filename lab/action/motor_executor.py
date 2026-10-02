@@ -270,6 +270,10 @@ class AIOnlyBackend(QuestingBackend):
         if mover is not None:
             mover(int(dx), int(dy))
 
+    def center_cursor_in_target(self) -> bool:
+        center = getattr(self.inner, "center_cursor_in_target", None)
+        return bool(center()) if center is not None else False
+
     def backend_health(self) -> dict:
         h = dict(super().backend_health())
         h["backend"] = self.name
@@ -348,11 +352,20 @@ class MotorExecutor(Worker):
         self._last_brain_out_ts: int = -1
         self._last_command_id: int = -1
         self._engineered_steer_until_ns: int = 0
+        # Self-correcting camera servo. We do not assume whether a positive
+        # RMB drag rotates this Roblox camera left or right; if the next fresh
+        # CV sample moves the target farther from center while turning in
+        # place, invert the sign once.
+        self._camera_sign = 1
+        self._camera_prev_direction = None
+        self._camera_prev_target = None
+        self._camera_prev_ns = 0
         self.stats.update({"inputs_emitted": 0, "shadow_only": 0,
                            "emergency_stops": 0, "hold_refreshes": 0,
                            "navigation_vetoes": 0,
                            "semantic_steers": 0,
                            "camera_aligns": 0,
+                           "camera_sign_flips": 0,
                            "command_only": self.command_only})
 
     # -- autonomy gate ----------------------------------------------------
@@ -743,15 +756,35 @@ class MotorExecutor(Worker):
                 # and a fast geometric servo only to keep that goal centered.
                 # This prevents W+A/W+D orbiting around an objective for tens
                 # of seconds while the cloud waits for the next frame.
-                if camera_align and abs(direction) > 0.26:
-                    dx = int(max(-78, min(78, direction * 58.0)))
-                    if abs(dx) < 16:
-                        dx = 16 if dx >= 0 else -16
+                target_type = str(cmd.get("target_type") or "")
+                if camera_align and abs(direction) > 0.24:
+                    # Learn drag polarity from fresh geometry while turning in
+                    # place. This avoids endless circles if Roblox/camera mode
+                    # interprets RMB drag opposite to our initial assumption.
+                    if (self._camera_prev_direction is not None
+                            and target_type == self._camera_prev_target
+                            and 0 < now_ns - self._camera_prev_ns < int(2.2e9)
+                            and abs(direction)
+                                > abs(self._camera_prev_direction) + 0.10
+                            and direction * self._camera_prev_direction > 0):
+                        self._camera_sign *= -1
+                        self.stats["camera_sign_flips"] += 1
+                    dx = int(max(
+                        -92, min(
+                            92,
+                            self._camera_sign * direction * 72.0)))
+                    if abs(dx) < 18:
+                        dx = 18 if dx >= 0 else -18
                     self.backend.mouse_move(dx, 0)
                     self.stats["camera_aligns"] += 1
-                # When the target is far off-axis, rotate first and wait for
-                # fresh CV rather than moving a large arc around it.
-                if not (camera_align and abs(direction) > 1.05):
+                    self._camera_prev_direction = direction
+                    self._camera_prev_target = target_type
+                    self._camera_prev_ns = now_ns
+
+                # Turn first whenever the target is meaningfully off-axis.
+                # Moving forward during a large camera correction was the
+                # source of the observed circular paths.
+                if not (camera_align and abs(direction) > 0.34):
                     self._hold_key_locked("W", now_ns, hold_s)
                     if not camera_align:
                         deadband = 0.24
@@ -859,9 +892,16 @@ class MotorExecutor(Worker):
                 y = float(cmd.get("y_norm", -1.0))
                 if not (0.0 <= x <= 1.0 and 0.0 <= y <= 1.0):
                     return
+                self._release_movement_locked(
+                    now_ns, reason="ui_click_freeze")
                 self.backend.ui_click(
-                    x, y, button="left", restore_cursor=True)
-                self.action_lock_until_ns = now_ns + int(0.45e9)
+                    x, y, button="left", restore_cursor=False)
+                # AI-only backend/window backend keeps the cursor in Roblox;
+                # never restore it to an arbitrary desktop position.
+                center = getattr(self.backend, "center_cursor_in_target", None)
+                if center is not None:
+                    center()
+                self.action_lock_until_ns = now_ns + int(0.70e9)
             elif name == "EXEC_CONTROL":
                 from .gpo_controls import control_map
                 control_id = str(cmd.get("control_id") or "")
