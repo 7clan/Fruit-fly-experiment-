@@ -274,6 +274,15 @@ class AIOnlyBackend(QuestingBackend):
         center = getattr(self.inner, "center_cursor_in_target", None)
         return bool(center()) if center is not None else False
 
+    def ui_click(self, x_norm: float, y_norm: float,
+                 button: str = "left", restore_cursor: bool = True) -> None:
+        # In AI-only mode there is no human cursor ownership to restore. Keep
+        # the pointer inside the authorized Roblox client after UI clicks so
+        # subsequent camera drags/attacks cannot begin on the desktop.
+        super().ui_click(
+            x_norm, y_norm, button=button, restore_cursor=False)
+        self.center_cursor_in_target()
+
     def backend_health(self) -> dict:
         h = dict(super().backend_health())
         h["backend"] = self.name
