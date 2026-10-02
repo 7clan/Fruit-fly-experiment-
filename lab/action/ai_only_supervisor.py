@@ -399,10 +399,16 @@ class AIOnlyAutopilotSupervisor(Worker):
                 actor.get("distance"),
                 proximity if ttype == "quest_enemy_actor" else None)
             if actor_visible and adir is not None and aprox is not None:
-                if aprox >= 0.43 and abs(adir) <= 0.95:
+                ai_recent_enemy = (
+                    now <= self._ai_enemy_confirmed_until_ns)
+                attack_floor = 0.18 if ai_recent_enemy else 0.36
+                if aprox >= attack_floor and abs(adir) <= 0.95:
                     if now - self._last_emit_ns >= int(0.34e9):
+                        command = (
+                            "ATTACK_LIGHT" if aprox >= 0.46
+                            else "ATTACK_ADVANCE")
                         self._emit(
-                            "ATTACK_LIGHT", now, reason=reason,
+                            command, now, reason=reason,
                             ttl_s=0.8,
                             coach_plan_id=pid,
                             coach_confidence=confidence,
@@ -432,7 +438,9 @@ class AIOnlyAutopilotSupervisor(Worker):
                 if marker_melee:
                     if now - self._last_emit_ns >= int(0.34e9):
                         self._emit(
-                            "ATTACK_LIGHT", now, reason=reason,
+                            ("ATTACK_LIGHT" if proximity >= 0.78
+                             else "ATTACK_ADVANCE"),
+                            now, reason=reason,
                             ttl_s=0.8,
                             coach_plan_id=pid,
                             coach_confidence=confidence,
