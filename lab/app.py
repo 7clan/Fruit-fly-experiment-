@@ -552,8 +552,18 @@ class DigitalFlyLab:
         from .action.windows_input import focus_window, function_key_pressed
         target = getattr(self.capture, "_target", None) or {}
         hwnd = int(target.get("handle") or 0)
+        # The fly-brain runs used to spend ~1 minute prewarming, which gave
+        # Windows capture plenty of time to discover Roblox. AI-only starts
+        # immediately, so explicitly wait a few seconds for the first target
+        # window discovery instead of racing capture startup.
+        deadline_ns = SHARED_CLOCK.now_ns() + int(6.0e9)
+        while hwnd <= 0 and SHARED_CLOCK.now_ns() < deadline_ns:
+            time.sleep(0.10)
+            target = getattr(self.capture, "_target", None) or {}
+            hwnd = int(target.get("handle") or 0)
         if hwnd <= 0:
-            raise RuntimeError("cannot arm navigation: captured HWND missing")
+            raise RuntimeError(
+                "cannot arm navigation: Roblox capture HWND not found within 6 s")
         target_setter = getattr(
             self.executor.backend, "set_target_window", None)
         if target_setter is not None:
