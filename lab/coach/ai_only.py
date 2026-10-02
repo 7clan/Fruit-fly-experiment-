@@ -12,7 +12,9 @@ import json
 import time
 
 from .ollama_cloud import OllamaCloudCoachWorker
-from .semantic_coach import ALLOWED_SKILLS, _compact
+from .semantic_coach import (
+    ALLOWED_SKILLS, SemanticCoachWorker, _compact,
+)
 
 
 class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
@@ -383,3 +385,57 @@ Return ONLY JSON with exactly:
             "melee_ready": bool(vt.get("melee_ready")) and vc >= 0.82,
         }
         return plan
+
+
+class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
+    """AI-only controller using Gemini Flash-Lite multimodal transport.
+
+    Reuses the exact AI-only prompt/validation/event cadence above, but sends
+    frames to Google's low-latency multimodal endpoint instead of Ollama
+    Cloud. This is the preferred path on the target laptop because inference
+    stays off-device and the model is substantially smaller/faster than the
+    31B Ollama fallback that caused multi-second control lag.
+    """
+
+    name = "ai_only_gemini_coach"
+
+    def __init__(self, bus, target_hz: float = 1.5,
+                 model: str | None = None,
+                 base_url: str | None = None,
+                 timeout_s: float = 16.0,
+                 api_key: str | None = None):
+        # Call the Gemini base initializer directly so Ollama-specific auth,
+        # model defaults, and transport are never activated.
+        SemanticCoachWorker.__init__(
+            self, bus,
+            target_hz=target_hz,
+            model=model,
+            min_call_interval_s=1.0,
+            unchanged_refresh_s=20.0,
+            timeout_s=timeout_s,
+            api_key=api_key,
+        )
+        # AIOnlyOllamaCoachWorker._prompt() uses the compact relevant-section
+        # selector provided by OllamaCloudCoachWorker; initialize the same
+        # cached section index without using its network transport.
+        self._sections = self._split_sections(self.knowledge)
+        self.min_call_interval_s = 1.0
+        self.unchanged_refresh_s = 20.0
+        self.provider = "gemini_ai_only"
+        self.max_output_tokens = 320
+        self.stats.update({
+            "provider": self.provider,
+            "model": self.model,
+            "decision_owner": "cloud_ai",
+            "fruit_fly_control": False,
+            "ai_only": True,
+            "supports_vision": True,
+            "cloud_ai_used": True,
+        })
+
+    def _call_gemini(self, prompt: str, image_b64: str | None,
+                     previous_image_b64: str | None = None) -> dict:
+        # One CURRENT frame only; local CV and quest.state provide temporal
+        # feedback between cloud calls.
+        return SemanticCoachWorker._call_gemini(
+            self, prompt, image_b64, previous_image_b64=None)
