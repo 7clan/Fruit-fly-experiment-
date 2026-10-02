@@ -245,7 +245,6 @@ class QuestCombatSupervisor(Worker):
         skill = str(plan.get("skill") or "WAIT").upper()
         target_type = str(target.get("type") or "none")
         proximity = self._f(target.get("distance"))
-        self._last_coach_plan_id = pid
         self.stats["coach_plans_seen"] += 1
 
         name = None
@@ -333,7 +332,12 @@ class QuestCombatSupervisor(Worker):
                     })
 
         if not name:
+            # Geometry may not be actionable yet (e.g. TAKE_QUEST while the
+            # NPC is still several metres away). Keep the plan pending so it
+            # can fire once fresh CV reaches the required range, until the
+            # plan's normal 20 s expiry.
             return False
+        self._last_coach_plan_id = pid
         self._phase = "coach:" + skill.lower()
         self._emit(
             name, now_ns,
@@ -575,7 +579,15 @@ class QuestCombatSupervisor(Worker):
                 self._last_interact_ns = now
                 self.stats["quest_interacts"] += 1
 
-        elif target_type == "quest_enemy_marker" and not yellow_quest:
+        else:
+            coach_env = self.coach.read()
+            coach_skill = str(
+                ((coach_env.payload or {}).get("skill")
+                 if coach_env else "") or "").upper()
+
+        if (target_type == "quest_enemy_marker"
+                and (not yellow_quest
+                     or coach_skill == "FIGHT_QUEST_TARGET")):
             if proximity is not None and proximity >= 0.70:
                 self._phase = "combat"
                 # Regular block cycling gives the slow whole-brain loop a
@@ -616,7 +628,7 @@ class QuestCombatSupervisor(Worker):
         elif target_type == "recommended_quest_waypoint":
             self._phase = "travel"
 
-        else:
+        elif target_type != "quest_enemy_marker":
             # No objective in view: wait for the semantic coach / next game
             # observation instead of taking over the user's camera.
             self._phase = "await_visible_target"
