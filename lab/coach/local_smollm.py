@@ -210,6 +210,19 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
             "skill_card": plan.get("skill_card"),
             "local_ai_used": bool(local_ai_used),
         }
+        # Human-visible low-rate trace of exactly what the semantic coach
+        # handed downstream. Useful even if the OpenCV dashboard is lagging.
+        why = str(plan.get("explanation") or "").replace("\n", " ")
+        if len(why) > 140:
+            why = why[:137] + "..."
+        print(
+            f"[AI->FLY] skill={plan.get('skill')} "
+            f"target={plan.get('target')} "
+            f"source={provider} "
+            f"ai={'yes' if local_ai_used else 'fallback'} "
+            f"why={why}",
+            flush=True,
+        )
 
     def _select_with_model(
             self, candidate: dict, obs: dict, quest: dict,
