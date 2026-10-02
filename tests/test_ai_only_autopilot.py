@@ -3,6 +3,7 @@ from lab.action.motor_executor import (
     AIOnlyBackend, MotorExecutor, SafeNoopBackend,
 )
 from lab.bus import Bus
+from lab.app import DigitalFlyLab
 from lab.coach.ai_only import AIOnlyOllamaCoachWorker
 
 
@@ -245,3 +246,24 @@ def test_ai_only_backend_forwards_relative_camera_motion():
     health = backend.backend_health()
     assert health["camera_drag"] is True
     assert health["mouse_move_enabled"] is True
+
+
+
+def test_ai_only_lab_excludes_fly_encoder_and_brain_workers():
+    lab = DigitalFlyLab(
+        capture_kind="synthetic",
+        runtime_kind="mock",
+        autonomy=False,
+        ai_only=True,
+        semantic_coach=True,
+        coach_provider="ollama_cloud",
+        dashboard=False,
+    )
+    assert lab.ai_only is True
+    assert lab.executor.command_only is True
+    assert lab.brain not in lab.workers
+    assert lab.encoder not in lab.workers
+    assert lab.quest_supervisor is None
+    assert lab.ai_only_supervisor in lab.workers
+    assert lab.semantic_coach in lab.workers
+    assert lab.semantic_coach.stats["decision_owner"] == "cloud_ai"
