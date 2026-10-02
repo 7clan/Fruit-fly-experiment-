@@ -250,6 +250,33 @@ def create_windows_questing_backend() -> InputBackend:
     return QuestingBackend(create_windows_input_backend())
 
 
+class AIOnlyBackend(QuestingBackend):
+    """Questing surface plus bounded relative camera motion.
+
+    This exists only on the experimental AI-only branch. The cloud AI may
+    explicitly choose LOOK_LEFT/LOOK_RIGHT; no other worker chooses camera
+    movement. F12 still releases all input immediately.
+    """
+
+    name = "windows_ai_only_v1"
+
+    def mouse_move(self, dx: int, dy: int) -> None:
+        mover = getattr(self.inner, "mouse_move", None)
+        if mover is not None:
+            mover(int(dx), int(dy))
+
+    def backend_health(self) -> dict:
+        h = dict(super().backend_health())
+        h["backend"] = self.name
+        h["camera_drag"] = True
+        h["mouse_move_enabled"] = True
+        return h
+
+
+def create_windows_ai_only_backend() -> InputBackend:
+    return AIOnlyBackend(create_windows_input_backend())
+
+
 # ---------------------------------------------------------------------------
 # concrete action schema (input binding expansion)
 # ---------------------------------------------------------------------------
