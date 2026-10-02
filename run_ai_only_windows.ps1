@@ -41,7 +41,7 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_BASE)) {
     $env:OLLAMA_CLOUD_BASE = "https://ollama.com/v1"
 }
 if ([string]::IsNullOrWhiteSpace($env:OLLAMA_CLOUD_MODEL)) {
-    $env:OLLAMA_CLOUD_MODEL = "deepseek-v4.1-flash"
+    $env:OLLAMA_CLOUD_MODEL = "gemma4:cloud"
 }
 
 if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
@@ -50,18 +50,19 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
     if ($LASTEXITCODE -ne 0) { throw "Ollama Cloud setup failed." }
 }
 
-Write-Host "Testing cloud access..." -ForegroundColor Cyan
+Write-Host "Testing cloud access + REQUIRED image vision..." -ForegroundColor Cyan
 $probeArgs = @(
     "-m", "lab.coach.ollama_cloud_probe",
     "--model", $env:OLLAMA_CLOUD_MODEL,
     "--base-url", $env:OLLAMA_CLOUD_BASE,
-    "--timeout", "20"
+    "--timeout", "25",
+    "--require-vision"
 )
 $probeOutput = @(& $mainPython @probeArgs)
 $probeExit = $LASTEXITCODE
 $probeOutput | ForEach-Object { Write-Host $_ }
 if ($probeExit -ne 0) {
-    throw "Ollama Cloud preflight failed; AI-only run not started."
+    throw "Ollama Cloud vision preflight failed; AI-only run will not start blind."
 }
 $modelLine = $probeOutput | Where-Object { $_ -like "COACH_MODEL=*" } | Select-Object -Last 1
 if ([string]::IsNullOrWhiteSpace($modelLine)) {
