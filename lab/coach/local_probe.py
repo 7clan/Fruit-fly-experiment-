@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import time
 import urllib.error
 import urllib.request
 
@@ -59,22 +60,32 @@ def probe(base_url: str = DEFAULT_URL,
     except Exception as exc:
         return False, f"models endpoint failed: {type(exc).__name__}: {exc}"
 
-    # Tiny TEXT-ONLY generation verifies that the loaded model is callable.
-    # The expensive vision tower is intentionally not exercised here.
+    # Exercise the SAME tiny label-only pattern used during gameplay.
+    # This catches a server that can emit two tokens but stalls on the actual
+    # selector request, without paying the cost of the visual tower.
     try:
+        t0 = time.perf_counter()
         payload = _post(
             base_url + "/chat/completions",
             {
                 "model": model,
                 "messages": [{
                     "role": "user",
-                    "content": "Reply only: OK",
+                    "content": (
+                        "GPO skill selector. Choose ONE exact label from "
+                        "ALLOWED. STATE={\"candidate\":"
+                        "\"NAVIGATE_OBJECTIVE\",\"target\":"
+                        "\"recommended_quest_waypoint\"} "
+                        "ALLOWED=NAVIGATE_OBJECTIVE|REOBSERVE ANSWER="
+                    ),
                 }],
                 "temperature": 0.0,
-                "max_tokens": 2,
+                "max_tokens": 12,
+                "stop": ["\n"],
             },
             timeout_s,
         )
+        elapsed_ms = (time.perf_counter() - t0) * 1000.0
         choices = payload.get("choices") or []
         text = str(
             (((choices[0] if choices else {}).get("message") or {})
@@ -82,9 +93,13 @@ def probe(base_url: str = DEFAULT_URL,
         ).strip()
         if not text:
             return False, f"text probe returned no text: {str(payload)[:500]}"
+        upper = text.upper()
+        if ("NAVIGATE_OBJECTIVE" not in upper
+                and "REOBSERVE" not in upper):
+            return False, f"selector probe returned unexpected text: {text!r}"
         return True, (
             f"model={model} local_url={base_url} "
-            "text_ready=yes vision=cold_lazy"
+            f"selector_ms={elapsed_ms:.0f} vision=cold_lazy"
         )
     except urllib.error.HTTPError as exc:
         try:
