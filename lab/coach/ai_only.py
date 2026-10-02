@@ -29,8 +29,12 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # Keep cloud decisions event-driven. The fast local actuator servo
         # continues an already-selected goal; asking the model every few
         # frames only produced duplicate plans and extra cost.
-        self.min_call_interval_s = 4.0
-        self.unchanged_refresh_s = 14.0
+        # The cloud call itself averaged ~2.8 s on the 2026-10-02 run.
+        # Keep decisions event-driven and let the local skill executor react
+        # at 8-20 Hz. 2 s does not cause a 2 s cadence because unchanged
+        # scenes are still held for the longer refresh interval.
+        self.min_call_interval_s = 2.0
+        self.unchanged_refresh_s = 16.0
         self.provider = "ollama_cloud_ai_only"
         self.stats.update({
             "provider": self.provider,
@@ -40,45 +44,31 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         })
 
     def _signature(self, obs: dict, quest: dict, brain: dict) -> tuple:
-        """Coarse event signature for cloud calls.
+        """Event signature for cloud replanning.
 
-        Screen-space target coordinates jitter every frame. Treat that as
-        actuator feedback, not a reason to ask the cloud model for the same
-        objective again.
+        Screen-space direction/proximity changes are handled by the local
+        servo and MUST NOT wake the cloud model. Cloud replanning is reserved
+        for semantic transitions: quest state, UI actions, enemy visibility,
+        recovery state, or meaningful health change.
         """
-        target = obs.get("target") or {}
         player = obs.get("player") or {}
         notes = obs.get("notes") or {}
         try:
-            prox = float(target.get("distance"))
-        except (TypeError, ValueError):
-            prox = -1.0
-        try:
-            direction = float(target.get("direction"))
-        except (TypeError, ValueError):
-            direction = 0.0
-        direction_bucket = (
-            "left" if direction < -0.45
-            else "right" if direction > 0.45
-            else "center")
-        proximity_bucket = (
-            "near" if prox >= 0.62
-            else "mid" if prox >= 0.32
-            else "far")
-        try:
             health_bucket = int(max(
-                0.0, min(1.0, float(player.get("health")))) * 4)
+                0.0, min(1.0, float(player.get("health")))) * 5)
         except (TypeError, ValueError):
             health_bucket = -1
         return (
-            str(target.get("type") or "none"),
-            direction_bucket,
-            proximity_bucket,
             str(quest.get("quest_status") or quest.get("phase") or "unknown"),
             bool(quest.get("quest_enemy_actor_visible")),
+            bool(quest.get("quest_enemy_objective_visible")),
+            bool(quest.get("quest_giver_visible")),
+            bool(quest.get("recommended_waypoint_visible")),
             bool(quest.get("awaiting_quest_confirmation")),
             bool(quest.get("stuck")),
             bool(quest.get("circling")),
+            int(quest.get("action_epoch") or 0),
+            int(quest.get("ui_epoch") or 0),
             bool(notes.get("quest_marker_detected")),
             bool(notes.get("quest_enemy_marker_detected")),
             health_bucket,
@@ -125,20 +115,48 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
             "notes": c.get("notes"),
         } for c in (catalog.get("controls") or []) if c.get("control_id")]
 
+        target = obs.get("target") or {}
+        player = obs.get("player") or {}
+        notes = obs.get("notes") or {}
+        # Avoid the misleading legacy field name "distance": in this CV
+        # contract the value is actually PROXIMITY (0=far, 1=close).
+        world_for_ai = {
+            "player": {
+                "health_fraction": player.get("health"),
+                "stamina_fraction": player.get("stamina"),
+            },
+            "target": {
+                "type": target.get("type"),
+                "direction_radians": target.get("direction"),
+                "proximity_0_far_1_close": target.get("distance"),
+                "confidence": target.get("confidence"),
+            },
+            "cues": {
+                "yellow_quest_giver": bool(notes.get("quest_marker_detected")),
+                "green_recommended_waypoint": bool(
+                    notes.get("recommended_waypoint_detected")),
+                "red_quest_objective": bool(
+                    notes.get("quest_enemy_marker_detected")),
+                "quest_enemy_actor_visible": bool(
+                    notes.get("quest_enemy_actor_visible")),
+                "quest_enemy_actor": notes.get("quest_enemy_actor"),
+            },
+        }
         situation = {
-            "world": _compact(obs, 4200),
-            "quest": _compact(quest, 1500),
+            "world": _compact(world_for_ai, 2600),
+            "quest": _compact(quest, 2200),
             "agent": {
                 "enabled": bool(action_meta.get("autonomy")),
                 "mode": "AI_ONLY",
                 "loadout": action_meta.get("gpo_loadout"),
             },
             "verified_controls": controls,
-            "previous_plan": _compact(previous_plan, 1600),
-            "persistent_character_profile": _compact(self.profile, 3200),
+            "previous_plan": _compact(previous_plan, 1300),
+            "persistent_character_profile": _compact(self.profile, 2400),
             "state_contract": {
+                "proximity": "0 means far; 1 means close/melee",
                 "quest_status": (
-                    "perception-derived; active beats any yellow quest giver"),
+                    "sticky perception state; active beats visible quest giver"),
                 "quest_enemy_marker": (
                     "objective/location cue; NOT proof an enemy body is in melee"),
                 "quest_enemy_actor_visible": (
@@ -147,9 +165,18 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                     "closed-loop progress monitor; recover before repeating navigation"),
                 "last_equipped_slot": (
                     "last hotbar slot the agent physically selected"),
+                "action_epoch": (
+                    "increments after one-shot physical actions so you can "
+                    "verify the result on the next frame"),
             },
         }
-        playbook = self.knowledge[:30000]
+        situation_text = json.dumps(situation, default=str)
+        # Keep the full playbook on disk, but send only relevant sections on
+        # each live frame. This cuts thousands of repeated prompt tokens and
+        # lowers cloud latency without deleting any available knowledge.
+        playbook = self._relevant_playbook(situation_text)
+        if not playbook:
+            playbook = self.knowledge[:12000]
         if retrieved_context:
             playbook += "\n\nCURRENT GPO WIKI CONTEXT:\n" + retrieved_context[:8000]
         skills = ", ".join(sorted(ALLOWED_SKILLS))
@@ -167,10 +194,12 @@ use observed abilities, buy ordinary in-game progression items when sensible,
 travel by ship when needed, and update the persistent character profile.
 
 CONTROL DISCIPLINE:
-- Choose exactly ONE skill per response. Do not restate the same objective just
-  because its screen coordinates moved slightly. If the previous plan is still
-  progressing, keep that skill; the local servo persists it without another
-  cloud decision.
+- Choose exactly ONE skill per response. Treat that skill as a PERSISTENT
+  behavior/macro, not a one-frame keypress. Do not restate the same objective
+  because its coordinates moved. The local servo keeps executing the selected
+  behavior against fresh CV while this cloud call is sleeping. Replan only
+  after a semantic state change, failure/stuck signal, UI page change, or goal
+  completion.
 - Never output raw keys. EXEC_CONTROL must use a control_id from
   verified_controls.
 - Read quest state in this priority order:
@@ -185,8 +214,10 @@ CONTROL DISCIPLINE:
 - SAFEZONE / PROTECTED text is PvP protection in this experiment. It is NOT a
   reason to avoid or postpone fighting quest NPCs. Never invent a need to leave
   the safe zone before PvE.
-- TAKE_QUEST: move to the yellow QUEST/! giver. When close the actuator presses
-  T once, then waits. If a quest dialogue/Accept/Yes button is visible, choose
+- TAKE_QUEST: move to the yellow QUEST/! giver. If the CURRENT screenshot
+  visibly shows the T/Interact prompt, set control_id="interact"; the actuator
+  will press T immediately even if geometric proximity is noisy. Otherwise it
+  approaches until ready, presses T once, then waits. If a quest dialogue/Accept/Yes button is visible, choose
   UI_CLICK with its normalized center. Do not repeatedly press T while
   awaiting_quest_confirmation=true.
 - FIGHT_QUEST_TARGET: the actuator closes distance on the tracked quest NPC and
@@ -217,7 +248,7 @@ GPO PLAYBOOK / STRATEGY KNOWLEDGE:
 {playbook}
 
 CURRENT STATE:
-{json.dumps(situation, default=str)}
+{situation_text}
 
 Return ONLY JSON with exactly:
 {{
@@ -231,6 +262,33 @@ Return ONLY JSON with exactly:
   "confidence": 0.0,
   "explanation": "one short sentence",
   "next_after_success": "short",
+  "perception": {
+    "quest_state": "active|available|pending_accept|unknown",
+    "dialogue_visible": false,
+    "interaction_prompt_visible": false,
+    "enemy_actor_visible": false,
+    "player_dead": false,
+    "safezone_visible": false
+  },
   "knowledge_query": "short GPO wiki query or empty",
   "memory_updates": []
 }}"""
+
+
+    def _validate_plan(self, raw: dict, catalog: dict) -> dict:
+        plan = super()._validate_plan(raw, catalog)
+        p = raw.get("perception") or {}
+        allowed_quest = {"active", "available", "pending_accept", "unknown"}
+        qstate = str(p.get("quest_state") or "unknown").strip().lower()
+        if qstate not in allowed_quest:
+            qstate = "unknown"
+        plan["perception"] = {
+            "quest_state": qstate,
+            "dialogue_visible": bool(p.get("dialogue_visible")),
+            "interaction_prompt_visible": bool(
+                p.get("interaction_prompt_visible")),
+            "enemy_actor_visible": bool(p.get("enemy_actor_visible")),
+            "player_dead": bool(p.get("player_dead")),
+            "safezone_visible": bool(p.get("safezone_visible")),
+        }
+        return plan
