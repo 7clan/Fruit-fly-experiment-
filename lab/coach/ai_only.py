@@ -268,11 +268,12 @@ CONTROL DISCIPLINE:
 - FIGHT_QUEST_TARGET: the actuator closes distance on the tracked quest NPC and
   emits M1 clicks once melee geometry is reached. Do not attack ordinary players.
 - Whenever you can visually identify the object/person you are acting on, fill
-  visual_target with its CURRENT normalized screen center and confidence.
-  For a quest NPC enemy use kind="quest_enemy_actor". Set melee_ready=true only
-  when the actual NPC body is visibly close enough to hit now. This visual
-  grounding lets the fast local actuator keep control between cloud replies
-  when the handcrafted body tracker temporarily misses the NPC.
+  visual_target with its CURRENT normalized screen center, confidence, AND a
+  tight normalized bounding box [x1,y1,x2,y2]. For a quest NPC enemy use
+  kind="quest_enemy_actor". For a giver use kind="quest_giver". Set
+  melee_ready=true only when the actual NPC body is visibly close enough to
+  hit now. The local visual tracker follows YOUR selected box between cloud
+  replies; it does not choose a target by itself.
 - EQUIP_SLOT: inspect the CURRENT hotbar/hand/ability HUD. Report the visibly
   selected hotbar slot in perception.equipped_slot_visible when readable.
   Set perception.melee_ready_visible=true only when the current hand/loadout
@@ -317,6 +318,7 @@ Return ONLY JSON with exactly:
     "kind": "none|quest_giver|quest_enemy_actor|quest_objective|waypoint|ui",
     "x_norm": 0.5,
     "y_norm": 0.5,
+    "bbox_norm": [0.0, 0.0, 0.0, 0.0],
     "confidence": 0.0,
     "melee_ready": false
   }},
@@ -375,12 +377,28 @@ Return ONLY JSON with exactly:
             vc = max(0.0, min(1.0, float(vt.get("confidence", 0.0))))
         except (TypeError, ValueError):
             vx, vy, vc = 0.5, 0.5, 0.0
+
+        bbox = vt.get("bbox_norm")
+        clean_bbox = None
+        if isinstance(bbox, (list, tuple)) and len(bbox) == 4:
+            try:
+                x1, y1, x2, y2 = [
+                    max(0.0, min(1.0, float(v))) for v in bbox
+                ]
+                if x2 - x1 >= 0.025 and y2 - y1 >= 0.035:
+                    clean_bbox = [
+                        round(x1, 4), round(y1, 4),
+                        round(x2, 4), round(y2, 4),
+                    ]
+            except (TypeError, ValueError):
+                clean_bbox = None
         if vc < 0.65:
             kind = "none"
         plan["visual_target"] = {
             "kind": kind,
             "x_norm": round(vx, 4),
             "y_norm": round(vy, 4),
+            "bbox_norm": clean_bbox,
             "confidence": round(vc, 4),
             "melee_ready": bool(vt.get("melee_ready")) and vc >= 0.82,
         }
