@@ -42,6 +42,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         # emitted. These are facts for the AI, not hidden gameplay decisions.
         self._quest_status = "unknown"
         self._last_enemy_marker_ns = 0
+        self._enemy_marker_since_ns = 0
         self._last_yellow_marker_ns = 0
         self._last_waypoint_ns = 0
         self._last_actor_ns = 0
@@ -150,7 +151,14 @@ class AIOnlyAutopilotSupervisor(Worker):
         if green:
             self._last_waypoint_ns = now_ns
         if red:
+            if not self._enemy_marker_since_ns:
+                self._enemy_marker_since_ns = now_ns
             self._last_enemy_marker_ns = now_ns
+        else:
+            # Brief detector misses keep quest_status sticky via
+            # _last_enemy_marker_ns, but a future close-marker combat fallback
+            # must re-establish continuous visual evidence.
+            self._enemy_marker_since_ns = 0
         if actor:
             self._last_actor_ns = now_ns
 
@@ -227,6 +235,9 @@ class AIOnlyAutopilotSupervisor(Worker):
                 notes.get("recommended_waypoint_detected")),
             "quest_enemy_objective_visible": bool(
                 notes.get("quest_enemy_marker_detected")),
+            "quest_enemy_marker_stable_s": (
+                round((now_ns - self._enemy_marker_since_ns) / 1e9, 2)
+                if self._enemy_marker_since_ns else 0.0),
             "quest_enemy_actor_visible": bool(
                 notes.get("quest_enemy_actor_visible")),
             "quest_enemy_actor": actor,
@@ -374,13 +385,30 @@ class AIOnlyAutopilotSupervisor(Worker):
                         target_type="quest_enemy_actor",
                         hold_s=0.92)
             elif (bool(notes.get("quest_enemy_marker_detected"))
-                  and direction is not None):
-                # AI selected combat, but the body is not resolved yet. Move
-                # toward its red objective instead of clicking empty space.
-                self._steer(
-                    now, direction=direction, pid=pid,
-                    confidence=confidence, reason=reason,
-                    target_type="quest_enemy_marker")
+                  and direction is not None and proximity is not None):
+                # Prefer a resolved body. As a conservative fallback for the
+                # game's red dot sitting directly on a quest NPC's head, M1
+                # is allowed only when the marker has remained continuously
+                # visible, is strongly centered, and is visually very close.
+                marker_stable_s = (
+                    (now - self._enemy_marker_since_ns) / 1e9
+                    if self._enemy_marker_since_ns else 0.0)
+                if (proximity >= 0.78 and abs(direction) <= 0.42
+                        and marker_stable_s >= 0.80):
+                    if now - self._last_emit_ns >= int(0.34e9):
+                        self._emit(
+                            "ATTACK_LIGHT", now, reason=reason,
+                            ttl_s=0.8,
+                            coach_plan_id=pid,
+                            coach_confidence=confidence,
+                            target_type="quest_enemy_marker_close_fallback")
+                        self.stats["combat_commands"] += 1
+                else:
+                    # Objective not yet in verified melee geometry: approach.
+                    self._steer(
+                        now, direction=direction, pid=pid,
+                        confidence=confidence, reason=reason,
+                        target_type="quest_enemy_marker")
 
         elif skill == "BLOCK":
             if self._one_shot(pid):
