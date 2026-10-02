@@ -218,13 +218,60 @@ class WindowsInputBackend:
         self.mouse_down(button)
         self.mouse_up(button)
 
+    def _client_screen_rect(self):
+        hwnd = int(self._target_hwnd or 0)
+        if hwnd <= 0 or not bool(_user32.IsWindow(wt.HWND(hwnd))):
+            return None
+        rect = _RECT()
+        if not bool(_user32.GetClientRect(wt.HWND(hwnd), ctypes.byref(rect))):
+            return None
+        origin = _POINT(0, 0)
+        if not bool(_user32.ClientToScreen(
+                wt.HWND(hwnd), ctypes.byref(origin))):
+            return None
+        width = max(1, int(rect.right - rect.left))
+        height = max(1, int(rect.bottom - rect.top))
+        return (
+            int(origin.x), int(origin.y),
+            int(origin.x + width - 1), int(origin.y + height - 1),
+        )
+
+    def center_cursor_in_target(self) -> bool:
+        bounds = self._client_screen_rect()
+        if bounds is None:
+            return False
+        left, top, right, bottom = bounds
+        cx = int((left + right) // 2)
+        cy = int(top + (bottom - top) * 0.48)
+        return bool(_user32.SetCursorPos(cx, cy))
+
     def camera_drag(self, dx: int, dy: int = 0) -> None:
-        """Roblox/GPO camera look: hold RMB while applying relative motion."""
+        """Roblox/GPO camera look without letting the cursor escape Roblox.
+
+        Relative SendInput starts wherever the OS cursor currently sits. On a
+        small window that previously pushed the pointer onto the desktop. For
+        autonomous camera look, always start from the authorized Roblox client
+        center, clamp the drag to a fraction of that client, then recenter.
+        """
+        bounds = self._client_screen_rect()
+        if bounds is not None:
+            left, top, right, bottom = bounds
+            width = max(1, right - left + 1)
+            height = max(1, bottom - top + 1)
+            dx = max(-int(width * 0.18), min(int(width * 0.18), int(dx)))
+            dy = max(-int(height * 0.14), min(int(height * 0.14), int(dy)))
+            self.center_cursor_in_target()
+        else:
+            dx = max(-140, min(140, int(dx)))
+            dy = max(-90, min(90, int(dy)))
+
         self.mouse_down("right")
         try:
             self.mouse_move(int(dx), int(dy))
         finally:
             self.mouse_up("right")
+            # Leave the pointer in a deterministic safe place inside Roblox.
+            self.center_cursor_in_target()
 
     # Compatibility names used by MotorExecutor/InputBackend.
     def mouse_button_down(self, button: str) -> None:
@@ -276,7 +323,16 @@ class WindowsInputBackend:
             self.mouse_click(button)
         finally:
             if restore_cursor and have_old:
-                _user32.SetCursorPos(int(old.x), int(old.y))
+                bounds = self._client_screen_rect()
+                if bounds is not None:
+                    left, top, right, bottom = bounds
+                    if (left <= int(old.x) <= right
+                            and top <= int(old.y) <= bottom):
+                        _user32.SetCursorPos(int(old.x), int(old.y))
+                    else:
+                        self.center_cursor_in_target()
+                else:
+                    _user32.SetCursorPos(int(old.x), int(old.y))
 
     def release_all(self) -> None:
         for code in list(self._down):
