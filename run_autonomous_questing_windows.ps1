@@ -16,7 +16,7 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-$modelSpec = "ggml-org/SmolLM2-135M-Video-Instruct-GGUF:Q4_K_M"
+$modelSpec = "lmstudio-community/SmolLM2-135M-Instruct-GGUF:Q4_K_M"
 $modelAlias = "smollm2-135m"
 $port = 18080
 $baseUrl = "http://127.0.0.1:$port"
@@ -49,7 +49,7 @@ function Test-Health {
     }
 }
 
-Write-Host "== GATE 7C LOCAL: DIGITAL FLY + SMOLVLM2-256M COACH ==" -ForegroundColor Cyan
+Write-Host "== GATE 7C LOCAL: DIGITAL FLY + SMOLLM2-135M COACH ==" -ForegroundColor Cyan
 
 & $mainPython -c "from lab.action.windows_input import _INPUT,_EXPECTED_INPUT_SIZE; import ctypes; s=ctypes.sizeof(_INPUT); print(f'[preflight] Win32 INPUT size={s} expected={_EXPECTED_INPUT_SIZE}'); raise SystemExit(0 if s==_EXPECTED_INPUT_SIZE else 2)"
 if ($LASTEXITCODE -ne 0) {
