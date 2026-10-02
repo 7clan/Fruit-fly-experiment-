@@ -34,7 +34,7 @@ from . import __version__
 from .action.gpo_controls import CORE_CONTROLS, loadout_controls
 from .action.motor_executor import (
     MotorExecutor, SafeNoopBackend, create_windows_movement_only_backend,
-    create_windows_questing_backend)
+    create_windows_questing_backend, create_windows_ai_only_backend)
 from .action.quest_combat_supervisor import QuestCombatSupervisor
 from .action.ai_only_supervisor import AIOnlyAutopilotSupervisor
 from .brain.worker import BrainWorker
@@ -161,7 +161,9 @@ class DigitalFlyLab:
         self.autonomy_requested = bool(
             autonomy and (
                 movement_only or self.quest_autonomy or self.ai_only))
-        if self.autonomy_requested and (self.quest_autonomy or self.ai_only):
+        if self.autonomy_requested and self.ai_only:
+            backend = create_windows_ai_only_backend()
+        elif self.autonomy_requested and self.quest_autonomy:
             backend = create_windows_questing_backend()
         elif self.autonomy_requested:
             backend = create_windows_movement_only_backend()
