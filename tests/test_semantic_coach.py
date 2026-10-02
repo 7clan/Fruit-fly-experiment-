@@ -3,6 +3,8 @@ from lab.coach.semantic_coach import SemanticCoachWorker
 from lab.coach.local_smolvlm import LocalSmolVLMCoachWorker
 from lab.coach.local_smollm import LocalSmolLMCoachWorker
 from lab.coach.llama_api import LlamaApiCoachWorker
+from lab.coach.meta_model_api import MetaModelApiCoachWorker
+from lab.coach.meta_probe import choose_model as choose_meta_model
 from lab.coach.llama_probe import choose_model as choose_llama_model
 from lab.coach.gpo_skills import (
     select_skill_cards, render_skill_cards, procedural_skill_plan,
@@ -584,3 +586,45 @@ def test_llama_cloud_coach_marks_ai_and_vision():
     assert plan["ai_used"] is True
     assert plan["cloud_ai_used"] is True
     assert plan["provider"] == "meta_llama_api"
+
+
+
+def test_meta_probe_prefers_current_muse_spark():
+    available = {
+        "muse-spark-1.3",
+        "muse-spark-1.2",
+    }
+    assert choose_meta_model("auto", available) == "muse-spark-1.3"
+
+
+def test_meta_cloud_coach_marks_ai_and_vision():
+    bus = Bus()
+    coach = MetaModelApiCoachWorker(
+        bus,
+        model="muse-spark-1.3",
+        api_key="test-only",
+    )
+    assert coach.provider == "meta_model_api"
+    assert coach.supports_vision is True
+    plan = coach._validate_plan({
+        "scene": "quest_travel",
+        "objective": "follow objective",
+        "target": "green waypoint",
+        "skill": "NAVIGATE_OBJECTIVE",
+        "control_id": "",
+        "observed_ability": {"binding": "", "label": ""},
+        "ui_click": {
+            "needed": False,
+            "x_norm": 0.0,
+            "y_norm": 0.0,
+            "label": "",
+        },
+        "confidence": 0.91,
+        "explanation": "green objective is visible",
+        "next_after_success": "reobserve",
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, _catalog())
+    assert plan["ai_used"] is True
+    assert plan["cloud_ai_used"] is True
+    assert plan["provider"] == "meta_model_api"
