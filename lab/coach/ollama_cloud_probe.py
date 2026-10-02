@@ -29,9 +29,15 @@ PREFERRED_MODELS = (
     "nemotron-3-nano:30b",
 )
 
-_TINY_PNG_B64 = (
-    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC"
-    "AAAAC0lEQVR42mP8/x8AAusB9Y9Z4N8AAAAASUVORK5CYII="
+# 64x64 solid-red PNG. A 1x1 probe can trip vision encoders even when the
+# transport is correct, so use a normal-size image and require the model to
+# identify its color. This validates real image understanding, not merely
+# acceptance of a multimodal request.
+_PROBE_PNG_B64 = (
+    "iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAIAAAAlC+aJAAAAX0lEQVR4nO3P"
+    "QQ0AIBDAMMC/50MEj4ZkVbDtWX87OuBVA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNa"
+    "A1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA1oDWgNaA9oFUoUBf3Xr7AgA"
+    "AAAASUVORK5CYII="
 )
 
 
@@ -104,26 +110,40 @@ def _probe_text(base_url: str, key: str, model: str,
 
 def _probe_vision(base_url: str, key: str, model: str,
                   timeout_s: float) -> tuple[bool, str]:
+    # Ollama's documented OpenAI-compatibility schema expects image_url to be
+    # the data-URI STRING itself, not the nested {"url": ...} object accepted
+    # by OpenAI's own API. The nested form caused HTTP 500 on Ollama Cloud.
     body = {
         "model": model,
         "messages": [{
             "role": "user",
             "content": [
-                {"type": "text", "text": "Reply only: OK"},
                 {
                     "type": "image_url",
-                    "image_url": {
-                        "url": "data:image/png;base64," + _TINY_PNG_B64,
-                    },
+                    "image_url": (
+                        "data:image/png;base64," + _PROBE_PNG_B64
+                    ),
+                },
+                {
+                    "type": "text",
+                    "text": (
+                        "What is the dominant color of the square? "
+                        "Reply with one color word only."
+                    ),
                 },
             ],
         }],
         "temperature": 0.0,
-        "max_tokens": 8,
+        "max_tokens": 12,
     }
     try:
         payload = _post(base_url, key, body, timeout_s)
-        return bool(_extract_text(payload)), "vision=yes"
+        answer = _extract_text(payload).strip().lower()
+        ok = "red" in answer
+        return ok, (
+            "vision=yes verified=red_square"
+            if ok else f"vision=unverified answer={answer[:60]!r}"
+        )
     except urllib.error.HTTPError as exc:
         if int(exc.code) in {400, 500, 502, 503, 504}:
             return False, (
