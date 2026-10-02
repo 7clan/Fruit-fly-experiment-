@@ -228,12 +228,31 @@ Return ONLY JSON with exactly:
         # Multimodal models perform better when the authoritative visual
         # observation precedes the long instruction/state text.
         content = []
+        if previous_image_b64:
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": (
+                        "data:image/jpeg;base64,"
+                        + previous_image_b64),
+                },
+            })
+            content.append({
+                "type": "text",
+                "text": (
+                    "PREVIOUS GAME FRAME: use only for visual change, "
+                    "motion, dialogue transitions and stuck/progress cues."),
+            })
         if image_b64:
             content.append({
                 "type": "image_url",
                 "image_url": {
                     "url": "data:image/jpeg;base64," + image_b64,
                 },
+            })
+            content.append({
+                "type": "text",
+                "text": "CURRENT GAME FRAME: authoritative current view.",
             })
         content.append({"type": "text", "text": prompt})
 
