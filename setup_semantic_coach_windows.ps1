@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "== DigitalFlyLab semantic coach setup ==" -ForegroundColor Cyan
 Write-Host "Provider: Google Gemini API" -ForegroundColor Yellow
 Write-Host "Default model: gemini-3.5-flash-lite (stable, multimodal, lower-cost current model)." -ForegroundColor Yellow
-Write-Host "Gemini 2.5 Flash-Lite is cheaper but Google limits it for new projects, so 3.1 is the practical default." -ForegroundColor DarkYellow
+Write-Host "Gemini 3.5 Flash-Lite is the preferred low-latency multimodal model for new projects." -ForegroundColor DarkYellow
 Write-Host "The key is saved as a USER environment variable, not in the repository." -ForegroundColor DarkYellow
 Write-Host ""
 Write-Host "Opening Google AI Studio API-key page..." -ForegroundColor Cyan
@@ -42,4 +42,4 @@ Write-Host "Model: $model" -ForegroundColor Green
 Write-Host "The API key was NOT written to a project file." -ForegroundColor Green
 Write-Host ""
 Write-Host "Next command:" -ForegroundColor Cyan
-Write-Host ".\run_autonomous_questing_windows.ps1" -ForegroundColor White
+Write-Host ".\run_ai_only_windows.ps1" -ForegroundColor White
