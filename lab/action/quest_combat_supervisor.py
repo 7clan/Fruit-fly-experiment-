@@ -563,9 +563,12 @@ class QuestCombatSupervisor(Worker):
             return
 
         # Yellow QUEST and the green Recommended Quest circle can be
-        # visible at the same time. Fast vision preserves both cues. The
-        # green circle remains the biological navigation target, while a
-        # sufficiently close/centered yellow cue triggers NPC interaction.
+        # visible at the same time. Fast vision preserves both cues.
+        coach_env = self.coach.read()
+        coach_skill = str(
+            ((coach_env.payload or {}).get("skill")
+             if coach_env else "") or "").upper()
+
         if (target_type != "quest_enemy_marker" and yellow_quest
                 and yellow_proximity is not None
                 and yellow_proximity >= 0.72
@@ -579,13 +582,7 @@ class QuestCombatSupervisor(Worker):
                 self._last_interact_ns = now
                 self.stats["quest_interacts"] += 1
 
-        else:
-            coach_env = self.coach.read()
-            coach_skill = str(
-                ((coach_env.payload or {}).get("skill")
-                 if coach_env else "") or "").upper()
-
-        if (target_type == "quest_enemy_marker"
+        elif (target_type == "quest_enemy_marker"
                 and (not yellow_quest
                      or coach_skill == "FIGHT_QUEST_TARGET")):
             if proximity is not None and proximity >= 0.70:
@@ -628,7 +625,7 @@ class QuestCombatSupervisor(Worker):
         elif target_type == "recommended_quest_waypoint":
             self._phase = "travel"
 
-        elif target_type != "quest_enemy_marker":
+        else:
             # No objective in view: wait for the semantic coach / next game
             # observation instead of taking over the user's camera.
             self._phase = "await_visible_target"
