@@ -851,3 +851,75 @@ def test_stuck_navigation_waits_for_recovery_replan_instead_of_driving_wall():
     sup._stuck = True
     sup.step()
     assert bus.state("action.command").read() is None
+
+
+
+def test_active_quest_latches_through_brief_marker_loss():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.2,
+            "distance": 0.4,
+            "confidence": 0.9,
+        },
+        {
+            "plan_id": 126,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "quest objective",
+            "confidence": 0.95,
+            "explanation": "follow active quest",
+            "perception": {"quest_state": "active"},
+        },
+        notes={"quest_enemy_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    assert sup._quest_active_latched is True
+
+    # Marker leaves the camera; active quest must not become "available"
+    # just because the yellow giver happens to be visible again.
+    bus.state("world.observation").write({
+        "target": {
+            "type": "quest_marker",
+            "direction": 0.0,
+            "distance": 0.7,
+            "confidence": 0.9,
+        },
+        "player": {
+            "health": 1.0,
+            "health_units": "fraction",
+            "stamina": 1.0,
+        },
+        "notes": {
+            "quest_marker_detected": True,
+            "quest_marker_direction": 0.0,
+            "quest_marker_proximity": 0.7,
+        },
+    })
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["quest_status"] == "active"
+    assert state["quest_active_latched"] is True
+
+
+def test_ai_completed_state_clears_active_quest_latch():
+    bus = _armed_bus(
+        {"type": "none", "direction": None, "distance": None,
+         "confidence": 0.0},
+        {
+            "plan_id": 127,
+            "skill": "REOBSERVE",
+            "target": "none",
+            "confidence": 0.95,
+            "explanation": "quest reward/completion is visible",
+            "perception": {"quest_state": "completed"},
+        },
+        notes={},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup._quest_active_latched = True
+    sup._quest_status = "active"
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["quest_status"] == "completed"
+    assert state["quest_active_latched"] is False
