@@ -43,7 +43,8 @@ from .bus import Bus, BusMode
 from .capture.base import (CaptureAdapter, SyntheticCapture,
                            create_windows_capture)
 from .clock import SHARED_CLOCK
-from .coach import SemanticCoachWorker, LocalSmolVLMCoachWorker
+from .coach import (
+    SemanticCoachWorker, LocalSmolVLMCoachWorker, LocalSmolLMCoachWorker)
 from .dashboard.dashboard import (
     DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
 from .evidence import EvidenceRecorder
@@ -170,7 +171,7 @@ class DigitalFlyLab:
         if self.quest_autonomy and semantic_coach:
             provider = str(coach_provider or "gemini").strip().lower()
             if provider == "local":
-                self.semantic_coach = LocalSmolVLMCoachWorker(
+                self.semantic_coach = LocalSmolLMCoachWorker(
                     self.bus,
                     target_hz=float(coach_hz),
                     model=coach_model,
