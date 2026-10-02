@@ -1,5 +1,5 @@
 # run_autonomous_questing_windows.ps1
-# Canonical fly navigation + LOCAL SmolVLM2 semantic coach + quest/PvE supervisor.
+# Canonical fly navigation + LOCAL SmolLM2 semantic coach + quest/PvE supervisor.
 # F12 is the global emergency stop. No cloud API key is required.
 
 $ErrorActionPreference = "Stop"
@@ -16,8 +16,8 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-$modelSpec = "ggml-org/SmolVLM2-256M-Video-Instruct-GGUF:Q4_K_M"
-$modelAlias = "smolvlm2-256m"
+$modelSpec = "ggml-org/SmolLM2-135M-Video-Instruct-GGUF:Q4_K_M"
+$modelAlias = "smollm2-135m"
 $port = 18080
 $baseUrl = "http://127.0.0.1:$port"
 $apiUrl = "$baseUrl/v1"
@@ -69,10 +69,10 @@ if (-not $serverExe) {
 }
 
 Write-Host "Fly brain contributes approach/retreat/escape; local AI selects skills and fresh CV servo handles time-critical target steering." -ForegroundColor Green
-Write-Host "LOCAL AI: SmolVLM2-256M Q4_K_M via llama.cpp; no Gemini/API key." -ForegroundColor Green
-Write-Host "Local AI performs token-only skill selection on scene changes/~90s; expensive image reasoning remains rare." -ForegroundColor Yellow
+Write-Host "LOCAL AI: SmolLM2-135M Q4_K_M via llama.cpp; no Gemini/API key." -ForegroundColor Green
+Write-Host "Local AI is TEXT ONLY: OpenCV sees the game; SmolLM selects a bounded skill from structured state." -ForegroundColor Yellow
 Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
-Write-Host "Local AI may reason about quests, obstacles, combat, visible shops, equipment and ships using the offline GPO playbook." -ForegroundColor Yellow
+Write-Host "No vision tower is loaded. UI/shop actions still require structured perception to expose a safe action." -ForegroundColor Yellow
 Write-Host "CPU policy: llama.cpp uses ONE low-priority CPU thread in short bursts; zero GPU layers." -ForegroundColor Yellow
 Write-Host "Dashboard: ENABLE, DISABLE, REFOCUS, RELEASE KEYS, END RUN, EMERGENCY STOP." -ForegroundColor Yellow
 Write-Host "Backup hotkeys: F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Yellow
@@ -83,8 +83,8 @@ if (-not (Test-Health)) {
     $stdout = Join-Path $logDir "live_server.stdout.log"
     $stderr = Join-Path $logDir "live_server.stderr.log"
     Remove-Item $stdout,$stderr -Force -ErrorAction SilentlyContinue
-    $serverArgs = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "1", "--threads-batch", "1", "--ctx-size", "2048", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-warmup", "--no-webui")
-    Write-Host "Starting local SmolVLM server..." -ForegroundColor Cyan
+    $serverArgs = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "1", "--threads-batch", "1", "--ctx-size", "1024", "--parallel", "1", "--n-gpu-layers", "0", "--no-warmup", "--no-webui")
+    Write-Host "Starting local SmolLM server..." -ForegroundColor Cyan
     $serverProc = Start-Process -FilePath $serverExe -ArgumentList $serverArgs -PassThru -WindowStyle Minimized -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     try {
         $serverProc.PriorityClass = "Idle"
@@ -129,7 +129,7 @@ if (-not (Test-Health)) {
         if ($serverProc -and -not $serverProc.HasExited) {
             Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
         }
-        throw "Local SmolVLM server failed to start. Last log: $tail"
+        throw "Local SmolLM server failed to start. Last log: $tail"
     }
 }
 
@@ -143,7 +143,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 Write-Host "Local coach READY: $modelAlias" -ForegroundColor Green
-Write-Host "Low-power profile: capture/CV 3 Hz, x2 downsample, AI skill calls scene-gated/~90s, visual reasoning rare." -ForegroundColor Yellow
+Write-Host "Low-power profile: capture/CV 3 Hz, x2 downsample, 135M text selector; no local image inference." -ForegroundColor Yellow
 
 $exitCode = 1
 try {
@@ -152,7 +152,7 @@ try {
 }
 finally {
     if ($serverProc -and -not $serverProc.HasExited) {
-        Write-Host "Stopping local SmolVLM server..." -ForegroundColor DarkGray
+        Write-Host "Stopping local SmolLM server..." -ForegroundColor DarkGray
         Stop-Process -Id $serverProc.Id -Force -ErrorAction SilentlyContinue
         $serverProc.WaitForExit()
     }
