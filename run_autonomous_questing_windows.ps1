@@ -17,7 +17,7 @@ $env:OPENBLAS_NUM_THREADS = "1"
 $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
-Write-Host "== GATE 7D CLOUD: DIGITAL FLY + OLLAMA DEEPSEEK V4.1 FLASH COACH ==" -ForegroundColor Cyan
+Write-Host "== GATE 7D CLOUD: DIGITAL FLY + OLLAMA CLOUD COACH ==" -ForegroundColor Cyan
 
 & $mainPython -c "from lab.action.windows_input import _INPUT,_EXPECTED_INPUT_SIZE; import ctypes; s=ctypes.sizeof(_INPUT); print(f'[preflight] Win32 INPUT size={s} expected={_EXPECTED_INPUT_SIZE}'); raise SystemExit(0 if s==_EXPECTED_INPUT_SIZE else 2)"
 if ($LASTEXITCODE -ne 0) {
@@ -49,8 +49,8 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
 }
 
 Write-Host "Fly brain owns biological approach/retreat/escape signals." -ForegroundColor Green
-Write-Host "CLOUD AI: DeepSeek V4.1 Flash selects high-level skills and can inspect occasional game frames." -ForegroundColor Green
-Write-Host "Model: deepseek-v4.1-flash via Ollama OpenAI-compatible cloud API." -ForegroundColor Yellow
+Write-Host "CLOUD AI: the resolved Ollama Cloud model selects high-level skills; runtime records whether image calls actually succeed." -ForegroundColor Green
+Write-Host "Requested model: $($env:OLLAMA_CLOUD_MODEL) via Ollama OpenAI-compatible cloud API." -ForegroundColor Yellow
 Write-Host "No local language/vision model will run beside Roblox + Brian2." -ForegroundColor Yellow
 Write-Host "Camera policy: autonomy NEVER rotates/drags your camera." -ForegroundColor Yellow
 Write-Host "Combat: coach can EQUIP a verified hotbar slot; quest-target light attacks become real M1/left-clicks." -ForegroundColor Yellow
