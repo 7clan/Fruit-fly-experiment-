@@ -101,6 +101,8 @@ CONTROL DISCIPLINE:
   conflict with static knowledge.
 - If a route is blocked choose JUMP, CLIMB, GO_AROUND, BACKTRACK, GEPPO or a
   verified movement control yourself.
+- If the useful target is off-screen, choose LOOK_LEFT or LOOK_RIGHT. Those
+  are the only camera-turn actions in this branch.
 - If uncertain choose REOBSERVE or WAIT.
 - When useful, request a short GPO wiki query; after retrieval, make the final
   decision instead of requesting another lookup.
