@@ -39,14 +39,14 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
         target_hz: float = 0.5,
         model: str | None = None,
         base_url: str | None = None,
-        timeout_s: float = 15.0,
+        timeout_s: float = 8.0,
     ):
         super().__init__(
             bus,
             target_hz=target_hz,
             model=model or DEFAULT_LOCAL_MODEL,
-            min_call_interval_s=30.0,
-            unchanged_refresh_s=90.0,
+            min_call_interval_s=45.0,
+            unchanged_refresh_s=120.0,
             timeout_s=timeout_s,
             api_key="local-no-key",
         )
@@ -57,6 +57,9 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
         self._last_ai_call_ns = 0
         self._last_plan_signature = None
         self._text_backoff_until_ns = 0
+        self._last_model_signature = None
+        self._last_model_skill = None
+        self._same_model_skill_streak = 0
         self.stats.update({
             "provider": self.provider,
             "base_url": self.base_url,
@@ -84,60 +87,49 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
             return None
 
     def _skill_prompt(
-            self, candidate: dict, obs: dict, quest: dict) -> str:
-        """Keep the prompt tiny; all detailed arguments remain deterministic."""
+            self, candidate: dict, obs: dict, quest: dict,
+            choices: list[str]) -> str:
+        """Tiny index-selection prompt; the model emits one digit only."""
         target = dict(obs.get("target") or {})
         notes = dict(obs.get("notes") or {})
         player = dict(obs.get("player") or {})
-        card_id = str(candidate.get("skill_card") or "")
-        allowed = sorted(self._card_actions(card_id))
         state = {
-            "card": card_id,
             "candidate": str(candidate.get("skill") or ""),
             "target": str(target.get("type") or "none"),
             "dir": self._f(target.get("direction")),
             "dist": self._f(target.get("distance")),
-            "conf": self._f(target.get("confidence")),
             "phase": str(quest.get("phase") or ""),
             "hp": self._f(player.get("health")),
-            "st": self._f(player.get("stamina")),
             "yellow": bool(notes.get("quest_marker_detected")),
-            "yellow_near": self._f(notes.get("quest_marker_proximity")),
-            "yellow_dir": self._f(notes.get("quest_marker_direction")),
-            "red_enemy": bool(notes.get("red_enemy")),
+            "red": bool(notes.get("quest_enemy_marker_detected")
+                        or notes.get("red_enemy")),
         }
+        mapping = ";".join(
+            f"{idx}={skill}" for idx, skill in enumerate(choices))
         return (
-            "GPO controller. Pick exactly one ALLOWED skill. "
-            "Prefer CANDIDATE unless the state clearly requires another "
-            "allowed skill. Never invent a skill. "
-            "Quest-marked enemies only; ordinary players are never targets. "
+            "GPO control. Return the INDEX of the best action. "
+            "Prefer candidate unless clearly wrong. Never target players. "
             f"STATE={json.dumps(state, separators=(',', ':'))} "
-            f"ALLOWED={'|'.join(allowed)}"
+            f"CHOICES={mapping} INDEX="
         )
 
-    def _call_skill(self, prompt: str, allowed: set[str]) -> str:
-        """Schema-constrained one-field decision via llama.cpp."""
+    def _call_skill(self, prompt: str, choices: list[str]) -> str:
+        """One-character constrained decision via llama.cpp.
+
+        This avoids generating JSON on the old CPU. The user-supplied GBNF
+        grammar restricts output to a single valid choice index.
+        """
         endpoint = self.base_url + "/chat/completions"
-        choices = sorted(allowed)
+        if not choices or len(choices) > 9:
+            raise ValueError(f"unsupported choice count: {len(choices)}")
+        grammar = "root ::= " + " | ".join(
+            f'\"{idx}\"' for idx in range(len(choices)))
         body = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.0,
-            "max_tokens": 24,
-            "response_format": {
-                "type": "json_object",
-                "schema": {
-                    "type": "object",
-                    "properties": {
-                        "skill": {
-                            "type": "string",
-                            "enum": choices,
-                        },
-                    },
-                    "required": ["skill"],
-                    "additionalProperties": False,
-                },
-            },
+            "max_tokens": 2,
+            "grammar": grammar,
         }
         raw = json.dumps(body).encode("utf-8")
         req = urllib.request.Request(
@@ -161,13 +153,15 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
         ).strip()
         if not text:
             raise RuntimeError(
-                f"SmolLM returned no text: {str(payload)[:300]}")
-        parsed = json.loads(text)
-        skill = str(parsed.get("skill") or "").strip().upper()
-        if skill not in allowed:
+                f"SmolLM returned no choice: {str(payload)[:300]}")
+        try:
+            idx = int(text[0])
+        except (ValueError, IndexError) as exc:
+            raise ValueError(f"SmolLM returned invalid index {text!r}") from exc
+        if idx < 0 or idx >= len(choices):
             raise ValueError(
-                f"SmolLM selected {skill!r}; allowed={sorted(allowed)}")
-        return skill
+                f"SmolLM index {idx} outside choices={choices}")
+        return choices[idx]
 
     def _publish(
             self, raw: dict, catalog: dict, now_ns: int, *,
@@ -228,7 +222,22 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
             self, candidate: dict, obs: dict, quest: dict,
             catalog: dict, now_ns: int) -> bool:
         allowed = self._card_actions(candidate.get("skill_card"))
-        prompt = self._skill_prompt(candidate, obs, quest)
+        signature = (
+            str(candidate.get("skill_card") or ""),
+            str(candidate.get("scene") or ""),
+            str((obs.get("target") or {}).get("type") or ""),
+        )
+        choices = sorted(allowed)
+        # If the tiny model repeats the same recovery skill twice without the
+        # structured scene changing, force it to try another safe option.
+        if (
+                signature == self._last_model_signature
+                and self._same_model_skill_streak >= 2
+                and self._last_model_skill in choices
+                and len(choices) > 1):
+            choices = [
+                x for x in choices if x != self._last_model_skill]
+        prompt = self._skill_prompt(candidate, obs, quest, choices)
         t0 = time.perf_counter()
         self.stats["calls"] = int(self.stats.get("calls", 0)) + 1
         self.stats["text_skill_calls"] = int(
@@ -236,12 +245,20 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
         self.stats["schema_constrained_calls"] = int(
             self.stats.get("schema_constrained_calls", 0)) + 1
         try:
-            chosen = self._call_skill(prompt, allowed)
+            chosen = self._call_skill(prompt, choices)
+            if (
+                    signature == self._last_model_signature
+                    and chosen == self._last_model_skill):
+                self._same_model_skill_streak += 1
+            else:
+                self._same_model_skill_streak = 1
+            self._last_model_signature = signature
+            self._last_model_skill = chosen
             merged = dict(candidate)
             merged["skill"] = chosen
             merged["explanation"] = (
                 f"SmolLM2-135M selected {chosen} from "
-                f"{sorted(allowed)}.")
+                f"{choices}.")
             self._publish(
                 merged, catalog, now_ns,
                 provider="local_smollm2_135m_skill",
@@ -295,7 +312,7 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
         )
         ai_due = (
             signature != self._last_ai_signature
-            or now - self._last_ai_call_ns >= int(30.0e9)
+            or now - self._last_ai_call_ns >= int(45.0e9)
         )
 
         if ai_due and now >= self._text_backoff_until_ns:
@@ -313,7 +330,7 @@ class LocalSmolLMCoachWorker(SemanticCoachWorker):
                 self.stats["last_error"] = repr(exc)
                 # Back off so Brian2 keeps priority if the tiny model has an
                 # unexpected slow path on this old CPU.
-                self._text_backoff_until_ns = now + int(60.0e9)
+                self._text_backoff_until_ns = now + int(90.0e9)
                 self.events.publish({
                     "kind": "coach_error",
                     "ts_ns": now,
