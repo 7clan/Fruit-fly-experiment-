@@ -137,7 +137,8 @@ class DigitalFlyLab:
             # Brian2 workload, so spend that CPU budget on tracked humanoid
             # roles; the cloud controller needs a real enemy BODY distinct
             # from the red quest objective marker.
-            role_detection=(self.ai_only or not active_low_power))
+            role_detection=(self.ai_only or not active_low_power),
+            role_detection_stride=(3 if self.ai_only else 1))
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
