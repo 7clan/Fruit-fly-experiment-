@@ -1,11 +1,21 @@
-"""Execution adapter for the AI-only GPO branch.
+"""Execution adapter + perception state for the AI-only GPO branch.
 
-The cloud AI is the only gameplay decision-maker. This worker never invents a
-quest/combat strategy. It only keeps the AI's most recent explicit skill alive
-long enough to execute against fresh screen geometry.
+The cloud AI owns gameplay decisions. This worker does not pick quests or
+strategies; it (1) publishes stable facts the model needs and (2) realizes the
+model's selected skill against fresh screen geometry.
+
+Important separation:
+- yellow marker = quest giver
+- green marker = recommended travel waypoint
+- red quest marker = objective/location cue
+- quest_enemy_actor = persistent hostile NPC body associated with that red cue
+
+Only the last item is eligible for melee clicks.
 """
 
 from __future__ import annotations
+
+from collections import deque
 
 from ..bus import Bus, StateChannel
 from ..worker import Worker
@@ -21,10 +31,35 @@ class AIOnlyAutopilotSupervisor(Worker):
         self.meta: StateChannel = bus.state("action.meta")
         self.command: StateChannel = bus.state("action.command")
         self.state: StateChannel = bus.state("quest.state")
+
         self._command_id = 0
-        self._last_plan_id = -1
         self._last_emit_ns = 0
         self._last_one_shot_plan_id = -1
+        self._last_log_ns = 0
+        self._last_log_sig = None
+
+        # Stable game-state memory derived from perception + actions actually
+        # emitted. These are facts for the AI, not hidden gameplay decisions.
+        self._quest_status = "unknown"
+        self._last_enemy_marker_ns = 0
+        self._last_yellow_marker_ns = 0
+        self._last_waypoint_ns = 0
+        self._last_actor_ns = 0
+        self._await_quest_until_ns = 0
+        self._last_interact_ns = 0
+        self._last_action_ns = 0
+        self._last_action_name = None
+        self._last_equipped_slot = None
+
+        # Progress/circling monitor. Proximity is the detector contract where
+        # larger values mean visually closer.
+        self._progress_target = None
+        self._best_proximity = None
+        self._last_progress_ns = 0
+        self._direction_history = deque(maxlen=20)
+        self._stuck = False
+        self._circling = False
+
         self.stats.update({
             "commands": 0,
             "navigation_commands": 0,
@@ -32,6 +67,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             "interaction_commands": 0,
             "one_shot_commands": 0,
             "ignored_plans": 0,
+            "suppressed_duplicate_logs": 0,
+            "quest_interact_suppressed": 0,
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
         })
@@ -48,11 +85,12 @@ class AIOnlyAutopilotSupervisor(Worker):
         return bool(env and (env.payload or {}).get("autonomy"))
 
     def _emit(self, name: str, now_ns: int, *, reason: str,
-              ttl_s: float = 1.0, **extra) -> None:
+              ttl_s: float = 1.4, **extra) -> None:
         self._command_id += 1
+        name = str(name).upper()
         self.command.write({
             "command_id": self._command_id,
-            "name": str(name).upper(),
+            "name": name,
             "source": self.name,
             "reason": str(reason)[:240],
             "ts_ns": now_ns,
@@ -62,28 +100,30 @@ class AIOnlyAutopilotSupervisor(Worker):
             **extra,
         }, ts_ns=now_ns)
         self._last_emit_ns = now_ns
+        self._last_action_ns = now_ns
+        self._last_action_name = name
         self.stats["commands"] += 1
-        print(
-            f"[AI-ONLY->EXEC] {name} "
-            f"plan={extra.get('coach_plan_id', '-')} "
-            f"reason={str(reason)[:120]}",
-            flush=True,
-        )
 
-    def _publish(self, now_ns: int, plan: dict, obs: dict) -> None:
-        target = obs.get("target") or {}
-        self.state.write({
-            "ts_ns": now_ns,
-            "phase": "ai:" + str(plan.get("skill") or "WAIT").lower(),
-            "target_type": target.get("type"),
-            "target_proximity": target.get("distance"),
-            "ai_plan_id": plan.get("plan_id"),
-            "ai_skill": plan.get("skill"),
-            "ai_target": plan.get("target"),
-            "decision_owner": "cloud_ai",
-            "fruit_fly_control": False,
-            "AI_ONLY": True,
-        }, ts_ns=now_ns)
+        # Persistent servo/attack commands must repeat physically, but the
+        # terminal should not print the same objective 20 times.
+        sig = (name, extra.get("coach_plan_id"), extra.get("target_type"))
+        repeat = name in {"STEER_TARGET", "ATTACK_LIGHT"}
+        log_due = (
+            sig != self._last_log_sig
+            or now_ns - self._last_log_ns >= int(3.5e9)
+            or not repeat
+        )
+        if log_due:
+            print(
+                f"[AI-ONLY->EXEC] {name} "
+                f"plan={extra.get('coach_plan_id', '-')} "
+                f"reason={str(reason)[:120]}",
+                flush=True,
+            )
+            self._last_log_sig = sig
+            self._last_log_ns = now_ns
+        else:
+            self.stats["suppressed_duplicate_logs"] += 1
 
     def _one_shot(self, pid: int) -> bool:
         if pid == self._last_one_shot_plan_id:
@@ -91,28 +131,167 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._last_one_shot_plan_id = pid
         return True
 
+    def _observe(self, now_ns: int, obs: dict) -> None:
+        notes = obs.get("notes") or {}
+        target = obs.get("target") or {}
+        ttype = str(target.get("type") or "none")
+        proximity = self._f(target.get("distance"))
+        direction = self._f(target.get("direction"))
+
+        yellow = bool(notes.get("quest_marker_detected"))
+        green = bool(notes.get("recommended_waypoint_detected"))
+        red = bool(notes.get("quest_enemy_marker_detected"))
+        actor = bool(
+            notes.get("quest_enemy_actor_visible")
+            or ttype == "quest_enemy_actor")
+
+        if yellow:
+            self._last_yellow_marker_ns = now_ns
+        if green:
+            self._last_waypoint_ns = now_ns
+        if red:
+            self._last_enemy_marker_ns = now_ns
+        if actor:
+            self._last_actor_ns = now_ns
+
+        # Quest status is perception-derived and intentionally sticky across
+        # brief occlusion/camera motion.
+        if red or actor:
+            self._quest_status = "active"
+            self._await_quest_until_ns = 0
+        elif now_ns < self._await_quest_until_ns:
+            self._quest_status = "pending_accept"
+        elif (self._last_enemy_marker_ns
+              and now_ns - self._last_enemy_marker_ns < int(8.0e9)):
+            self._quest_status = "active"
+        elif yellow:
+            self._quest_status = "available"
+        elif green:
+            self._quest_status = "travel_to_quest_giver"
+        else:
+            self._quest_status = "unknown"
+
+        # Progress monitor uses the current sensory target, not the AI prose.
+        target_key = ttype if ttype != "none" else None
+        if target_key != self._progress_target:
+            self._progress_target = target_key
+            self._best_proximity = proximity
+            self._last_progress_ns = now_ns
+            self._direction_history.clear()
+            self._stuck = False
+            self._circling = False
+        elif proximity is not None:
+            if (self._best_proximity is None
+                    or proximity > self._best_proximity + 0.035):
+                self._best_proximity = proximity
+                self._last_progress_ns = now_ns
+                self._stuck = False
+                self._circling = False
+            elif (self._last_progress_ns
+                  and now_ns - self._last_progress_ns > int(4.5e9)
+                  and proximity < 0.72):
+                self._stuck = True
+
+        if direction is not None and abs(direction) >= 0.26:
+            sign = -1 if direction < 0 else 1
+            self._direction_history.append((now_ns, sign))
+            cutoff = now_ns - int(5.0e9)
+            recent = [
+                s for ts, s in self._direction_history if ts >= cutoff]
+            flips = sum(
+                1 for i in range(1, len(recent))
+                if recent[i] != recent[i - 1])
+            self._circling = bool(self._stuck and flips >= 4)
+
+    def _publish_state(self, now_ns: int, obs: dict,
+                       plan: dict | None = None) -> None:
+        target = obs.get("target") or {}
+        notes = obs.get("notes") or {}
+        actor = notes.get("quest_enemy_actor") or {}
+        action_age = (
+            round((now_ns - self._last_action_ns) / 1e9, 2)
+            if self._last_action_ns else None)
+        interact_age = (
+            round((now_ns - self._last_interact_ns) / 1e9, 2)
+            if self._last_interact_ns else None)
+        self.state.write({
+            "ts_ns": now_ns,
+            "phase": self._quest_status,
+            "quest_status": self._quest_status,
+            "quest_active": self._quest_status == "active",
+            "awaiting_quest_confirmation": (
+                now_ns < self._await_quest_until_ns),
+            "quest_giver_visible": bool(
+                notes.get("quest_marker_detected")),
+            "recommended_waypoint_visible": bool(
+                notes.get("recommended_waypoint_detected")),
+            "quest_enemy_objective_visible": bool(
+                notes.get("quest_enemy_marker_detected")),
+            "quest_enemy_actor_visible": bool(
+                notes.get("quest_enemy_actor_visible")),
+            "quest_enemy_actor": actor,
+            "target_type": target.get("type"),
+            "target_proximity": target.get("distance"),
+            "target_direction": target.get("direction"),
+            "stuck": bool(self._stuck),
+            "circling": bool(self._circling),
+            "last_action": self._last_action_name,
+            "last_action_age_s": action_age,
+            "last_quest_interact_age_s": interact_age,
+            "last_equipped_slot": self._last_equipped_slot,
+            "ai_plan_id": (plan or {}).get("plan_id"),
+            "ai_skill": (plan or {}).get("skill"),
+            "ai_target": (plan or {}).get("target"),
+            "decision_owner": "cloud_ai",
+            "fruit_fly_control": False,
+            "AI_ONLY": True,
+        }, ts_ns=now_ns)
+
+    def _steer(self, now_ns: int, *, direction: float, pid: int,
+               confidence: float, reason: str, target_type: str,
+               hold_s: float = 1.05) -> None:
+        if now_ns - self._last_emit_ns < int(0.86e9):
+            return
+        self._emit(
+            "STEER_TARGET", now_ns, reason=reason, ttl_s=1.6,
+            direction=float(direction), hold_s=float(hold_s),
+            camera_align=True,
+            coach_plan_id=pid, coach_confidence=confidence,
+            target_type=target_type)
+        self.stats["navigation_commands"] += 1
+
     def step(self) -> None:
         if not self._armed():
             return
+
         oenv = self.obs.read()
-        penv = self.plan.read()
-        if oenv is None or penv is None:
+        if oenv is None:
             return
         obs = oenv.payload or {}
-        plan = penv.payload or {}
-        if plan.get("enabled") is False:
+        now = self.clock.now_ns()
+        self._observe(now, obs)
+
+        penv = self.plan.read()
+        if penv is None:
+            self._publish_state(now, obs, None)
             return
 
-        now = self.clock.now_ns()
+        plan = penv.payload or {}
+        if plan.get("enabled") is False:
+            self._publish_state(now, obs, plan)
+            return
+
         try:
             pid = int(plan.get("plan_id", -1))
             pts = int(plan.get("ts_ns", penv.ts_ns))
             confidence = float(plan.get("confidence", 0.0))
         except (TypeError, ValueError):
             self.stats["ignored_plans"] += 1
+            self._publish_state(now, obs, plan)
             return
-        if pid < 0 or now - pts > int(24.0e9) or confidence < 0.60:
+        if pid < 0 or now - pts > int(32.0e9) or confidence < 0.55:
             self.stats["ignored_plans"] += 1
+            self._publish_state(now, obs, plan)
             return
 
         skill = str(plan.get("skill") or "WAIT").upper()
@@ -122,162 +301,238 @@ class AIOnlyAutopilotSupervisor(Worker):
         direction = self._f(target.get("direction"))
         proximity = self._f(target.get("distance"))
         reason = "ai_only:" + str(plan.get("explanation") or skill)
-        self._last_plan_id = pid
 
-        # Long-running skills are repeatedly realized against FRESH geometry.
         if skill in {"NAVIGATE_OBJECTIVE", "TRAVEL"}:
-            if (ttype in {"recommended_quest_waypoint", "quest_marker",
-                          "quest_enemy_marker"}
-                    and direction is not None and proximity is not None
-                    and now - self._last_emit_ns >= int(0.52e9)):
-                self._emit(
-                    "STEER_TARGET", now, reason=reason, ttl_s=0.9,
-                    direction=direction, hold_s=0.62,
-                    coach_plan_id=pid, coach_confidence=confidence,
+            if (ttype in {
+                    "recommended_quest_waypoint", "quest_marker",
+                    "quest_enemy_marker", "quest_enemy_actor"}
+                    and direction is not None and proximity is not None):
+                self._steer(
+                    now, direction=direction, pid=pid,
+                    confidence=confidence, reason=reason,
                     target_type=ttype)
-                self.stats["navigation_commands"] += 1
 
         elif skill in {"TAKE_QUEST", "INTERACT"}:
-            yellow = bool(notes.get("quest_marker_detected", False))
-            ydir = self._f(notes.get("quest_marker_direction"))
-            yprox = self._f(notes.get("quest_marker_proximity"))
-            if yellow and ydir is not None and yprox is not None:
-                if yprox >= 0.70 and abs(ydir) <= 0.50:
-                    if now - self._last_emit_ns >= int(1.25e9):
-                        self._emit(
-                            "INTERACT_QUEST", now, reason=reason,
-                            coach_plan_id=pid,
-                            coach_confidence=confidence)
-                        self.stats["interaction_commands"] += 1
-                elif now - self._last_emit_ns >= int(0.52e9):
-                    self._emit(
-                        "STEER_TARGET", now, reason=reason, ttl_s=0.9,
-                        direction=ydir, hold_s=0.62,
-                        coach_plan_id=pid, coach_confidence=confidence,
-                        target_type="quest_marker")
-                    self.stats["navigation_commands"] += 1
+            # Never retake while perception says an objective is already live.
+            if self._quest_status == "active":
+                pass
+            elif now < self._await_quest_until_ns:
+                self.stats["quest_interact_suppressed"] += 1
+            else:
+                yellow = bool(notes.get("quest_marker_detected", False))
+                ydir = self._f(notes.get("quest_marker_direction"))
+                yprox = self._f(notes.get("quest_marker_proximity"))
+                if yellow and ydir is not None and yprox is not None:
+                    # The old 0.70 threshold kept orbiting Robert forever.
+                    # At >=0.48 and reasonably centered, T is the useful next
+                    # physical primitive. Then wait for dialogue/red objective.
+                    if yprox >= 0.48 and abs(ydir) <= 0.72:
+                        if (not self._last_interact_ns
+                                or now - self._last_interact_ns >= int(4.0e9)):
+                            self._emit(
+                                "INTERACT_QUEST", now, reason=reason,
+                                coach_plan_id=pid,
+                                coach_confidence=confidence,
+                                target_type="quest_marker")
+                            self._last_interact_ns = now
+                            self._await_quest_until_ns = now + int(5.5e9)
+                            self._quest_status = "pending_accept"
+                            self.stats["interaction_commands"] += 1
+                    else:
+                        self._steer(
+                            now, direction=ydir, pid=pid,
+                            confidence=confidence, reason=reason,
+                            target_type="quest_marker")
 
         elif skill == "FIGHT_QUEST_TARGET":
-            # Hard identity gate stays below the AI: the plan may only become
-            # physical combat while current CV confirms the quest-enemy marker.
-            if (ttype == "quest_enemy_marker"
-                    and direction is not None and proximity is not None):
-                if proximity >= 0.66:
-                    if now - self._last_emit_ns >= int(0.42e9):
+            # Never M1 a red objective dot. Require the persistent NPC body
+            # associated with the active quest.
+            actor = notes.get("quest_enemy_actor") or {}
+            actor_visible = bool(
+                notes.get("quest_enemy_actor_visible")
+                or ttype == "quest_enemy_actor")
+            adir = self._f(
+                actor.get("direction"),
+                direction if ttype == "quest_enemy_actor" else None)
+            aprox = self._f(
+                actor.get("distance"),
+                proximity if ttype == "quest_enemy_actor" else None)
+            if actor_visible and adir is not None and aprox is not None:
+                if aprox >= 0.43 and abs(adir) <= 0.95:
+                    if now - self._last_emit_ns >= int(0.34e9):
                         self._emit(
                             "ATTACK_LIGHT", now, reason=reason,
+                            ttl_s=0.8,
                             coach_plan_id=pid,
-                            coach_confidence=confidence)
+                            coach_confidence=confidence,
+                            target_type="quest_enemy_actor")
                         self.stats["combat_commands"] += 1
-                elif now - self._last_emit_ns >= int(0.52e9):
-                    self._emit(
-                        "STEER_TARGET", now, reason=reason, ttl_s=0.9,
-                        direction=direction, hold_s=0.62,
-                        coach_plan_id=pid, coach_confidence=confidence,
-                        target_type=ttype)
-                    self.stats["navigation_commands"] += 1
+                else:
+                    self._steer(
+                        now, direction=adir, pid=pid,
+                        confidence=confidence, reason=reason,
+                        target_type="quest_enemy_actor",
+                        hold_s=0.92)
+            elif (bool(notes.get("quest_enemy_marker_detected"))
+                  and direction is not None):
+                # AI selected combat, but the body is not resolved yet. Move
+                # toward its red objective instead of clicking empty space.
+                self._steer(
+                    now, direction=direction, pid=pid,
+                    confidence=confidence, reason=reason,
+                    target_type="quest_enemy_marker")
 
-        elif skill == "BLOCK" and self._one_shot(pid):
-            self._emit(
-                "BLOCK", now, reason=reason, hold_s=0.60,
-                coach_plan_id=pid, coach_confidence=confidence)
-            self.stats["combat_commands"] += 1
-            self.stats["one_shot_commands"] += 1
-
-        elif skill == "EVADE" and self._one_shot(pid):
-            self._emit(
-                "EVADE_BACK", now, reason=reason,
-                coach_plan_id=pid, coach_confidence=confidence)
-            self.stats["combat_commands"] += 1
-            self.stats["one_shot_commands"] += 1
-
-        elif skill in {"JUMP", "CLIMB", "SPRINT", "GEPPO", "BOARD_SHIP"}:
+        elif skill == "BLOCK":
             if self._one_shot(pid):
                 self._emit(
-                    skill, now, reason=reason,
-                    coach_plan_id=pid, coach_confidence=confidence)
-                self.stats["one_shot_commands"] += 1
-
-        elif skill == "BACKTRACK" and self._one_shot(pid):
-            self._emit(
-                "DASH_BACK", now, reason=reason,
-                coach_plan_id=pid, coach_confidence=confidence)
-            self.stats["one_shot_commands"] += 1
-
-        elif skill in {"LOOK_LEFT", "LOOK_RIGHT"} and self._one_shot(pid):
-            self._emit(
-                "SEARCH_CAMERA", now, reason=reason,
-                dx=(-90 if skill == "LOOK_LEFT" else 90),
-                coach_plan_id=pid, coach_confidence=confidence)
-            self.stats["one_shot_commands"] += 1
-
-        elif skill == "GO_AROUND" and self._one_shot(pid):
-            control_id = str(plan.get("control_id") or "")
-            if control_id in {"move_left", "move_right", "move_backward",
-                              "dash_left", "dash_right", "dash_backward"}:
-                self._emit(
-                    "EXEC_CONTROL", now, reason=reason,
-                    control_id=control_id,
-                    coach_plan_id=pid, coach_confidence=confidence)
-                self.stats["one_shot_commands"] += 1
-
-        elif skill == "USE_HAKI" and self._one_shot(pid):
-            cid = str(plan.get("control_id") or "")
-            name = ("OBSERVATION_HAKI"
-                    if cid == "observation_haki" else "BUSO_HAKI")
-            self._emit(
-                name, now, reason=reason,
-                coach_plan_id=pid, coach_confidence=confidence)
-            self.stats["one_shot_commands"] += 1
-
-        elif skill == "EQUIP_SLOT" and self._one_shot(pid):
-            cid = str(plan.get("control_id") or "")
-            if cid.startswith("equip_slot_"):
-                slot = cid.rsplit("_", 1)[-1]
-                if slot in set("0123456789"):
-                    self._emit(
-                        "EQUIP_SLOT", now, reason=reason, slot=slot,
-                        coach_plan_id=pid, coach_confidence=confidence)
-                    self.stats["one_shot_commands"] += 1
-
-        elif skill == "EXEC_CONTROL" and self._one_shot(pid):
-            cid = str(plan.get("control_id") or "")
-            if cid:
-                self._emit(
-                    "EXEC_CONTROL", now, reason=reason, control_id=cid,
-                    coach_plan_id=pid, coach_confidence=confidence)
-                self.stats["one_shot_commands"] += 1
-
-        elif skill == "USE_OBSERVED_ABILITY" and self._one_shot(pid):
-            ability = plan.get("observed_ability") or {}
-            binding = str(ability.get("binding") or "").strip().upper()
-            label = str(ability.get("label") or "").strip()[:96]
-            if binding and label:
-                self._emit(
-                    "USE_OBSERVED_ABILITY", now, reason=reason,
-                    binding=f"key:{binding}", label=label,
+                    "BLOCK", now, reason=reason, hold_s=0.65,
                     coach_plan_id=pid, coach_confidence=confidence)
                 self.stats["combat_commands"] += 1
                 self.stats["one_shot_commands"] += 1
 
-        elif skill in {"UI_CLICK", "BUY_ITEM"} and self._one_shot(pid):
-            ui = plan.get("ui_click") or {}
-            if bool(ui.get("needed")) and confidence >= 0.85:
-                try:
-                    x = float(ui.get("x_norm"))
-                    y = float(ui.get("y_norm"))
-                except (TypeError, ValueError):
-                    x = y = -1.0
-                if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+        elif skill == "EVADE":
+            if self._one_shot(pid):
+                self._emit(
+                    "EVADE_BACK", now, reason=reason,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["combat_commands"] += 1
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "JUMP":
+            if now - self._last_emit_ns >= int(0.95e9):
+                self._emit(
+                    "JUMP", now, reason=reason,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "CLIMB":
+            if now - self._last_emit_ns >= int(1.15e9):
+                self._emit(
+                    "CLIMB", now, reason=reason, ttl_s=1.8,
+                    hold_s=1.15,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "GEPPO":
+            if now - self._last_emit_ns >= int(0.52e9):
+                self._emit(
+                    "GEPPO", now, reason=reason,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "SPRINT":
+            if now - self._last_emit_ns >= int(3.0e9):
+                self._emit(
+                    "SPRINT", now, reason=reason,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "BOARD_SHIP":
+            if self._one_shot(pid):
+                self._emit(
+                    "BOARD_SHIP", now, reason=reason,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "BACKTRACK":
+            if self._one_shot(pid):
+                self._emit(
+                    "DASH_BACK", now, reason=reason,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill in {"LOOK_LEFT", "LOOK_RIGHT"}:
+            if self._one_shot(pid):
+                self._emit(
+                    "SEARCH_CAMERA", now, reason=reason,
+                    dx=(-105 if skill == "LOOK_LEFT" else 105),
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "GO_AROUND":
+            if self._one_shot(pid):
+                control_id = str(plan.get("control_id") or "")
+                if control_id in {
+                        "move_left", "move_right", "move_backward",
+                        "dash_left", "dash_right", "dash_backward"}:
                     self._emit(
-                        "UI_CLICK", now, reason=reason,
-                        x_norm=x, y_norm=y, confidence=confidence,
-                        ui_context=True,
-                        ui_label=str(ui.get("label") or "")[:96],
-                        purchase_intent=(skill == "BUY_ITEM"),
-                        coach_plan_id=pid,
-                        coach_confidence=confidence)
+                        "EXEC_CONTROL", now, reason=reason,
+                        control_id=control_id,
+                        coach_plan_id=pid, coach_confidence=confidence)
                     self.stats["one_shot_commands"] += 1
 
-        # WAIT and REOBSERVE intentionally emit nothing.
-        self._publish(now, plan, obs)
+        elif skill == "USE_HAKI":
+            if self._one_shot(pid):
+                cid = str(plan.get("control_id") or "")
+                name = (
+                    "OBSERVATION_HAKI"
+                    if cid == "observation_haki"
+                    else "BUSO_HAKI")
+                self._emit(
+                    name, now, reason=reason,
+                    coach_plan_id=pid, coach_confidence=confidence)
+                self.stats["one_shot_commands"] += 1
+
+        elif skill == "EQUIP_SLOT":
+            if self._one_shot(pid):
+                cid = str(plan.get("control_id") or "")
+                if cid.startswith("equip_slot_"):
+                    slot = cid.rsplit("_", 1)[-1]
+                    if slot in set("0123456789"):
+                        self._emit(
+                            "EQUIP_SLOT", now, reason=reason, slot=slot,
+                            coach_plan_id=pid,
+                            coach_confidence=confidence)
+                        self._last_equipped_slot = slot
+                        self.stats["one_shot_commands"] += 1
+
+        elif skill == "EXEC_CONTROL":
+            if self._one_shot(pid):
+                cid = str(plan.get("control_id") or "")
+                if cid:
+                    self._emit(
+                        "EXEC_CONTROL", now, reason=reason,
+                        control_id=cid,
+                        coach_plan_id=pid,
+                        coach_confidence=confidence)
+                    if cid.startswith("equip_slot_"):
+                        self._last_equipped_slot = cid.rsplit("_", 1)[-1]
+                    self.stats["one_shot_commands"] += 1
+
+        elif skill == "USE_OBSERVED_ABILITY":
+            if self._one_shot(pid):
+                ability = plan.get("observed_ability") or {}
+                binding = str(
+                    ability.get("binding") or "").strip().upper()
+                label = str(ability.get("label") or "").strip()[:96]
+                if binding and label:
+                    self._emit(
+                        "USE_OBSERVED_ABILITY", now, reason=reason,
+                        binding=f"key:{binding}", label=label,
+                        coach_plan_id=pid,
+                        coach_confidence=confidence)
+                    self.stats["combat_commands"] += 1
+                    self.stats["one_shot_commands"] += 1
+
+        elif skill in {"UI_CLICK", "BUY_ITEM"}:
+            if self._one_shot(pid):
+                ui = plan.get("ui_click") or {}
+                if bool(ui.get("needed")) and confidence >= 0.80:
+                    try:
+                        x = float(ui.get("x_norm"))
+                        y = float(ui.get("y_norm"))
+                    except (TypeError, ValueError):
+                        x = y = -1.0
+                    if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+                        self._emit(
+                            "UI_CLICK", now, reason=reason,
+                            x_norm=x, y_norm=y, confidence=confidence,
+                            ui_context=True,
+                            ui_label=str(ui.get("label") or "")[:96],
+                            purchase_intent=(skill == "BUY_ITEM"),
+                            coach_plan_id=pid,
+                            coach_confidence=confidence)
+                        self.stats["one_shot_commands"] += 1
+
+        # WAIT and REOBSERVE intentionally emit no physical command.
+        self._publish_state(now, obs, plan)
