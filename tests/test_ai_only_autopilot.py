@@ -848,8 +848,13 @@ def test_stuck_navigation_waits_for_recovery_replan_instead_of_driving_wall():
         notes={"quest_enemy_marker_detected": True},
     )
     sup = AIOnlyAutopilotSupervisor(bus)
-    sup._stuck = True
+    # Seed the same target as already being pursued without progress long
+    # enough for _observe() to derive the real stuck state.
+    sup._progress_target = "quest_enemy_marker"
+    sup._best_proximity = 0.25
+    sup._last_progress_ns = sup.clock.now_ns() - int(5.0e9)
     sup.step()
+    assert sup._stuck is True
     assert bus.state("action.command").read() is None
 
 
