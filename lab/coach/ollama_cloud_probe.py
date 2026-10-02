@@ -14,11 +14,16 @@ import urllib.error
 import urllib.request
 
 
-DEFAULT_MODEL = "deepseek-v4.1-flash"
+DEFAULT_MODEL = "gemma4:cloud"
 DEFAULT_BASE = "https://ollama.com/v1"
+# AI-only needs a model that can actually see the current Roblox frame.
+# Keep the official Ollama Cloud multimodal alias first. Text-only fallbacks
+# remain useful for the hybrid coach, but AI-only runs pass --require-vision.
 PREFERRED_MODELS = (
-    "deepseek-v4.1-flash",
+    "gemma4:cloud",
+    "gemma4:31b-cloud",
     "gemma4:31b",
+    "deepseek-v4.1-flash",
     "gpt-oss:120b",
     "gpt-oss:20b",
     "nemotron-3-nano:30b",
@@ -58,12 +63,10 @@ def _post(base_url: str, key: str, body: dict,
 
 
 def _normalize_model(model: str) -> str:
-    model = str(model or "").strip()
-    if model.endswith(":cloud"):
-        model = model[:-6]
-    if model.endswith("-cloud"):
-        model = model[:-6]
-    return model
+    # Do NOT strip :cloud / -cloud. Those aliases select Ollama's hosted
+    # multimodal variants; stripping them previously turned a vision-capable
+    # request into a different text/degraded endpoint.
+    return str(model or "").strip()
 
 
 def _candidate_models(requested: str) -> list[str]:
@@ -123,7 +126,7 @@ def _probe_vision(base_url: str, key: str, model: str,
         return bool(_extract_text(payload)), "vision=yes"
     except urllib.error.HTTPError as exc:
         if int(exc.code) in {400, 500, 502, 503, 504}:
-            return True, (
+            return False, (
                 f"vision=degraded_http_{exc.code} "
                 "fallback=structured_state"
             )
@@ -131,7 +134,8 @@ def _probe_vision(base_url: str, key: str, model: str,
 
 
 def probe(model: str = DEFAULT_MODEL, base_url: str = DEFAULT_BASE,
-          timeout_s: float = 30.0) -> tuple[bool, str, str | None]:
+          timeout_s: float = 30.0,
+          require_vision: bool = False) -> tuple[bool, str, str | None]:
     key = str(os.getenv("OLLAMA_API_KEY") or "").strip()
     if not key:
         return False, "OLLAMA_API_KEY is missing", None
@@ -140,8 +144,11 @@ def probe(model: str = DEFAULT_MODEL, base_url: str = DEFAULT_BASE,
     for candidate in _candidate_models(model):
         try:
             _probe_text(base_url, key, candidate, timeout_s)
-            _, vision_note = _probe_vision(
+            vision_ok, vision_note = _probe_vision(
                 base_url, key, candidate, timeout_s)
+            if require_vision and not vision_ok:
+                errors.append(f"{candidate}:{vision_note}")
+                continue
             fallback = (
                 "" if candidate == _normalize_model(model)
                 else f" fallback_from={model}")
@@ -171,9 +178,13 @@ def main(argv=None) -> int:
     ap.add_argument("--model", default=DEFAULT_MODEL)
     ap.add_argument("--base-url", default=DEFAULT_BASE)
     ap.add_argument("--timeout", type=float, default=30.0)
+    ap.add_argument(
+        "--require-vision", action="store_true",
+        help="fail over until a hosted model accepts image input")
     args = ap.parse_args(argv)
     ok, detail, selected = probe(
-        args.model, args.base_url, args.timeout)
+        args.model, args.base_url, args.timeout,
+        require_vision=bool(args.require_vision))
     print(f"[ollama-cloud-probe] {'OK' if ok else 'FAILED'} {detail}")
     if ok and selected:
         print(f"COACH_MODEL={selected}")
