@@ -693,10 +693,12 @@ class OpenCVDashboardRenderer:
             else:
                 card = coach.get("skill_card")
                 provider = coach.get("provider")
-                used = (
-                    coach.get("local_ai_used")
-                    if coach.get("local_ai_used") is not None
-                    else coach.get("local_vlm_used"))
+                used = coach.get("ai_used")
+                if used is None:
+                    used = (
+                        coach.get("local_ai_used")
+                        if coach.get("local_ai_used") is not None
+                        else coach.get("local_vlm_used"))
                 ai_tag = (
                     "AI=YES" if used is True
                     else "AI=FALLBACK" if used is False
