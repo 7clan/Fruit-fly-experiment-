@@ -173,7 +173,16 @@ def validate_observed_ability_binding(binding: str) -> str:
 
 
 def control_map() -> dict[str, GPOControl]:
-    return {c.control_id: c for c in CORE_CONTROLS}
+    # Include the currently verified starter loadout controls as executable
+    # catalog entries. They were shown to the AI but previously omitted from
+    # this lookup, so selecting melee_gut_punch / melee_ground_smash silently
+    # did nothing.
+    controls = list(CORE_CONTROLS)
+    try:
+        controls.extend(CURRENT_DEFAULT_MELEE)
+    except NameError:
+        pass
+    return {c.control_id: c for c in controls}
 
 
 def controls_by_category(category: str) -> list[GPOControl]:
