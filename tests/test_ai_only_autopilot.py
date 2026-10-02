@@ -1,3 +1,5 @@
+import numpy as np
+
 from lab.action.ai_only_supervisor import AIOnlyAutopilotSupervisor
 from lab.action.gpo_controls import control_map
 from lab.action.motor_executor import (
@@ -5,7 +7,9 @@ from lab.action.motor_executor import (
 )
 from lab.app import DigitalFlyLab
 from lab.bus import Bus
-from lab.coach.ai_only import AIOnlyOllamaCoachWorker
+from lab.coach.ai_only import (
+    AIOnlyGeminiCoachWorker, AIOnlyOllamaCoachWorker,
+)
 from lab.coach.ollama_cloud_probe import _candidate_models, _normalize_model
 
 
@@ -995,3 +999,196 @@ def test_supervisor_accepts_visually_confirmed_equipped_slot():
     state = bus.state("quest.state").read().payload
     assert state["last_equipped_slot"] == "1"
     assert state["melee_ready_visible"] is True
+
+
+
+def test_ai_only_gemini_controller_reuses_same_ai_only_contract():
+    bus = Bus()
+    coach = AIOnlyGeminiCoachWorker(
+        bus, model="gemini-3.5-flash-lite", api_key="test-only")
+    assert coach.provider == "gemini_ai_only"
+    assert coach.stats["decision_owner"] == "cloud_ai"
+    assert coach.stats["fruit_fly_control"] is False
+    assert coach.max_output_tokens == 320
+    prompt = coach._prompt(
+        {"target": {"type": "none"}, "player": {}, "notes": {}},
+        {"quest_status": "unknown"},
+        {},
+        {"controls": []},
+        {"autonomy": True, "gpo_loadout": "default_melee"},
+        {},
+    )
+    assert "SOLE GAMEPLAY CONTROLLER" in prompt
+    assert "bbox_norm" in prompt
+
+
+def test_visual_target_validation_keeps_trackable_bbox():
+    bus = Bus()
+    coach = AIOnlyOllamaCoachWorker(
+        bus, model="gemma4:cloud", api_key="test-only")
+    plan = coach._validate_plan({
+        "scene": "combat",
+        "objective": "fight",
+        "target": "Corrupt Marine",
+        "skill": "FIGHT_QUEST_TARGET",
+        "control_id": "",
+        "observed_ability": {"binding": "", "label": ""},
+        "visual_target": {
+            "kind": "quest_enemy_actor",
+            "x_norm": 0.55,
+            "y_norm": 0.48,
+            "bbox_norm": [0.42, 0.22, 0.66, 0.74],
+            "confidence": 0.95,
+            "melee_ready": False,
+        },
+        "ui_click": {
+            "needed": False, "x_norm": 0, "y_norm": 0, "label": ""},
+        "confidence": 0.95,
+        "explanation": "visible NPC",
+        "next_after_success": "fight",
+        "perception": {
+            "quest_state": "active",
+            "enemy_actor_visible": True,
+        },
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, {"controls": []})
+    assert plan["visual_target"]["bbox_norm"] == [0.42, 0.22, 0.66, 0.74]
+
+
+def test_ai_visual_tracker_follows_ai_selected_patch_between_cloud_calls():
+    bus = Bus()
+    tracker = AIVisualTracker(bus, target_hz=8.0, max_width=320)
+
+    img1 = np.zeros((200, 320, 3), dtype=np.uint8)
+    # Non-uniform target patch: deterministic stripes/corners prevent
+    # zero-variance template matching.
+    img1[60:140, 90:145, :] = 45
+    img1[65:100, 96:118, 1] = 230
+    img1[104:134, 120:141, 2] = 210
+    img1[82:91, 92:143, 0] = 180
+
+    bus.state("coach.plan").write({
+        "plan_id": 501,
+        "visual_target": {
+            "kind": "quest_enemy_actor",
+            "x_norm": (90 + 145) / 2 / 320,
+            "y_norm": (60 + 140) / 2 / 200,
+            "bbox_norm": [90/320, 60/200, 145/320, 140/200],
+            "confidence": 0.95,
+        },
+    })
+    bus.state("capture.frames.latest").write({"data_ref": img1})
+    tracker.step()
+    first = bus.state("ai.visual.track").read()
+    assert first is not None
+    x1 = first.payload["x_norm"]
+
+    img2 = np.zeros_like(img1)
+    img2[60:140, 110:165, :] = 45
+    img2[65:100, 116:138, 1] = 230
+    img2[104:134, 140:161, 2] = 210
+    img2[82:91, 112:163, 0] = 180
+    bus.state("capture.frames.latest").write({"data_ref": img2})
+    tracker.step()
+    second = bus.state("ai.visual.track").read()
+    assert second is not None
+    assert second.payload["plan_id"] == 501
+    assert second.payload["kind"] == "quest_enemy_actor"
+    assert second.payload["x_norm"] > x1 + 0.025
+    assert second.payload["confidence"] >= 0.42
+
+
+def test_fight_macro_can_equip_ai_selected_slot_then_continue_same_plan():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_actor",
+            "direction": 0.05,
+            "distance": 0.70,
+            "confidence": 0.92,
+        },
+        {
+            "plan_id": 502,
+            "skill": "FIGHT_QUEST_TARGET",
+            "target": "Corrupt Marine",
+            "control_id": "equip_slot_1",
+            "confidence": 0.96,
+            "explanation": "equip melee and fight",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": True,
+                "melee_ready_visible": False,
+            },
+        },
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_actor_visible": True,
+            "quest_enemy_actor": {
+                "direction": 0.05,
+                "distance": 0.70,
+                "confidence": 0.92,
+            },
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    first = bus.state("action.command").read()
+    assert first is not None
+    assert first.payload["name"] == "EQUIP_SLOT"
+    assert first.payload["slot"] == "1"
+    assert sup._last_fight_equip_plan_id == 502
+
+    # Same cloud plan is still live; after the equipment precondition the
+    # adapter is allowed to execute the AI's fight macro.
+    sup._last_emit_ns = 0
+    sup.step()
+    second = bus.state("action.command").read()
+    assert second.payload["name"] in {"ATTACK_LIGHT", "ATTACK_ADVANCE"}
+
+
+def test_take_quest_macro_can_click_visible_dialog_without_second_ai_call():
+    bus = _armed_bus(
+        {
+            "type": "quest_marker",
+            "direction": 0.0,
+            "distance": 0.65,
+            "confidence": 0.9,
+        },
+        {
+            "plan_id": 503,
+            "skill": "TAKE_QUEST",
+            "target": "quest giver dialogue",
+            "confidence": 0.95,
+            "explanation": "accept visible quest dialogue",
+            "perception": {
+                "quest_state": "available",
+                "dialogue_visible": True,
+                "interaction_prompt_visible": False,
+            },
+            "ui_click": {
+                "needed": True,
+                "x_norm": 0.62,
+                "y_norm": 0.76,
+                "label": "Accept",
+            },
+        },
+        notes={
+            "quest_marker_detected": True,
+            "quest_marker_direction": 0.0,
+            "quest_marker_proximity": 0.65,
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "UI_CLICK"
+    assert cmd.payload["ui_label"] == "Accept"
+    assert sup._quest_status == "pending_accept"
+
+
+def test_ai_only_backend_ui_click_never_restores_cursor_outside_game():
+    fake = _FakeCameraInput()
+    backend = AIOnlyBackend(fake)
+    backend.ui_click(0.55, 0.72)
+    assert ("ui_click", 0.55, 0.72, "left") in fake.events
