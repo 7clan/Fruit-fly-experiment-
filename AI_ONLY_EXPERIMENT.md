@@ -4,7 +4,7 @@ This branch is intentionally separate from `main`.
 
 - `main` keeps the digital-fly + semantic-coach research stack unchanged.
 - `ai-only-autopilot` removes the fly brain from the **gameplay control path**.
-- Ollama Cloud AI is the only gameplay decision-maker.
+- Gemini Flash-Lite AI is the only gameplay decision-maker in the default launcher.
 - Local CV measures screen geometry; the execution adapter only realizes the
   AI-selected skill and does not choose quests, combat, equipment, or routes.
 - The canonical Brian2 brain and fly-channel encoder are not started in this
@@ -39,9 +39,18 @@ git reset --hard origin/ai-only-autopilot
 .\run_ai_only_windows.ps1
 ```
 
-The launcher uses the existing Ollama API key configuration. It probes cloud
-access, resolves the working hosted model, focuses Roblox, and starts the
-autopilot. No Brian2 prewarm is performed.
+The launcher uses the existing Gemini API-key configuration. It verifies both
+text and image input before launch, focuses Roblox, and starts the autopilot.
+It intentionally does not fall back to the slower Ollama 31B path. No Brian2
+prewarm is performed.
+
+Latency mitigation is split into two layers:
+- cloud AI decides the semantic goal/action;
+- an 8 Hz local tracker follows only the AI-selected bounding box and the
+  local executor persists that AI-selected skill between cloud replies.
+
+This means local code reacts quickly without secretly choosing a different
+quest, NPC, item, or combat goal.
 
 For a clean experiment, do not manually move, click, equip, or fight after the
 run starts. Use F12 to stop; the normal session report/ZIP is still saved.
