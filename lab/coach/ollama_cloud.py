@@ -37,6 +37,7 @@ class OllamaCloudCoachWorker(SemanticCoachWorker):
         self.api_key = key
         self.model = selected
         self.supports_vision = True
+        self.max_output_tokens = 560
         self.allow_remote_wiki = True
         self._sections = self._split_sections(self.knowledge)
         self.stats.update({
@@ -256,7 +257,7 @@ Return ONLY JSON with exactly:
             "model": self.model,
             "messages": [{"role": "user", "content": content}],
             "temperature": 0.0,
-            "max_tokens": 560,
+            "max_tokens": int(self.max_output_tokens),
             "response_format": {"type": "json_object"},
         }
 
@@ -294,7 +295,7 @@ Return ONLY JSON with exactly:
                 "model": self.model,
                 "messages": [{"role": "user", "content": prompt}],
                 "temperature": 0.0,
-                "max_tokens": 560,
+                "max_tokens": int(self.max_output_tokens),
                 "response_format": {"type": "json_object"},
             }
             payload = send(fallback)
