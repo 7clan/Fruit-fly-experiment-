@@ -65,6 +65,12 @@ class LlamaApiCoachWorker(SemanticCoachWorker):
                 None if self.api_key else "LLAMA_API_KEY_missing"),
         })
 
+    def _validate_plan(self, raw: dict, catalog: dict) -> dict:
+        plan = super()._validate_plan(raw, catalog)
+        plan["ai_used"] = True
+        plan["cloud_ai_used"] = True
+        return plan
+
     @staticmethod
     def _json_schema() -> dict:
         return {
