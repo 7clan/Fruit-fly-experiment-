@@ -800,6 +800,9 @@ class DigitalFlyLab:
         coach_skill = (
             (cenv.payload or {}).get("skill", "-")
             if cenv is not None else "-")
+        coach_last_ms = (
+            self.semantic_coach.stats.get("last_api_ms")
+            if self.semantic_coach is not None else None)
         brain_chunks = 0 if self.ai_only else self.brain.stats["steps"]
         runtime_label = (
             "disabled_ai_only" if self.ai_only
@@ -810,6 +813,7 @@ class DigitalFlyLab:
                 f"intention={intention} "
                 f"quest_phase={quest_phase} "
                 f"coach={coach_skill} "
+                f"coach_ms={coach_last_ms if coach_last_ms is not None else '-'} "
                 f"inputs={self.executor.stats.get('inputs_emitted', 0)} "
                 f"send_ok={self.executor.backend.backend_health().get('sendinput_successes', 0)} "
                 f"send_fail={self.executor.backend.backend_health().get('sendinput_failures', 0)} "
