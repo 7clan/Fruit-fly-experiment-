@@ -37,6 +37,7 @@ class QuestCombatSupervisor(Worker):
 
         self._command_id = 0
         self._last_coach_plan_id = -1
+        self._last_coach_seen_plan_id = -1
         self._phase = "observe"
         self._last_health = None
         self._last_damage_ns = 0
@@ -245,7 +246,9 @@ class QuestCombatSupervisor(Worker):
         skill = str(plan.get("skill") or "WAIT").upper()
         target_type = str(target.get("type") or "none")
         proximity = self._f(target.get("distance"))
-        self.stats["coach_plans_seen"] += 1
+        if pid != self._last_coach_seen_plan_id:
+            self._last_coach_seen_plan_id = pid
+            self.stats["coach_plans_seen"] += 1
 
         name = None
         extra = {}
