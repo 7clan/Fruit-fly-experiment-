@@ -639,7 +639,7 @@ def test_ollama_cloud_coach_marks_ai_and_vision():
         model="deepseek-v4.1-flash",
         api_key="test-only",
     )
-    assert coach.provider == "ollama_cloud_deepseek_v4_1_flash"
+    assert coach.provider == "ollama_cloud"
     assert coach.supports_vision is True
     assert coach.allow_remote_wiki is True
     plan = coach._validate_plan({
@@ -663,7 +663,7 @@ def test_ollama_cloud_coach_marks_ai_and_vision():
     }, _catalog())
     assert plan["cloud_ai_used"] is True
     assert plan["local_ai_used"] is False
-    assert plan["provider"] == "ollama_cloud_deepseek_v4_1_flash"
+    assert plan["provider"] == "ollama_cloud"
     assert plan["skill"] == "FIGHT_QUEST_TARGET"
 
 
@@ -699,3 +699,49 @@ def test_ollama_cloud_prompt_explicitly_supports_equip_then_m1_combat():
     assert "EQUIP_SLOT" in prompt
     assert "left-mouse clicks (M1)" in prompt
     assert "FIGHT_QUEST_TARGET" in prompt
+
+
+def test_coach_plan_waits_for_actionable_geometry_before_consuming():
+    bus, sup = _armed_supervisor({
+        "type": "quest_enemy_marker",
+        "distance": 0.40,
+        "direction": 0.0,
+        "confidence": 0.95,
+    })
+    now = sup.clock.now_ns()
+    bus.state("coach.plan").write({
+        "plan_id": 77,
+        "ts_ns": now,
+        "skill": "FIGHT_QUEST_TARGET",
+        "confidence": 0.95,
+        "explanation": "fight the confirmed quest enemy",
+    }, ts_ns=now)
+
+    # Too far away: keep this plan pending instead of throwing it away.
+    sup.step()
+    assert sup._last_coach_plan_id != 77
+    assert sup.stats["coach_commands"] == 0
+
+    # Fresh geometry becomes actionable while the same AI plan is still valid.
+    bus.state("world.observation").write({
+        "target": {
+            "type": "quest_enemy_marker",
+            "distance": 0.82,
+            "direction": 0.0,
+            "confidence": 0.95,
+        },
+        "player": {
+            "health": 1.0,
+            "health_units": "fraction",
+            "stamina": 1.0,
+        },
+        "notes": {},
+    }, ts_ns=sup.clock.now_ns())
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert cmd.payload["source"] == "semantic_coach"
+    assert sup._last_coach_plan_id == 77
+    assert sup.stats["coach_commands"] == 1
+    assert sup.stats["coach_plans_seen"] == 1
