@@ -246,8 +246,10 @@ CONTROL DISCIPLINE:
 - Read quest state in this priority order:
     1) quest_status=active -> DO NOT take another quest. Follow/fight its target.
     2) quest_status=pending_accept -> wait for confirmation/dialogue change.
-    3) quest_status=available -> approach the yellow quest giver and interact.
-    4) travel_to_quest_giver -> follow the green recommended waypoint.
+    3) quest_status=completed -> the prior quest ended; locate/choose the next
+       appropriate quest instead of continuing to hunt a vanished target.
+    4) quest_status=available -> approach the yellow quest giver and interact.
+    5) travel_to_quest_giver -> follow the green recommended waypoint.
 - A red quest_enemy_marker is an OBJECTIVE LOCATION/DIRECTION marker, not an
   enemy body. Do not claim an enemy is in melee from that marker alone.
   FIGHT_QUEST_TARGET is appropriate when quest_enemy_actor_visible=true; if the
@@ -317,7 +319,7 @@ Return ONLY JSON with exactly:
   "explanation": "one short sentence",
   "next_after_success": "short",
   "perception": {{
-    "quest_state": "active|available|pending_accept|unknown",
+    "quest_state": "active|available|pending_accept|completed|unknown",
     "dialogue_visible": false,
     "interaction_prompt_visible": false,
     "enemy_actor_visible": false,
@@ -332,7 +334,9 @@ Return ONLY JSON with exactly:
     def _validate_plan(self, raw: dict, catalog: dict) -> dict:
         plan = super()._validate_plan(raw, catalog)
         p = raw.get("perception") or {}
-        allowed_quest = {"active", "available", "pending_accept", "unknown"}
+        allowed_quest = {
+            "active", "available", "pending_accept", "completed", "unknown"
+        }
         qstate = str(p.get("quest_state") or "unknown").strip().lower()
         if qstate not in allowed_quest:
             qstate = "unknown"
