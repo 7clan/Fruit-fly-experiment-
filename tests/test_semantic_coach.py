@@ -451,9 +451,11 @@ def test_smollm_135m_prompt_is_tiny_structured_state():
             "notes": {"quest_marker_detected": False},
         },
         {"phase": "travel"},
+        ["NAVIGATE_OBJECTIVE", "REOBSERVE", "SPRINT"],
     )
     assert "NAVIGATE_OBJECTIVE" in prompt
-    assert "ALLOWED=" in prompt
+    assert "CHOICES=" in prompt
+    assert "INDEX=" in prompt
     assert len(prompt) < 800
 
 
@@ -492,3 +494,44 @@ def test_smollm_135m_selects_skill_without_any_image():
     assert env.payload["local_ai_used"] is True
     assert env.payload["text_only"] is True
     assert coach.stats["text_skill_calls"] == 1
+
+
+
+def test_smollm_repeated_recovery_excludes_same_skill_after_two_uses():
+    bus = Bus()
+    coach = LocalSmolLMCoachWorker(bus)
+    seen_choices = []
+
+    def fake_skill(prompt, choices):
+        seen_choices.append(list(choices))
+        return choices[0]
+
+    coach._call_skill = fake_skill
+    bus.state("action.meta").write({
+        "autonomy": True,
+        "gpo_loadout": "default_melee",
+    })
+    bus.state("action.control_catalog").write(_catalog())
+    bus.state("quest.state").write({"phase": "stuck"})
+    bus.state("world.observation").write({
+        "target": {"type": "none"},
+        "player": {"health": 1.0, "stamina": 1.0},
+        "ui": {"dialogue": False, "menu": False},
+        "notes": {},
+    })
+    # Direct selector calls isolate the anti-repeat policy from rate limiting.
+    candidate = procedural_skill_plan(
+        bus.state("world.observation").read().payload,
+        bus.state("quest.state").read().payload,
+    )
+    catalog = _catalog()
+    obs = bus.state("world.observation").read().payload
+    quest = bus.state("quest.state").read().payload
+    for i in range(3):
+        coach._select_with_model(
+            candidate, obs, quest, catalog, coach.clock.now_ns() + i + 1)
+    assert len(seen_choices) == 3
+    repeated = seen_choices[0][0]
+    assert repeated in seen_choices[0]
+    assert repeated in seen_choices[1]
+    assert repeated not in seen_choices[2]
