@@ -51,13 +51,14 @@ if ([string]::IsNullOrWhiteSpace($env:OLLAMA_API_KEY)) {
     if ($LASTEXITCODE -ne 0) { throw "Ollama Cloud setup failed." }
 }
 
-Write-Host "Testing cloud access + REQUIRED image vision..." -ForegroundColor Cyan
+Write-Host "Testing REQUIRED image vision; preferring a smaller/faster model when available..." -ForegroundColor Cyan
 $probeArgs = @(
     "-m", "lab.coach.ollama_cloud_probe",
     "--model", $env:OLLAMA_CLOUD_MODEL,
     "--base-url", $env:OLLAMA_CLOUD_BASE,
     "--timeout", "25",
-    "--require-vision"
+    "--require-vision",
+    "--prefer-fast"
 )
 $probeOutput = @(& $mainPython @probeArgs)
 $probeExit = $LASTEXITCODE
