@@ -155,6 +155,61 @@ def test_far_quest_enemy_actor_is_approached_before_attack():
     assert cmd.payload["direction"] == -0.65
 
 
+
+
+
+def test_close_stable_red_marker_can_fallback_to_m1_when_body_tracker_misses():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.05,
+            "distance": 0.86,
+            "confidence": 0.94,
+        },
+        {
+            "plan_id": 31,
+            "skill": "FIGHT_QUEST_TARGET",
+            "target": "red-marked quest NPC",
+            "confidence": 0.94,
+            "explanation": "fight the close quest objective",
+        },
+        notes={"quest_enemy_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup._enemy_marker_since_ns = sup.clock.now_ns() - int(1.0e9)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert cmd.payload["target_type"] == "quest_enemy_marker_close_fallback"
+
+
+def test_navigation_servo_does_not_reissue_same_command_every_worker_tick():
+    bus = _armed_bus(
+        {
+            "type": "recommended_quest_waypoint",
+            "direction": 0.25,
+            "distance": 0.35,
+            "confidence": 0.92,
+        },
+        {
+            "plan_id": 32,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "green waypoint",
+            "confidence": 0.94,
+            "explanation": "follow waypoint",
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    first = bus.state("action.command").read()
+    assert first is not None
+    first_id = first.payload["command_id"]
+    sup.step()
+    second = bus.state("action.command").read()
+    assert second.payload["command_id"] == first_id
+
+
 def test_ai_only_take_quest_interacts_at_moderate_close_range_once():
     plan = {
         "plan_id": 5,
