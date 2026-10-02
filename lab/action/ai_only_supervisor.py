@@ -351,7 +351,12 @@ class AIOnlyAutopilotSupervisor(Worker):
                     now + int(8.0e9))
 
         if skill in {"NAVIGATE_OBJECTIVE", "TRAVEL"}:
-            if (ttype in {
+            # When local progress monitoring says we are stuck, stop driving
+            # the old plan into the same wall while the cloud model is still
+            # thinking. The stuck/circling event forces a replan signature.
+            if self._stuck or self._circling:
+                pass
+            elif (ttype in {
                     "recommended_quest_waypoint", "quest_marker",
                     "quest_enemy_marker", "quest_enemy_actor"}
                     and direction is not None and proximity is not None):
@@ -359,6 +364,19 @@ class AIOnlyAutopilotSupervisor(Worker):
                     now, direction=direction, pid=pid,
                     confidence=confidence, reason=reason,
                     target_type=ttype)
+            elif (ai_visual_kind in {
+                    "quest_giver", "quest_enemy_actor",
+                    "quest_objective", "waypoint"}
+                  and ai_visual_conf >= 0.82
+                  and ai_visual_dir is not None):
+                # The VLM just saw a target that cheap CV did not. Use that
+                # fresh grounding long enough to rotate/acquire it locally.
+                self._steer(
+                    now, direction=ai_visual_dir, pid=pid,
+                    confidence=min(confidence, ai_visual_conf),
+                    reason=reason,
+                    target_type="ai_visual_" + ai_visual_kind,
+                    hold_s=0.78)
 
         elif skill in {"TAKE_QUEST", "INTERACT"}:
             # Never retake while perception says an objective is already live.
