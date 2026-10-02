@@ -47,7 +47,9 @@ from .clock import SHARED_CLOCK
 from .coach import (
     SemanticCoachWorker, LocalSmolVLMCoachWorker, LocalSmolLMCoachWorker,
     LlamaApiCoachWorker, MetaModelApiCoachWorker, OllamaCloudCoachWorker)
-from .coach.ai_only import AIOnlyOllamaCoachWorker
+from .coach.ai_only import (
+    AIOnlyGeminiCoachWorker, AIOnlyOllamaCoachWorker,
+)
 from .dashboard.dashboard import (
     DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
 from .evidence import EvidenceRecorder
@@ -184,15 +186,22 @@ class DigitalFlyLab:
         if self.ai_only:
             if not semantic_coach:
                 raise ValueError("AI-only mode requires semantic_coach=True")
-            provider = str(coach_provider or "ollama_cloud").strip().lower()
-            if provider != "ollama_cloud":
+            provider = str(coach_provider or "gemini").strip().lower()
+            if provider == "gemini":
+                self.semantic_coach = AIOnlyGeminiCoachWorker(
+                    self.bus,
+                    target_hz=float(coach_hz),
+                    model=coach_model,
+                    base_url=coach_url)
+            elif provider == "ollama_cloud":
+                self.semantic_coach = AIOnlyOllamaCoachWorker(
+                    self.bus,
+                    target_hz=float(coach_hz),
+                    model=coach_model,
+                    base_url=coach_url)
+            else:
                 raise ValueError(
-                    "AI-only branch currently requires ollama_cloud")
-            self.semantic_coach = AIOnlyOllamaCoachWorker(
-                self.bus,
-                target_hz=float(coach_hz),
-                model=coach_model,
-                base_url=coach_url)
+                    "AI-only mode supports gemini or ollama_cloud")
         elif self.quest_autonomy and semantic_coach:
             provider = str(coach_provider or "gemini").strip().lower()
             if provider == "local":
@@ -899,9 +908,10 @@ def main(argv=None) -> int:
             "--semantic-coach requires --quest-autonomy or --ai-only-autonomy")
     if args.ai_only_autonomy and not args.semantic_coach:
         raise SystemExit("--ai-only-autonomy requires --semantic-coach")
-    if args.ai_only_autonomy and args.coach_provider != "ollama_cloud":
+    if (args.ai_only_autonomy
+            and args.coach_provider not in {"gemini", "ollama_cloud"}):
         raise SystemExit(
-            "--ai-only-autonomy currently requires --coach-provider ollama_cloud")
+            "--ai-only-autonomy supports --coach-provider gemini or ollama_cloud")
     if args.ai_only_autonomy and args.runtime != "mock":
         raise SystemExit(
             "--ai-only-autonomy deliberately uses --runtime mock; "
