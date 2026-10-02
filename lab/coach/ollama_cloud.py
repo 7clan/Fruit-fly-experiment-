@@ -12,8 +12,8 @@ import urllib.request
 
 from .semantic_coach import ALLOWED_SKILLS, SemanticCoachWorker, _compact
 
-DEFAULT_OLLAMA_MODEL = "gemma4:31b"
-DEFAULT_OLLAMA_BASE = "https://ollama.com/api"
+DEFAULT_OLLAMA_MODEL = "deepseek-v4.1-flash"
+DEFAULT_OLLAMA_BASE = "https://ollama.com/v1"
 
 
 class OllamaCloudCoachWorker(SemanticCoachWorker):
@@ -33,7 +33,7 @@ class OllamaCloudCoachWorker(SemanticCoachWorker):
                          timeout_s=timeout_s, api_key=key)
         self.base_url = str(base_url or os.getenv("OLLAMA_CLOUD_BASE")
                             or DEFAULT_OLLAMA_BASE).rstrip("/")
-        self.provider = "ollama_cloud_gemma4_31b"
+        self.provider = "ollama_cloud_deepseek_v4_1_flash"
         self.api_key = key
         self.model = selected
         self.supports_vision = True
@@ -213,25 +213,44 @@ Return ONLY JSON with exactly:
 
     def _call_gemini(self, prompt: str, image_b64: str | None,
                      previous_image_b64: str | None = None) -> dict:
-        endpoint = self.base_url + "/chat"
-        msg = {"role": "user", "content": prompt}
+        """Call Ollama Cloud through its documented OpenAI-compatible API.
+
+        This avoids the native /api transport quirks seen on the target
+        Windows/network path.  Vision uses base64 data URIs when the selected
+        hosted model supports it; a text-only retry keeps the agent alive if
+        hosted vision is temporarily unavailable.
+        """
+        endpoint = self.base_url.rstrip("/") + "/chat/completions"
+
+        content = [{"type": "text", "text": prompt}]
         if image_b64:
-            msg["images"] = [image_b64]
+            content.append({
+                "type": "image_url",
+                "image_url": {
+                    "url": "data:image/jpeg;base64," + image_b64,
+                },
+            })
+
         body = {
             "model": self.model,
-            "messages": [msg],
-            "stream": False,
-            "format": self._json_schema(),
-            "options": {"temperature": 0.0, "num_predict": 520},
+            "messages": [{"role": "user", "content": content}],
+            "temperature": 0.0,
+            "max_tokens": 560,
+            "response_format": {"type": "json_object"},
         }
+
         def send(payload_body: dict) -> dict:
             req = urllib.request.Request(
-                endpoint, data=json.dumps(payload_body).encode("utf-8"),
-                headers={"Accept": "application/json",
-                         "Content-Type": "application/json",
-                         "Authorization": f"Bearer {self.api_key}",
-                         "User-Agent": "DigitalFlyLab/1.0"},
-                method="POST")
+                endpoint,
+                data=json.dumps(payload_body).encode("utf-8"),
+                headers={
+                    "Accept": "application/json",
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}",
+                    "User-Agent": "DigitalFlyLab/1.0",
+                },
+                method="POST",
+            )
             with urllib.request.urlopen(
                     req, timeout=float(self.timeout_s)) as resp:
                 return json.loads(resp.read().decode("utf-8"))
@@ -242,25 +261,31 @@ Return ONLY JSON with exactly:
             code = int(getattr(exc, "code", 0))
             if code not in {400, 500, 502, 503, 504}:
                 raise
-
-            # Retry without hosted-image processing. OpenCV/engineered state
-            # is already in the prompt, so the cloud model can still provide
-            # high-level reasoning without touching the laptop CPU.
-            text_msg = {"role": "user", "content": prompt}
+            # Keep cloud reasoning alive even if hosted image handling is
+            # degraded; structured CV state remains in the prompt.
             fallback = {
                 "model": self.model,
-                "messages": [text_msg],
-                "stream": False,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.0,
+                "max_tokens": 560,
+                "response_format": {"type": "json_object"},
             }
             payload = send(fallback)
 
-        text = str(((payload.get("message") or {}).get("content")) or "").strip()
-        if not text:
-            raise RuntimeError("Ollama Cloud returned no message content: "
-                               + str(payload)[:500])
-        if text.startswith("```"):
-            rows = text.splitlines()
-            if rows and rows[0].startswith("```"): rows = rows[1:]
-            if rows and rows[-1].strip().startswith("```"): rows = rows[:-1]
-            text = "\n".join(rows).strip()
-        return json.loads(text)
+        choices = payload.get("choices") or []
+        text_out = str(
+            (((choices[0] if choices else {}).get("message") or {})
+             .get("content")) or ""
+        ).strip()
+        if not text_out:
+            raise RuntimeError(
+                "Ollama Cloud returned no message content: "
+                + str(payload)[:500])
+        if text_out.startswith("```"):
+            rows = text_out.splitlines()
+            if rows and rows[0].startswith("```"):
+                rows = rows[1:]
+            if rows and rows[-1].strip().startswith("```"):
+                rows = rows[:-1]
+            text_out = "\n".join(rows).strip()
+        return json.loads(text_out)
