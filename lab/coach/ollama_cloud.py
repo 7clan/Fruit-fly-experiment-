@@ -225,7 +225,9 @@ Return ONLY JSON with exactly:
         """
         endpoint = self.base_url.rstrip("/") + "/chat/completions"
 
-        content = [{"type": "text", "text": prompt}]
+        # Multimodal models perform better when the authoritative visual
+        # observation precedes the long instruction/state text.
+        content = []
         if image_b64:
             content.append({
                 "type": "image_url",
@@ -233,6 +235,7 @@ Return ONLY JSON with exactly:
                     "url": "data:image/jpeg;base64," + image_b64,
                 },
             })
+        content.append({"type": "text", "text": prompt})
 
         body = {
             "model": self.model,
