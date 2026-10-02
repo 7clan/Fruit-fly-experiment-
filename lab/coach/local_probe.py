@@ -58,7 +58,7 @@ def probe(base_url: str = DEFAULT_URL,
     except Exception as exc:
         return False, f"models endpoint failed: {type(exc).__name__}: {exc}"
 
-    # Exercise the exact schema-constrained one-field decision used in play.
+    # Exercise the exact one-character GBNF choice used in play.
     try:
         t0 = time.perf_counter()
         payload = _post(
@@ -68,31 +68,15 @@ def probe(base_url: str = DEFAULT_URL,
                 "messages": [{
                     "role": "user",
                     "content": (
-                        "GPO controller. Pick one ALLOWED skill. "
+                        "GPO control. Return the INDEX of the best action. "
                         "STATE={\"candidate\":\"NAVIGATE_OBJECTIVE\","
                         "\"target\":\"recommended_quest_waypoint\"} "
-                        "ALLOWED=NAVIGATE_OBJECTIVE|REOBSERVE"
+                        "CHOICES=0=NAVIGATE_OBJECTIVE;1=REOBSERVE INDEX="
                     ),
                 }],
                 "temperature": 0.0,
-                "max_tokens": 24,
-                "response_format": {
-                    "type": "json_object",
-                    "schema": {
-                        "type": "object",
-                        "properties": {
-                            "skill": {
-                                "type": "string",
-                                "enum": [
-                                    "NAVIGATE_OBJECTIVE",
-                                    "REOBSERVE",
-                                ],
-                            },
-                        },
-                        "required": ["skill"],
-                        "additionalProperties": False,
-                    },
-                },
+                "max_tokens": 2,
+                "grammar": 'root ::= "0" | "1"',
             },
             timeout_s,
         )
@@ -104,13 +88,11 @@ def probe(base_url: str = DEFAULT_URL,
         ).strip()
         if not text:
             return False, f"text probe returned no text: {str(payload)[:500]}"
-        parsed = json.loads(text)
-        skill = str(parsed.get("skill") or "").upper()
-        if skill not in {"NAVIGATE_OBJECTIVE", "REOBSERVE"}:
-            return False, f"selector probe returned unexpected JSON: {text!r}"
+        if text[0] not in {"0", "1"}:
+            return False, f"selector probe returned unexpected choice: {text!r}"
         return True, (
             f"model={model} local_url={base_url} "
-            f"selector_ms={elapsed_ms:.0f} text_only=yes"
+            f"selector_ms={elapsed_ms:.0f} text_only=yes one_char=yes"
         )
     except urllib.error.HTTPError as exc:
         try:
