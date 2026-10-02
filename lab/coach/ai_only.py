@@ -33,8 +33,8 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # Keep decisions event-driven and let the local skill executor react
         # at 8-20 Hz. 2 s does not cause a 2 s cadence because unchanged
         # scenes are still held for the longer refresh interval.
-        self.min_call_interval_s = 2.0
-        self.unchanged_refresh_s = 16.0
+        self.min_call_interval_s = 1.0
+        self.unchanged_refresh_s = 20.0
         self.provider = "ollama_cloud_ai_only"
         # One frame + compact JSON is enough for this controller. Sending the
         # previous frame doubled vision work while local CV already measures
@@ -87,27 +87,40 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         )
 
     def _jpeg_b64(self, frame) -> tuple[str | None, float]:
-        """Higher-detail frame for the sole controller.
+        """Adaptive cloud frame.
 
-        The old 720px/Q58 image was optimized for a helper coach. AI-only must
-        read hotbar slots, dialogue buttons, quest text and nearby NPC cues.
-        One ~960px JPEG every few seconds is cheap compared with the removed
-        Brian2 workload.
+        Navigation/combat need fast scene understanding more than tiny text, so
+        use a smaller frame there. Quest dialogue/shop/hotbar interaction needs
+        fine UI text, so temporarily send the 960 px frame. This directly cuts
+        cloud vision latency without making button coordinates less accurate
+        when accuracy matters.
         """
         if frame is None:
             return None, 0.0
         t0 = time.perf_counter()
         try:
             import cv2
+            quest = self._state(self.quest_state)
+            prev = self._state(self.plan_state)
+            prev_skill = str(prev.get("skill") or "").upper()
+            detail_mode = bool(
+                quest.get("awaiting_quest_confirmation")
+                or str(quest.get("quest_status") or "") == "pending_accept"
+                or prev_skill in {
+                    "TAKE_QUEST", "INTERACT", "UI_CLICK",
+                    "BUY_ITEM", "EQUIP_SLOT", "USE_OBSERVED_ABILITY",
+                })
+            max_w = 960 if detail_mode else 736
+            quality = 74 if detail_mode else 64
             img = frame
             h, w = img.shape[:2]
-            if w > 960:
-                scale = 960.0 / float(w)
+            if w > max_w:
+                scale = max_w / float(w)
                 img = cv2.resize(
-                    img, (960, max(1, int(h * scale))),
+                    img, (max_w, max(1, int(h * scale))),
                     interpolation=cv2.INTER_AREA)
             ok, enc = cv2.imencode(
-                ".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), 74])
+                ".jpg", img, [int(cv2.IMWRITE_JPEG_QUALITY), quality])
             if not ok:
                 return None, 0.0
             data = base64.b64encode(enc.tobytes()).decode("ascii")
@@ -151,7 +164,23 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                     notes.get("quest_enemy_marker_detected")),
                 "quest_enemy_actor_visible": bool(
                     notes.get("quest_enemy_actor_visible")),
-                "quest_enemy_actor": notes.get("quest_enemy_actor"),
+                "quest_enemy_actor": (
+                    {
+                        "track_id": (
+                            (notes.get("quest_enemy_actor") or {})
+                            .get("track_id")),
+                        "direction_radians": (
+                            (notes.get("quest_enemy_actor") or {})
+                            .get("direction")),
+                        "proximity_0_far_1_close": (
+                            (notes.get("quest_enemy_actor") or {})
+                            .get("distance")),
+                        "confidence": (
+                            (notes.get("quest_enemy_actor") or {})
+                            .get("confidence")),
+                    }
+                    if notes.get("quest_enemy_actor") else {}
+                ),
             },
         }
         situation = {
@@ -234,6 +263,12 @@ CONTROL DISCIPLINE:
   awaiting_quest_confirmation=true.
 - FIGHT_QUEST_TARGET: the actuator closes distance on the tracked quest NPC and
   emits M1 clicks once melee geometry is reached. Do not attack ordinary players.
+- Whenever you can visually identify the object/person you are acting on, fill
+  visual_target with its CURRENT normalized screen center and confidence.
+  For a quest NPC enemy use kind="quest_enemy_actor". Set melee_ready=true only
+  when the actual NPC body is visibly close enough to hit now. This visual
+  grounding lets the fast local actuator keep control between cloud replies
+  when the handcrafted body tracker temporarily misses the NPC.
 - EQUIP_SLOT: use a visible hotbar slot or a verified equip_slot_N control.
   state.last_equipped_slot tells you what the agent last physically selected.
   Equip before combat when the fighting tool/style is not ready.
@@ -270,6 +305,13 @@ Return ONLY JSON with exactly:
   "skill": "ONE OF: {skills}",
   "control_id": "verified control id or empty",
   "observed_ability": {{"binding":"","label":""}},
+  "visual_target": {{
+    "kind": "none|quest_giver|quest_enemy_actor|quest_objective|waypoint|ui",
+    "x_norm": 0.5,
+    "y_norm": 0.5,
+    "confidence": 0.0,
+    "melee_ready": false
+  }},
   "ui_click": {{"needed":false,"x_norm":0.0,"y_norm":0.0,"label":""}},
   "confidence": 0.0,
   "explanation": "one short sentence",
@@ -302,5 +344,29 @@ Return ONLY JSON with exactly:
             "enemy_actor_visible": bool(p.get("enemy_actor_visible")),
             "player_dead": bool(p.get("player_dead")),
             "safezone_visible": bool(p.get("safezone_visible")),
+        }
+
+        vt = raw.get("visual_target") or {}
+        allowed_kinds = {
+            "none", "quest_giver", "quest_enemy_actor",
+            "quest_objective", "waypoint", "ui",
+        }
+        kind = str(vt.get("kind") or "none").strip().lower()
+        if kind not in allowed_kinds:
+            kind = "none"
+        try:
+            vx = max(0.0, min(1.0, float(vt.get("x_norm", 0.5))))
+            vy = max(0.0, min(1.0, float(vt.get("y_norm", 0.5))))
+            vc = max(0.0, min(1.0, float(vt.get("confidence", 0.0))))
+        except (TypeError, ValueError):
+            vx, vy, vc = 0.5, 0.5, 0.0
+        if vc < 0.65:
+            kind = "none"
+        plan["visual_target"] = {
+            "kind": kind,
+            "x_norm": round(vx, 4),
+            "y_norm": round(vy, 4),
+            "confidence": round(vc, 4),
+            "melee_ready": bool(vt.get("melee_ready")) and vc >= 0.82,
         }
         return plan
