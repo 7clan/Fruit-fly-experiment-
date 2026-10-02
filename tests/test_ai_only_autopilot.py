@@ -263,6 +263,7 @@ def test_ai_only_lab_excludes_fly_encoder_and_brain_workers():
     assert lab.executor.command_only is True
     assert lab.brain not in lab.workers
     assert lab.encoder not in lab.workers
+    assert lab.planner not in lab.workers
     assert lab.quest_supervisor is None
     assert lab.ai_only_supervisor in lab.workers
     assert lab.semantic_coach in lab.workers
