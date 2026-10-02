@@ -352,6 +352,7 @@ class MotorExecutor(Worker):
                            "emergency_stops": 0, "hold_refreshes": 0,
                            "navigation_vetoes": 0,
                            "semantic_steers": 0,
+                           "camera_aligns": 0,
                            "command_only": self.command_only})
 
     # -- autonomy gate ----------------------------------------------------
@@ -736,21 +737,32 @@ class MotorExecutor(Worker):
                 except (TypeError, ValueError):
                     direction = 0.0
                 hold_s = max(
-                    0.28, min(0.85, float(cmd.get("hold_s", 0.55))))
-                # Fresh screen-space geometry is the fast steering servo.
-                # The canonical fly still supplies higher-level
-                # approach/retreat/escape state but its 50 ms chunk arrives
-                # several wall-seconds late on the target laptop.
-                self._hold_key_locked("W", now_ns, hold_s)
-                deadband = 0.24
-                if direction < -deadband:
-                    self._hold_key_locked("A", now_ns, hold_s)
-                elif direction > deadband:
-                    self._hold_key_locked("D", now_ns, hold_s)
+                    0.30, min(1.25, float(cmd.get("hold_s", 0.75))))
+                camera_align = bool(cmd.get("camera_align", False))
+                # AI-only navigation uses the AI-selected target as the goal
+                # and a fast geometric servo only to keep that goal centered.
+                # This prevents W+A/W+D orbiting around an objective for tens
+                # of seconds while the cloud waits for the next frame.
+                if camera_align and abs(direction) > 0.26:
+                    dx = int(max(-78, min(78, direction * 58.0)))
+                    if abs(dx) < 16:
+                        dx = 16 if dx >= 0 else -16
+                    self.backend.mouse_move(dx, 0)
+                    self.stats["camera_aligns"] += 1
+                # When the target is far off-axis, rotate first and wait for
+                # fresh CV rather than moving a large arc around it.
+                if not (camera_align and abs(direction) > 1.05):
+                    self._hold_key_locked("W", now_ns, hold_s)
+                    if not camera_align:
+                        deadband = 0.24
+                        if direction < -deadband:
+                            self._hold_key_locked("A", now_ns, hold_s)
+                        elif direction > deadband:
+                            self._hold_key_locked("D", now_ns, hold_s)
                 self._engineered_steer_until_ns = (
                     now_ns + int(hold_s * 1e9))
                 self.action_lock_until_ns = (
-                    now_ns + int(min(0.45, hold_s * 0.65) * 1e9))
+                    now_ns + int(min(0.55, hold_s * 0.55) * 1e9))
                 self.stats["semantic_steers"] += 1
             elif name == "INTERACT_QUEST":
                 self._hold_key_locked("T", now_ns, 0.08)
@@ -758,8 +770,15 @@ class MotorExecutor(Worker):
             elif name == "JUMP":
                 self._hold_key_locked("SPACE", now_ns, 0.10)
             elif name == "CLIMB":
-                self._hold_key_locked("W", now_ns, 0.60)
-                self._hold_key_locked("CTRL", now_ns, 0.60)
+                # In GPO, CTRL is the climb control while contacting a wall.
+                # A short jump helps establish contact, then forward+CTRL is
+                # held long enough to visibly climb before the next decision.
+                hold_s = max(
+                    0.55, min(1.40, float(cmd.get("hold_s", 1.05))))
+                self._hold_key_locked("SPACE", now_ns, 0.11)
+                self._hold_key_locked("W", now_ns, hold_s)
+                self._hold_key_locked("CTRL", now_ns, hold_s)
+                self.action_lock_until_ns = now_ns + int(0.45e9)
             elif name == "SEARCH_CAMERA":
                 self.backend.mouse_move(
                     max(-90, min(90, int(cmd.get("dx", 35)))), 0)
@@ -825,7 +844,7 @@ class MotorExecutor(Worker):
                 # Hard gate: explicit UI context + high confidence only.
                 confidence = float(cmd.get("confidence", 0.0))
                 if (not bool(cmd.get("ui_context"))
-                        or confidence < 0.85):
+                        or confidence < 0.80):
                     return
                 label = str(cmd.get("ui_label") or "").strip().lower()
                 # Never automate platform-money/account/trade confirmations.
