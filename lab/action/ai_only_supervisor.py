@@ -41,6 +41,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         # Stable game-state memory derived from perception + actions actually
         # emitted. These are facts for the AI, not hidden gameplay decisions.
         self._quest_status = "unknown"
+        self._quest_active_latched = False
         self._last_enemy_marker_ns = 0
         self._enemy_marker_since_ns = 0
         self._last_yellow_marker_ns = 0
@@ -168,16 +169,17 @@ class AIOnlyAutopilotSupervisor(Worker):
         if actor:
             self._last_actor_ns = now_ns
 
-        # Quest status is perception-derived and intentionally sticky across
-        # brief occlusion/camera motion.
+        # Quest status is perception-derived and sticky. Once the live HUD or
+        # cloud vision confirms a quest is active, do NOT forget it merely
+        # because the red marker leaves the camera for a few seconds.
         if red or actor:
+            self._quest_active_latched = True
             self._quest_status = "active"
             self._await_quest_until_ns = 0
+        elif self._quest_active_latched:
+            self._quest_status = "active"
         elif now_ns < self._await_quest_until_ns:
             self._quest_status = "pending_accept"
-        elif (self._last_enemy_marker_ns
-              and now_ns - self._last_enemy_marker_ns < int(8.0e9)):
-            self._quest_status = "active"
         elif yellow:
             self._quest_status = "available"
         elif green:
@@ -232,7 +234,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             "ts_ns": now_ns,
             "phase": self._quest_status,
             "quest_status": self._quest_status,
-            "quest_active": self._quest_status == "active",
+            "quest_active": bool(self._quest_active_latched),
+            "quest_active_latched": bool(self._quest_active_latched),
             "awaiting_quest_confirmation": (
                 now_ns < self._await_quest_until_ns),
             "quest_giver_visible": bool(
@@ -338,13 +341,19 @@ class AIOnlyAutopilotSupervisor(Worker):
             ai_perception.get("quest_state") or "unknown").lower()
         if confidence >= 0.85:
             if ai_qstate == "active":
+                self._quest_active_latched = True
                 self._quest_status = "active"
                 self._await_quest_until_ns = 0
+            elif ai_qstate == "completed" and confidence >= 0.90:
+                self._quest_active_latched = False
+                self._quest_status = "completed"
+                self._await_quest_until_ns = 0
             elif (ai_qstate == "pending_accept"
-                  and self._quest_status != "active"):
+                  and not self._quest_active_latched):
                 self._quest_status = "pending_accept"
             elif (ai_qstate == "available"
-                  and self._quest_status not in {"active", "pending_accept"}):
+                  and not self._quest_active_latched
+                  and self._quest_status != "pending_accept"):
                 self._quest_status = "available"
             if bool(ai_perception.get("enemy_actor_visible")):
                 self._ai_enemy_confirmed_until_ns = (
