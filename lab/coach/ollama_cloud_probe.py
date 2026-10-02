@@ -10,6 +10,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 
@@ -27,6 +28,12 @@ PREFERRED_MODELS = (
     "gpt-oss:120b",
     "gpt-oss:20b",
     "nemotron-3-nano:30b",
+)
+
+FAST_VISION_MODELS = (
+    "qwen3-vl:4b",
+    "qwen3.5:4b",
+    "gemma3:4b",
 )
 
 # 64x64 solid-red PNG. A 1x1 probe can trip vision encoders even when the
@@ -75,9 +82,10 @@ def _normalize_model(model: str) -> str:
     return str(model or "").strip()
 
 
-def _candidate_models(requested: str) -> list[str]:
+def _candidate_models(requested: str, prefer_fast: bool = False) -> list[str]:
     out = []
-    for name in (_normalize_model(requested),) + PREFERRED_MODELS:
+    prefix = FAST_VISION_MODELS if prefer_fast else ()
+    for name in prefix + (_normalize_model(requested),) + PREFERRED_MODELS:
         name = _normalize_model(name)
         if name and name not in out:
             out.append(name)
@@ -137,12 +145,15 @@ def _probe_vision(base_url: str, key: str, model: str,
         "max_tokens": 12,
     }
     try:
+        t0 = time.perf_counter()
         payload = _post(base_url, key, body, timeout_s)
+        latency_ms = (time.perf_counter() - t0) * 1000.0
         answer = _extract_text(payload).strip().lower()
         ok = "red" in answer
         return ok, (
-            "vision=yes verified=red_square"
-            if ok else f"vision=unverified answer={answer[:60]!r}"
+            f"vision=yes verified=red_square latency_ms={latency_ms:.0f}"
+            if ok else
+            f"vision=unverified latency_ms={latency_ms:.0f} answer={answer[:60]!r}"
         )
     except urllib.error.HTTPError as exc:
         if int(exc.code) in {400, 500, 502, 503, 504}:
@@ -155,13 +166,14 @@ def _probe_vision(base_url: str, key: str, model: str,
 
 def probe(model: str = DEFAULT_MODEL, base_url: str = DEFAULT_BASE,
           timeout_s: float = 30.0,
-          require_vision: bool = False) -> tuple[bool, str, str | None]:
+          require_vision: bool = False,
+          prefer_fast: bool = False) -> tuple[bool, str, str | None]:
     key = str(os.getenv("OLLAMA_API_KEY") or "").strip()
     if not key:
         return False, "OLLAMA_API_KEY is missing", None
 
     errors = []
-    for candidate in _candidate_models(model):
+    for candidate in _candidate_models(model, prefer_fast=prefer_fast):
         try:
             _probe_text(base_url, key, candidate, timeout_s)
             vision_ok, vision_note = _probe_vision(
@@ -201,10 +213,14 @@ def main(argv=None) -> int:
     ap.add_argument(
         "--require-vision", action="store_true",
         help="fail over until a hosted model accepts image input")
+    ap.add_argument(
+        "--prefer-fast", action="store_true",
+        help="try smaller verified vision models before the configured fallback")
     args = ap.parse_args(argv)
     ok, detail, selected = probe(
         args.model, args.base_url, args.timeout,
-        require_vision=bool(args.require_vision))
+        require_vision=bool(args.require_vision),
+        prefer_fast=bool(args.prefer_fast))
     print(f"[ollama-cloud-probe] {'OK' if ok else 'FAILED'} {detail}")
     if ok and selected:
         print(f"COACH_MODEL={selected}")
