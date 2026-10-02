@@ -291,7 +291,8 @@ class MotorExecutor(Worker):
                  backend: Optional[InputBackend] = None,
                  autonomy_enabled: bool = False,
                  movement_only: bool = False,
-                 questing: bool = False):
+                 questing: bool = False,
+                 command_only: bool = False):
         super().__init__(bus, target_hz=target_hz)
         self.brain_out: StateChannel = bus.state(self.TOPIC_IN)
         self.command_state: StateChannel = bus.state("action.command")
@@ -305,6 +306,7 @@ class MotorExecutor(Worker):
         self.autonomy_enabled = bool(autonomy_enabled)   # GATED (see module doc)
         self.movement_only = bool(movement_only)
         self.questing = bool(questing)
+        self.command_only = bool(command_only)
         self._held: dict[str, float] = {}   # keyboard code -> hold-until ns
         self._held_mouse: dict[str, float] = {}  # mouse button -> hold-until ns
         self._lock = threading.Lock()
@@ -317,7 +319,8 @@ class MotorExecutor(Worker):
         self.stats.update({"inputs_emitted": 0, "shadow_only": 0,
                            "emergency_stops": 0, "hold_refreshes": 0,
                            "navigation_vetoes": 0,
-                           "semantic_steers": 0})
+                           "semantic_steers": 0,
+                           "command_only": self.command_only})
 
     # -- autonomy gate ----------------------------------------------------
     def set_autonomy(self, enabled: bool, reason: str = "") -> None:
@@ -346,6 +349,8 @@ class MotorExecutor(Worker):
         self._navigation_safety_for_held(now)
         if self.questing:
             self._consume_engineered_command(now)
+        if self.command_only:
+            return
         snap = self.brain_out.read()
         if snap is None:
             return
