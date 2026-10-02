@@ -6,7 +6,7 @@ from lab.action.motor_executor import (
 from lab.app import DigitalFlyLab
 from lab.bus import Bus
 from lab.coach.ai_only import AIOnlyOllamaCoachWorker
-from lab.coach.ollama_cloud_probe import _normalize_model
+from lab.coach.ollama_cloud_probe import _candidate_models, _normalize_model
 
 
 def _armed_bus(target, plan, notes=None):
@@ -331,7 +331,7 @@ def test_ai_only_prompt_contains_state_contract_and_no_safezone_excuse():
     )
     assert "SOLE GAMEPLAY CONTROLLER" in prompt
     assert "NO fruit-fly controller" in prompt
-    assert "quest_status=active" in prompt
+    assert '"quest_status": "active"' in prompt
     assert "SAFEZONE / PROTECTED" in prompt
     assert "reason to avoid" in prompt
     assert "quest_enemy_actor_visible" in prompt
@@ -460,3 +460,137 @@ def test_ai_only_lab_excludes_fly_workers_but_enables_role_detection():
     assert lab.ai_only_supervisor in lab.workers
     assert lab.semantic_coach in lab.workers
     assert lab.semantic_coach.stats["decision_owner"] == "cloud_ai"
+
+
+
+def test_ai_only_signature_ignores_screen_jitter_but_replans_on_events():
+    bus = Bus()
+    coach = AIOnlyOllamaCoachWorker(
+        bus, model="gemma4:cloud", api_key="test-only")
+    q = {
+        "quest_status": "active",
+        "quest_enemy_actor_visible": False,
+        "quest_enemy_objective_visible": True,
+        "quest_giver_visible": False,
+        "recommended_waypoint_visible": False,
+        "awaiting_quest_confirmation": False,
+        "stuck": False,
+        "circling": False,
+        "action_epoch": 0,
+        "ui_epoch": 0,
+    }
+    a = {
+        "target": {
+            "type": "quest_enemy_marker",
+            "direction": -1.2,
+            "distance": 0.20,
+        },
+        "player": {"health": 1.0},
+        "notes": {"quest_enemy_marker_detected": True},
+    }
+    b = {
+        "target": {
+            "type": "quest_enemy_marker",
+            "direction": 0.9,
+            "distance": 0.71,
+        },
+        "player": {"health": 1.0},
+        "notes": {"quest_enemy_marker_detected": True},
+    }
+    assert coach._signature(a, q, {}) == coach._signature(b, q, {})
+    q2 = dict(q)
+    q2["stuck"] = True
+    assert coach._signature(a, q, {}) != coach._signature(a, q2, {})
+
+
+def test_ai_visible_interact_prompt_can_trigger_t_despite_noisy_geometry():
+    bus = _armed_bus(
+        {
+            "type": "quest_marker",
+            "direction": 0.95,
+            "distance": 0.30,
+            "confidence": 0.82,
+        },
+        {
+            "plan_id": 80,
+            "skill": "TAKE_QUEST",
+            "target": "Robert",
+            "control_id": "interact",
+            "confidence": 0.96,
+            "explanation": "T prompt is visible",
+            "perception": {
+                "quest_state": "available",
+                "interaction_prompt_visible": True,
+            },
+        },
+        notes={
+            "quest_marker_detected": True,
+            "quest_marker_direction": 0.95,
+            "quest_marker_proximity": 0.30,
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "INTERACT_QUEST"
+    state = bus.state("quest.state").read().payload
+    assert state["action_epoch"] == 1
+
+
+def test_ai_visual_enemy_confirmation_relaxes_marker_melee_gate():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.20,
+            "distance": 0.66,
+            "confidence": 0.94,
+        },
+        {
+            "plan_id": 81,
+            "skill": "FIGHT_QUEST_TARGET",
+            "target": "Corrupt Marine",
+            "confidence": 0.95,
+            "explanation": "NPC is visibly in front",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": True,
+            },
+        },
+        notes={"quest_enemy_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup._enemy_marker_since_ns = sup.clock.now_ns() - int(1.0e9)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert sup.stats["marker_melee_fallbacks"] == 1
+
+
+def test_jump_is_one_shot_per_ai_plan_not_spammed():
+    bus = _armed_bus(
+        {"type": "quest_enemy_marker", "direction": 0.0,
+         "distance": 0.3, "confidence": 0.9},
+        {
+            "plan_id": 82,
+            "skill": "JUMP",
+            "target": "ledge",
+            "confidence": 0.9,
+            "explanation": "clear ledge",
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    first = bus.state("action.command").read()
+    assert first is not None
+    first_id = first.payload["command_id"]
+    sup.step()
+    second = bus.state("action.command").read()
+    assert second.payload["command_id"] == first_id
+
+
+def test_fast_model_candidates_precede_configured_model():
+    models = _candidate_models("gemma4:31b", prefer_fast=True)
+    assert models[0] == "qwen3-vl:4b"
+    assert "gemma4:31b" in models
