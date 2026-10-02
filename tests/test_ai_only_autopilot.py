@@ -928,3 +928,70 @@ def test_ai_completed_state_clears_active_quest_latch():
     state = bus.state("quest.state").read().payload
     assert state["quest_status"] == "completed"
     assert state["quest_active_latched"] is False
+
+
+
+def test_ai_only_plan_validation_keeps_equipment_perception():
+    bus = Bus()
+    coach = AIOnlyOllamaCoachWorker(
+        bus, model="qwen3.5:4b", api_key="test-only")
+    plan = coach._validate_plan({
+        "scene": "combat prep",
+        "objective": "equip melee",
+        "target": "hotbar",
+        "skill": "EQUIP_SLOT",
+        "control_id": "equip_slot_1",
+        "observed_ability": {"binding": "", "label": ""},
+        "visual_target": {
+            "kind": "ui", "x_norm": 0.15, "y_norm": 0.92,
+            "confidence": 0.9, "melee_ready": False,
+        },
+        "ui_click": {
+            "needed": False, "x_norm": 0, "y_norm": 0, "label": ""},
+        "confidence": 0.95,
+        "explanation": "slot 1 is visibly the melee tool",
+        "next_after_success": "fight",
+        "perception": {
+            "quest_state": "active",
+            "dialogue_visible": False,
+            "interaction_prompt_visible": False,
+            "enemy_actor_visible": True,
+            "player_dead": False,
+            "safezone_visible": True,
+            "equipped_slot_visible": "1",
+            "melee_ready_visible": True,
+        },
+        "knowledge_query": "",
+        "memory_updates": [],
+    }, {"controls": [{"control_id": "equip_slot_1"}]})
+    assert plan["perception"]["equipped_slot_visible"] == "1"
+    assert plan["perception"]["melee_ready_visible"] is True
+
+
+def test_supervisor_accepts_visually_confirmed_equipped_slot():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.0,
+            "distance": 0.3,
+            "confidence": 0.9,
+        },
+        {
+            "plan_id": 130,
+            "skill": "WAIT",
+            "target": "none",
+            "confidence": 0.95,
+            "explanation": "melee is visibly equipped",
+            "perception": {
+                "quest_state": "active",
+                "equipped_slot_visible": "1",
+                "melee_ready_visible": True,
+            },
+        },
+        notes={"quest_enemy_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["last_equipped_slot"] == "1"
+    assert state["melee_ready_visible"] is True
