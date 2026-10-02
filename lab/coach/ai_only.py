@@ -38,6 +38,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         self.min_call_interval_s = 1.0
         self.unchanged_refresh_s = 20.0
         self.provider = "ollama_cloud_ai_only"
+        self.suppress_duplicate_plan_logs = True
         # One frame + compact JSON is enough for this controller. Sending the
         # previous frame doubled vision work while local CV already measures
         # progress/stuck state.
@@ -443,6 +444,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         self.min_call_interval_s = 1.0
         self.unchanged_refresh_s = 20.0
         self.provider = "gemini_ai_only"
+        self.suppress_duplicate_plan_logs = True
         self.max_output_tokens = 320
         self.stats.update({
             "provider": self.provider,
