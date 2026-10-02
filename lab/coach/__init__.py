@@ -10,5 +10,6 @@ from .local_smolvlm import LocalSmolVLMCoachWorker
 from .local_smollm import LocalSmolLMCoachWorker
 from .llama_api import LlamaApiCoachWorker
 from .meta_model_api import MetaModelApiCoachWorker
+from .ollama_cloud import OllamaCloudCoachWorker
 
-__all__ = ["SemanticCoachWorker", "LocalSmolVLMCoachWorker", "LocalSmolLMCoachWorker", "LlamaApiCoachWorker", "MetaModelApiCoachWorker"]
+__all__ = ["SemanticCoachWorker", "LocalSmolVLMCoachWorker", "LocalSmolLMCoachWorker", "LlamaApiCoachWorker", "MetaModelApiCoachWorker", "OllamaCloudCoachWorker"]
