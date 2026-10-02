@@ -261,6 +261,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             "ai_plan_id": (plan or {}).get("plan_id"),
             "ai_skill": (plan or {}).get("skill"),
             "ai_target": (plan or {}).get("target"),
+            "ai_visual_target": (plan or {}).get("visual_target"),
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
             "AI_ONLY": True,
@@ -321,6 +322,18 @@ class AIOnlyAutopilotSupervisor(Worker):
         proximity = self._f(target.get("distance"))
         reason = "ai_only:" + str(plan.get("explanation") or skill)
         ai_perception = plan.get("perception") or {}
+        ai_visual = plan.get("visual_target") or {}
+        ai_visual_kind = str(
+            ai_visual.get("kind") or "none").strip().lower()
+        ai_visual_conf = self._f(ai_visual.get("confidence"), 0.0) or 0.0
+        ai_visual_x = self._f(ai_visual.get("x_norm"))
+        ai_visual_melee = bool(ai_visual.get("melee_ready"))
+        # Convert AI normalized screen x into the same approximate bearing
+        # convention used by the local CV. This target is only trusted for the
+        # currently fresh cloud plan and never persisted as identity.
+        ai_visual_dir = (
+            (float(ai_visual_x) - 0.5) * 2.8
+            if ai_visual_x is not None else None)
         ai_qstate = str(
             ai_perception.get("quest_state") or "unknown").lower()
         if confidence >= 0.85:
@@ -357,33 +370,52 @@ class AIOnlyAutopilotSupervisor(Worker):
                 yellow = bool(notes.get("quest_marker_detected", False))
                 ydir = self._f(notes.get("quest_marker_direction"))
                 yprox = self._f(notes.get("quest_marker_proximity"))
-                if yellow and ydir is not None and yprox is not None:
-                    prompt_seen = bool(
-                        ai_perception.get("interaction_prompt_visible"))
-                    explicit_interact = (
-                        str(plan.get("control_id") or "") == "interact")
-                    ready = (
-                        (prompt_seen and explicit_interact
-                         and confidence >= 0.85)
-                        or (yprox >= 0.46 and abs(ydir) <= 0.76))
-                    if ready:
-                        if (not self._last_interact_ns
-                                or now - self._last_interact_ns >= int(3.0e9)):
-                            self._emit(
-                                "INTERACT_QUEST", now, reason=reason,
-                                coach_plan_id=pid,
-                                coach_confidence=confidence,
-                                target_type="quest_marker")
-                            self._last_interact_ns = now
-                            self._await_quest_until_ns = now + int(5.0e9)
-                            self._quest_status = "pending_accept"
-                            self._action_epoch += 1
-                            self.stats["interaction_commands"] += 1
-                    else:
-                        self._steer(
-                            now, direction=ydir, pid=pid,
-                            confidence=confidence, reason=reason,
-                            target_type="quest_marker")
+                prompt_seen = bool(
+                    ai_perception.get("interaction_prompt_visible"))
+                explicit_interact = (
+                    str(plan.get("control_id") or "") == "interact")
+
+                # The VLM can literally read the on-screen "T Interact"
+                # prompt even when the cheap yellow-marker detector misses.
+                # In that case T is safer and faster than wandering around
+                # trying to satisfy stale geometry.
+                direct_ai_interact = bool(
+                    prompt_seen and explicit_interact
+                    and confidence >= 0.86)
+
+                geometry_ready = bool(
+                    yellow and ydir is not None and yprox is not None
+                    and yprox >= 0.46 and abs(ydir) <= 0.76)
+
+                if direct_ai_interact or geometry_ready:
+                    if (not self._last_interact_ns
+                            or now - self._last_interact_ns >= int(3.0e9)):
+                        self._emit(
+                            "INTERACT_QUEST", now, reason=reason,
+                            coach_plan_id=pid,
+                            coach_confidence=confidence,
+                            target_type=(
+                                "quest_giver_ai_prompt"
+                                if direct_ai_interact
+                                else "quest_marker"))
+                        self._last_interact_ns = now
+                        self._await_quest_until_ns = now + int(5.0e9)
+                        self._quest_status = "pending_accept"
+                        self._action_epoch += 1
+                        self.stats["interaction_commands"] += 1
+                elif yellow and ydir is not None and yprox is not None:
+                    self._steer(
+                        now, direction=ydir, pid=pid,
+                        confidence=confidence, reason=reason,
+                        target_type="quest_marker")
+                elif (ai_visual_kind == "quest_giver"
+                      and ai_visual_conf >= 0.82
+                      and ai_visual_dir is not None):
+                    self._steer(
+                        now, direction=ai_visual_dir, pid=pid,
+                        confidence=min(confidence, ai_visual_conf),
+                        reason=reason,
+                        target_type="quest_giver_ai_visual")
 
         elif skill == "FIGHT_QUEST_TARGET":
             # Never M1 a red objective dot. Require the persistent NPC body
@@ -420,6 +452,40 @@ class AIOnlyAutopilotSupervisor(Worker):
                         confidence=confidence, reason=reason,
                         target_type="quest_enemy_actor",
                         hold_s=0.92)
+            elif (ai_visual_kind == "quest_enemy_actor"
+                  and ai_visual_conf >= 0.84
+                  and ai_visual_dir is not None
+                  and self._quest_status == "active"):
+                # Cloud vision can resolve the actual NPC body when the cheap
+                # local role tracker misses it. The AI already chose FIGHT;
+                # use the grounded screen coordinate immediately instead of
+                # waiting several more cloud seconds for local reacquisition.
+                if ai_visual_melee and abs(ai_visual_dir) <= 0.72:
+                    if now - self._last_emit_ns >= int(0.34e9):
+                        self._emit(
+                            "ATTACK_LIGHT", now, reason=reason,
+                            ttl_s=0.8,
+                            coach_plan_id=pid,
+                            coach_confidence=confidence,
+                            target_type="quest_enemy_actor_ai_visual")
+                        self.stats["combat_commands"] += 1
+                elif abs(ai_visual_dir) <= 0.88:
+                    if now - self._last_emit_ns >= int(0.34e9):
+                        self._emit(
+                            "ATTACK_ADVANCE", now, reason=reason,
+                            ttl_s=0.9,
+                            coach_plan_id=pid,
+                            coach_confidence=confidence,
+                            target_type="quest_enemy_actor_ai_visual")
+                        self.stats["combat_commands"] += 1
+                else:
+                    self._steer(
+                        now, direction=ai_visual_dir, pid=pid,
+                        confidence=min(confidence, ai_visual_conf),
+                        reason=reason,
+                        target_type="quest_enemy_actor_ai_visual",
+                        hold_s=0.85)
+
             elif (bool(notes.get("quest_enemy_marker_detected"))
                   and direction is not None and proximity is not None):
                 # Prefer a resolved body. As a conservative fallback for the
@@ -600,10 +666,24 @@ class AIOnlyAutopilotSupervisor(Worker):
                         x = y = -1.0
                     if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
                         label = str(ui.get("label") or "")[:96]
+                        low = label.strip().lower()
+                        dialogue = bool(
+                            ai_perception.get("dialogue_visible"))
+                        ambiguous_negative = (
+                            "quit" in low or "cancel" in low
+                            or "decline" in low or "no thanks" in low)
+                        # In the observed GPO quest UI, valid progression
+                        # buttons were central/lower-screen. Edge coordinates
+                        # such as x=0.05 came from hallucinated "QUIT/Accept"
+                        # targets and caused bad clicks.
+                        quest_dialogue_safe = (
+                            not dialogue
+                            or (0.14 <= x <= 0.86 and 0.42 <= y <= 0.99))
                         sig = (
-                            label.strip().lower(),
-                            round(x, 2), round(y, 2))
-                        if (sig == self._last_ui_sig
+                            low, round(x, 2), round(y, 2))
+                        if ambiguous_negative or not quest_dialogue_safe:
+                            self.stats["ui_clicks_suppressed"] += 1
+                        elif (sig == self._last_ui_sig
                                 and self._last_ui_click_ns
                                 and now - self._last_ui_click_ns < int(2.5e9)):
                             self.stats["ui_clicks_suppressed"] += 1
@@ -620,6 +700,15 @@ class AIOnlyAutopilotSupervisor(Worker):
                             self._last_ui_click_ns = now
                             self._ui_epoch += 1
                             self._action_epoch += 1
+                            positive_quest = (
+                                dialogue and any(word in low for word in (
+                                    "accept", "alright", "yes",
+                                    "continue", "...", "okay", "ok")))
+                            if positive_quest:
+                                self._await_quest_until_ns = (
+                                    now + int(5.0e9))
+                                if self._quest_status != "active":
+                                    self._quest_status = "pending_accept"
                             self.stats["one_shot_commands"] += 1
 
         # WAIT and REOBSERVE intentionally emit no physical command.
