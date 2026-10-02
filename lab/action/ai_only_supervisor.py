@@ -263,6 +263,9 @@ class AIOnlyAutopilotSupervisor(Worker):
             "last_action_age_s": action_age,
             "last_quest_interact_age_s": interact_age,
             "last_equipped_slot": self._last_equipped_slot,
+            "melee_ready_visible": bool(
+                ((plan or {}).get("perception") or {})
+                .get("melee_ready_visible")),
             "action_epoch": int(self._action_epoch),
             "ui_epoch": int(self._ui_epoch),
             "ai_plan_id": (plan or {}).get("plan_id"),
@@ -343,6 +346,11 @@ class AIOnlyAutopilotSupervisor(Worker):
             if ai_visual_x is not None else None)
         ai_qstate = str(
             ai_perception.get("quest_state") or "unknown").lower()
+        ai_equipped = str(
+            ai_perception.get("equipped_slot_visible") or "unknown").strip()
+        if (confidence >= 0.88
+                and ai_equipped in set("0123456789")):
+            self._last_equipped_slot = ai_equipped
         if confidence >= 0.85:
             if ai_qstate == "active":
                 self._quest_active_latched = True
