@@ -42,6 +42,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         # emitted. These are facts for the AI, not hidden gameplay decisions.
         self._quest_status = "unknown"
         self._quest_active_latched = False
+        self._quest_completed_until_ns = 0
         self._last_enemy_marker_ns = 0
         self._enemy_marker_since_ns = 0
         self._last_yellow_marker_ns = 0
@@ -174,10 +175,13 @@ class AIOnlyAutopilotSupervisor(Worker):
         # because the red marker leaves the camera for a few seconds.
         if red or actor:
             self._quest_active_latched = True
+            self._quest_completed_until_ns = 0
             self._quest_status = "active"
             self._await_quest_until_ns = 0
         elif self._quest_active_latched:
             self._quest_status = "active"
+        elif now_ns < self._quest_completed_until_ns:
+            self._quest_status = "completed"
         elif now_ns < self._await_quest_until_ns:
             self._quest_status = "pending_accept"
         elif yellow:
@@ -347,6 +351,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             elif ai_qstate == "completed" and confidence >= 0.90:
                 self._quest_active_latched = False
                 self._quest_status = "completed"
+                self._quest_completed_until_ns = now + int(4.0e9)
                 self._await_quest_until_ns = 0
             elif (ai_qstate == "pending_accept"
                   and not self._quest_active_latched):
@@ -426,6 +431,7 @@ class AIOnlyAutopilotSupervisor(Worker):
                                 if direct_ai_interact
                                 else "quest_marker"))
                         self._last_interact_ns = now
+                        self._quest_completed_until_ns = 0
                         self._await_quest_until_ns = now + int(5.0e9)
                         self._quest_status = "pending_accept"
                         self._action_epoch += 1
