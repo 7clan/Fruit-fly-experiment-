@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import base64
 import json
+import re
 import time
 import urllib.error
 import urllib.request
@@ -41,8 +42,8 @@ class LocalSmolVLMCoachWorker(SemanticCoachWorker):
             bus,
             target_hz=target_hz,
             model=model or DEFAULT_LOCAL_MODEL,
-            min_call_interval_s=30.0,
-            unchanged_refresh_s=90.0,
+            min_call_interval_s=90.0,
+            unchanged_refresh_s=180.0,
             timeout_s=timeout_s,
             api_key="local-no-key",
         )
@@ -287,90 +288,116 @@ Return ONLY compact JSON:
     def _text_skill_prompt(
             self, candidate: dict, obs: dict, quest: dict,
             catalog: dict) -> str:
+        """Ultra-small prompt for the 256M model on the 2-core Windows box.
+
+        The model is not asked to reproduce a JSON object. It only selects
+        one bounded skill label; the trusted procedural candidate still owns
+        all arguments, target geometry and control details.
+        """
         card_id = str(candidate.get("skill_card") or "")
-        card_text = ""
-        for card in SKILL_CARDS:
-            if card.skill_id == card_id:
-                card_text = card.compact()
-                break
         target = dict(obs.get("target") or {})
         notes = dict(obs.get("notes") or {})
         player = dict(obs.get("player") or {})
-        compact_state = {
-            "candidate": {
-                "scene": candidate.get("scene"),
-                "skill": candidate.get("skill"),
-                "objective": candidate.get("objective"),
-                "skill_card": card_id,
-            },
-            "target": {
-                "type": target.get("type"),
-                "direction": target.get("direction"),
-                "distance": target.get("distance"),
-                "confidence": target.get("confidence"),
-            },
-            "quest_phase": quest.get("phase"),
+        allowed = sorted(self._card_actions(card_id))
+        state = {
+            "card": card_id,
+            "scene": candidate.get("scene"),
+            "candidate": candidate.get("skill"),
+            "target": target.get("type"),
+            "direction": target.get("direction"),
+            "distance": target.get("distance"),
+            "target_conf": target.get("confidence"),
+            "phase": quest.get("phase"),
             "health": player.get("health"),
             "stamina": player.get("stamina"),
-            "yellow_quest_visible": bool(notes.get("quest_marker_detected")),
-            "yellow_quest_proximity": notes.get("quest_marker_proximity"),
-            "yellow_quest_direction": notes.get("quest_marker_direction"),
+            "yellow": bool(notes.get("quest_marker_detected")),
+            "yellow_proximity": notes.get("quest_marker_proximity"),
+            "yellow_direction": notes.get("quest_marker_direction"),
         }
-        allowed = sorted(self._card_actions(card_id))
-        return f"""You are the LOCAL GPO SKILL SELECTOR.
-This is a TEXT-ONLY planning call. Fast CV already extracted the game state.
-Choose exactly ONE action from ALLOWED_ACTIONS. Do not invent keys.
+        return (
+            "GPO skill selector. Choose ONE exact label from ALLOWED. "
+            "Use the candidate unless state clearly requires another allowed "
+            "skill. Never invent a label.\n"
+            f"STATE={json.dumps(state, separators=(',', ':'), default=str)}\n"
+            f"ALLOWED={'|'.join(allowed)}\n"
+            "ANSWER="
+        )
 
-SKILL CARD:
-{card_text}
+    def _call_text_action(
+            self, prompt: str, allowed: set[str]) -> str:
+        """Return one skill token with minimal generation cost."""
+        endpoint = self.base_url + "/chat/completions"
+        body = {
+            "model": self.model,
+            "messages": [{"role": "user", "content": prompt}],
+            "temperature": 0.0,
+            "max_tokens": 12,
+            "stop": ["\n"],
+        }
+        raw = json.dumps(body).encode("utf-8")
+        req = urllib.request.Request(
+            endpoint,
+            data=raw,
+            headers={
+                "Accept": "application/json",
+                "Content-Type": "application/json",
+                "Authorization": "Bearer local-no-key",
+            },
+            method="POST",
+        )
+        with urllib.request.urlopen(
+                req, timeout=min(float(self.timeout_s), 25.0)) as resp:
+            payload = json.loads(resp.read().decode("utf-8"))
 
-STATE:
-{json.dumps(compact_state, separators=(",", ":"), default=str)}
+        choices = payload.get("choices") or []
+        text = str(
+            (((choices[0] if choices else {}).get("message") or {})
+             .get("content")) or ""
+        ).strip()
+        if not text:
+            raise RuntimeError(
+                f"local skill selector returned no text: {str(payload)[:300]}")
 
-ALLOWED_ACTIONS:
-{json.dumps(allowed)}
+        try:
+            parsed = json.loads(text)
+            if isinstance(parsed, dict):
+                text = str(parsed.get("skill") or "")
+            elif isinstance(parsed, str):
+                text = parsed
+        except Exception:
+            pass
+        upper = str(text).strip().strip("'\" ").upper()
+        if upper in allowed:
+            return upper
 
-Return ONLY JSON:
-{{
- "scene":"short",
- "objective":"short",
- "target":"short",
- "skill":"one allowed action",
- "control_id":"",
- "observed_ability":{{"binding":"","label":""}},
- "ui_click":{{"needed":false,"x_norm":0.0,"y_norm":0.0,"label":""}},
- "confidence":0.0,
- "explanation":"one short sentence",
- "next_after_success":"short",
- "knowledge_query":"",
- "memory_updates":[]
-}}"""
+        found = [
+            skill for skill in sorted(allowed, key=len, reverse=True)
+            if re.search(r"(?<![A-Z0-9_])" + re.escape(skill)
+                         + r"(?![A-Z0-9_])", upper)
+        ]
+        found = list(dict.fromkeys(found))
+        if len(found) == 1:
+            return found[0]
+        raise ValueError(
+            f"local skill selector output {text!r} did not name exactly one "
+            f"allowed skill {sorted(allowed)}")
 
     def _run_text_skill_selector(
             self, candidate: dict, obs: dict, quest: dict,
             catalog: dict, now_ns: int) -> bool:
         prompt = self._text_skill_prompt(candidate, obs, quest, catalog)
+        allowed = self._card_actions(candidate.get("skill_card"))
         t0 = time.perf_counter()
         self.stats["calls"] = int(self.stats.get("calls", 0)) + 1
         self.stats["text_skill_calls"] = int(
             self.stats.get("text_skill_calls", 0)) + 1
         try:
-            raw = self._call_gemini(prompt, None)
-            if not isinstance(raw, dict):
-                raise ValueError("local text skill selector returned non-object")
-            allowed = self._card_actions(candidate.get("skill_card"))
-            chosen = str(raw.get("skill") or "").upper()
-            if chosen not in allowed:
-                raise ValueError(
-                    f"local skill {chosen!r} not allowed by "
-                    f"{candidate.get('skill_card')!r}")
+            chosen = self._call_text_action(prompt, allowed)
             merged = dict(candidate)
-            for key in (
-                    "scene", "objective", "target", "skill", "confidence",
-                    "explanation", "next_after_success"):
-                if key in raw:
-                    merged[key] = raw[key]
             merged["skill"] = chosen
+            merged["explanation"] = (
+                f"Local SmolVLM selected {chosen} from "
+                f"{sorted(allowed)}.")
             merged["skill_card"] = candidate.get("skill_card")
             self._publish_skill_plan(
                 merged, catalog, now_ns,
@@ -384,6 +411,8 @@ Return ONLY JSON:
             )
             self._last_skill_publish_ns = now_ns
             self._last_skill_signature = self._last_ai_signature
+            self.stats["last_text_skill_ms"] = round(
+                (time.perf_counter() - t0) * 1000.0, 1)
             return True
         finally:
             self.stats["api_ms_total"] = round(
@@ -421,7 +450,7 @@ Return ONLY JSON:
             )
             ai_due = (
                 signature != self._last_ai_signature
-                or now - self._last_ai_call_ns >= int(30.0e9))
+                or now - self._last_ai_call_ns >= int(90.0e9))
             if ai_due and now >= self._text_backoff_until_ns:
                 try:
                     if self._run_text_skill_selector(
@@ -431,7 +460,7 @@ Return ONLY JSON:
                     self.stats["api_errors"] = int(
                         self.stats.get("api_errors", 0)) + 1
                     self.stats["last_error"] = repr(exc)
-                    self._text_backoff_until_ns = now + int(60.0e9)
+                    self._text_backoff_until_ns = now + int(120.0e9)
                     self.events.publish({
                         "kind": "coach_error",
                         "ts_ns": now,
