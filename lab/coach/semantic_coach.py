@@ -663,7 +663,7 @@ Return ONLY a JSON object with exactly these fields:
         if len(why) > 160:
             why = why[:157] + "..."
         print(
-            f"[AI->FLY] skill={plan.get('skill')} "
+            f"[AI->PLAN] skill={plan.get('skill')} "
             f"target={plan.get('target')} "
             f"source={plan.get('provider')} ai=yes "
             f"why={why}",
