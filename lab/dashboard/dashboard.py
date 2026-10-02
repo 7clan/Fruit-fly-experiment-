@@ -152,10 +152,12 @@ class TextDashboardRenderer:
                               "menu", "combat")
                               if (obs.get("ui") or {}).get(k)),
             f"  quest phase    {_fmt(quest_state.get('phase'))}",
-            f"  coach          {_fmt(coach.get('skill'))} "
+            f"  AI -> fly      {_fmt(coach.get('skill'))} "
             f"(conf {_fmt(coach.get('confidence'))})",
-            f"  coach scene    {_fmt(coach.get('scene'))}",
-            f"  command        {_fmt(command.get('name'))}",
+            f"  AI source      {_fmt(coach.get('provider'))}",
+            f"  AI target      {_fmt(coach.get('target'))}",
+            f"  AI why         {_fmt(coach.get('explanation'))}",
+            f"  executor cmd   {_fmt(command.get('name'))}",
         ]
         action_col = [
             "ACTION SYSTEM  [ENGINEERED resolver]",
@@ -676,7 +678,7 @@ class OpenCVDashboardRenderer:
                       "spiking FlyWire ID sample: waiting for brain chunk",
                       (120, 120, 140), scale=0.31)
 
-        self._draw_history(canvas, x0, 590, min(panel_w, 540), 100)
+        self._draw_history(canvas, x0, 590, min(panel_w, 540), 64)
 
         notes = obs.get("notes") or {}
         player = obs.get("player") or {}
@@ -685,44 +687,56 @@ class OpenCVDashboardRenderer:
         if coach:
             if coach.get("enabled") is False:
                 coach_line = (
-                    "AI COACH: DISABLED - "
-                    f"{coach.get('reason', 'API key missing')}")
+                    "AI -> FLY: DISABLED - "
+                    f"{coach.get('reason', 'coach unavailable')}")
+                coach_why = ""
             else:
                 card = coach.get("skill_card")
                 provider = coach.get("provider")
-                used = coach.get("local_vlm_used")
+                used = (
+                    coach.get("local_ai_used")
+                    if coach.get("local_ai_used") is not None
+                    else coach.get("local_vlm_used"))
                 ai_tag = (
-                    " AI=YES" if used is True
-                    else " AI=FALLBACK" if used is False
-                    else "")
+                    "AI=YES" if used is True
+                    else "AI=FALLBACK" if used is False
+                    else "AI=?")
                 coach_line = (
-                    f"AI COACH: {coach.get('skill') or '-'} "
-                    f"conf={coach.get('confidence')} "
-                    f"scene={coach.get('scene') or '-'}"
-                    + ai_tag
-                    + (f" skill={card}" if card else "")
-                    + (f" via={provider}" if provider else ""))
+                    f"AI -> FLY: {coach.get('skill') or '-'}  "
+                    f"target={coach.get('target') or '-'}  {ai_tag}"
+                    + (f"  card={card}" if card else ""))
+                why = str(coach.get("explanation") or "")
+                if len(why) > 82:
+                    why = why[:79] + "..."
+                coach_why = (
+                    f"WHY: {why or '-'}"
+                    + (f"  via={provider}" if provider else ""))
             self._put(
-                canvas, x0, 678, coach_line,
+                canvas, x0, 662, coach_line,
                 (190, 170, 245), scale=0.31)
+            if coach_why:
+                self._put(
+                    canvas, x0, 679, coach_why,
+                    (175, 155, 225), scale=0.29)
         self._put(
             canvas, x0, 697,
-            f"ENGINEERED PERCEPTION: target={target.get('type')}  "
+            f"PERCEPTION -> AI: target={target.get('type')}  "
             f"red_enemy={notes.get('quest_enemy_marker_detected', False)}",
-            (120, 180, 240), scale=0.33)
+            (120, 180, 240), scale=0.31)
         self._put(
-            canvas, x0, 716,
-            f"health={player.get('health')} stamina={player.get('stamina')}  "
-            f"goal={(goal.get('goal') or {}).get('label')}",
-            (120, 180, 240), scale=0.33)
+            canvas, x0, 714,
+            f"FLY/EXECUTOR: intention={intention.get('name') or '-'}  "
+            f"command={command.get('name') or '-'}  "
+            f"health={player.get('health')}",
+            (120, 180, 240), scale=0.31)
         if mode == "quest_pve_v1":
             dv = quest_state.get("defense_values") or {}
             self._put(
-                canvas, x0, 735,
-                f"QUEST/PVE [ENGINEERED]: phase={quest_state.get('phase')}  "
-                f"cmd={command.get('name') or '-'}  "
-                f"learn block={dv.get('block')} evade={dv.get('evade_back')}",
-                (110, 205, 235), scale=0.31)
+                canvas, x0, 731,
+                f"QUEST/PVE: phase={quest_state.get('phase')}  "
+                f"goal={(goal.get('goal') or {}).get('label')}  "
+                f"block={dv.get('block')} evade={dv.get('evade_back')}",
+                (110, 205, 235), scale=0.29)
 
         active = bool(action_meta.get(
             "autonomy", act.get("autonomy", False)))
@@ -752,8 +766,8 @@ class OpenCVDashboardRenderer:
                 state_text += f" [{reason}]"
             state_color = ((100, 230, 100) if active
                            else (120, 180, 255))
-        self._put(canvas, x0, 748, state_text, state_color,
-                  scale=0.39, thickness=1)
+        self._put(canvas, x0, 747, state_text, state_color,
+                  scale=0.37, thickness=1)
 
         # Explicit controls instead of a single toggle. These are all
         # safety/run controls; none injects an unapproved game action.
