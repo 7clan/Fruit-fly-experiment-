@@ -36,6 +36,7 @@ from .action.motor_executor import (
     MotorExecutor, SafeNoopBackend, create_windows_movement_only_backend,
     create_windows_questing_backend)
 from .action.quest_combat_supervisor import QuestCombatSupervisor
+from .action.ai_only_supervisor import AIOnlyAutopilotSupervisor
 from .brain.worker import BrainWorker
 from .brain.runtime import CanonicalBrianRuntime
 from .brain.subprocess_runtime import CanonicalBrainSubprocessRuntime
@@ -46,6 +47,7 @@ from .clock import SHARED_CLOCK
 from .coach import (
     SemanticCoachWorker, LocalSmolVLMCoachWorker, LocalSmolLMCoachWorker,
     LlamaApiCoachWorker, MetaModelApiCoachWorker, OllamaCloudCoachWorker)
+from .coach.ai_only import AIOnlyOllamaCoachWorker
 from .dashboard.dashboard import (
     DashboardWorker, OpenCVDashboardRenderer, Snapshot, TextDashboardRenderer)
 from .evidence import EvidenceRecorder
@@ -71,6 +73,7 @@ class DigitalFlyLab:
                  autonomy: bool = False,
                  movement_only: bool = False,
                  quest_autonomy: bool = False,
+                 ai_only: bool = False,
                  gpo_loadout: str = "default_melee",
                  semantic_coach: bool = False,
                  coach_provider: str = "gemini",
@@ -115,8 +118,10 @@ class DigitalFlyLab:
         self.control_catalog_state = self.bus.state("action.control_catalog")
 
         self.quest_autonomy = bool(quest_autonomy)
+        self.ai_only = bool(ai_only)
         self.gpo_loadout = str(gpo_loadout or "default_melee")
-        active_low_power = bool(movement_only or self.quest_autonomy)
+        active_low_power = bool(
+            movement_only or self.quest_autonomy or self.ai_only)
 
         # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
         # canonical Brian2 subprocess is the dominant workload.
@@ -154,8 +159,9 @@ class DigitalFlyLab:
                                  runtime=runtime, runtime_kind=runtime_kind,
                                  chunk_ms=chunk_ms)
         self.autonomy_requested = bool(
-            autonomy and (movement_only or self.quest_autonomy))
-        if self.autonomy_requested and self.quest_autonomy:
+            autonomy and (
+                movement_only or self.quest_autonomy or self.ai_only))
+        if self.autonomy_requested and (self.quest_autonomy or self.ai_only):
             backend = create_windows_questing_backend()
         elif self.autonomy_requested:
             backend = create_windows_movement_only_backend()
@@ -167,9 +173,22 @@ class DigitalFlyLab:
             # Never emit active input during init/prewarm.
             autonomy_enabled=False if self.autonomy_requested else autonomy,
             movement_only=movement_only,
-            questing=self.quest_autonomy)
+            questing=(self.quest_autonomy or self.ai_only),
+            command_only=self.ai_only)
 
-        if self.quest_autonomy and semantic_coach:
+        if self.ai_only:
+            if not semantic_coach:
+                raise ValueError("AI-only mode requires semantic_coach=True")
+            provider = str(coach_provider or "ollama_cloud").strip().lower()
+            if provider != "ollama_cloud":
+                raise ValueError(
+                    "AI-only branch currently requires ollama_cloud")
+            self.semantic_coach = AIOnlyOllamaCoachWorker(
+                self.bus,
+                target_hz=float(coach_hz),
+                model=coach_model,
+                base_url=coach_url)
+        elif self.quest_autonomy and semantic_coach:
             provider = str(coach_provider or "gemini").strip().lower()
             if provider == "local":
                 self.semantic_coach = LocalSmolLMCoachWorker(
@@ -205,11 +224,14 @@ class DigitalFlyLab:
                     f"unknown semantic coach provider {coach_provider!r}")
         else:
             self.semantic_coach = None
+        self.ai_only_supervisor = (
+            AIOnlyAutopilotSupervisor(self.bus, target_hz=8.0)
+            if self.ai_only else None)
         self.quest_supervisor = (
             QuestCombatSupervisor(
                 self.bus, self.value, target_hz=4.0,
                 loadout=self.gpo_loadout)
-            if self.quest_autonomy else None)
+            if self.quest_autonomy and not self.ai_only else None)
         self.replay = ReplayRecorder(
             self.bus, self.session_dir,
             target_hz=10.0 if active_low_power else 30.0)
@@ -248,10 +270,13 @@ class DigitalFlyLab:
                 self.bus, target_hz=dashboard_hz, renderer=renderer)
         else:
             self.dashboard = None
-        self.workers = [self.fast_vision, self.heavy_vision, self.planner,
-                        self.encoder, self.brain] + (
+        self.workers = [self.fast_vision, self.heavy_vision, self.planner] + (
+                            [] if self.ai_only
+                            else [self.encoder, self.brain]) + (
                             [self.semantic_coach]
                             if self.semantic_coach else []) + (
+                            [self.ai_only_supervisor]
+                            if self.ai_only_supervisor else []) + (
                             [self.quest_supervisor]
                             if self.quest_supervisor else []) + [
                         self.executor, self.replay] + (
@@ -263,20 +288,25 @@ class DigitalFlyLab:
         # canonical runtime: brian2 MUST be imported in the MAIN thread
         # (it installs a SIGINT handler at import); do it before spawning
         # worker threads. No-op for the mock runtime.
-        warm = getattr(self.brain.runtime, "warm_import", None)
+        warm = (
+            None if self.ai_only
+            else getattr(self.brain.runtime, "warm_import", None))
         if warm is not None:
             warm()
         meta = {
             "app": "DigitalFlyLab", "version": __version__,
             "mode": (
-                "QUEST_PVE_REQUESTED_DISARMED"
+                "AI_ONLY_REQUESTED_DISARMED"
+                if self.autonomy_requested and self.ai_only
+                else "QUEST_PVE_REQUESTED_DISARMED"
                 if self.autonomy_requested and self.quest_autonomy
                 else "ACTIVE_REQUESTED_DISARMED"
                 if self.autonomy_requested
                 else ("PASSIVE" if not self.executor.autonomy_enabled
                       else "ACTIVE")),
             "gpo_mode": (
-                "quest_pve_v1" if self.quest_autonomy
+                "ai_only_v1" if self.ai_only
+                else "quest_pve_v1" if self.quest_autonomy
                 else "navigation_v1" if self.autonomy_requested
                 else "passive"),
             "gpo_loadout": self.gpo_loadout,
@@ -293,8 +323,11 @@ class DigitalFlyLab:
                     if self.semantic_coach else None),
                 "enabled": bool(self.semantic_coach is not None),
             },
-            "runtime": self.brain.runtime.runtime_label,
-            "chunk_ms": self.brain.chunk_ms,
+            "runtime": (
+                "disabled_ai_only" if self.ai_only
+                else self.brain.runtime.runtime_label),
+            "chunk_ms": None if self.ai_only else self.brain.chunk_ms,
+            "decision_owner": "cloud_ai" if self.ai_only else "hybrid_fly",
             "capture_config": {
                 "fps": float(getattr(self.capture, "target_fps",
                                      getattr(self.capture, "fps", 0.0))),
@@ -316,7 +349,8 @@ class DigitalFlyLab:
                 "fast_role_detection": self.fast_vision.role_detection,
                 "heavy": self.heavy_vision.governor.target_hz,
                 "planner": self.planner.governor.target_hz,
-                "encoder": self.encoder.governor.target_hz,
+                "encoder": (
+                    None if self.ai_only else self.encoder.governor.target_hz),
                 "executor": self.executor.governor.target_hz,
                 "coach": (
                     self.semantic_coach.governor.target_hz
@@ -337,7 +371,8 @@ class DigitalFlyLab:
             "movement_control_available": self.autonomy_requested,
             "autonomy": self.executor.autonomy_enabled,
             "mode": (
-                "quest_pve_v1" if self.quest_autonomy
+                "ai_only_v1" if self.ai_only
+                else "quest_pve_v1" if self.quest_autonomy
                 else "navigation_v1" if self.autonomy_requested
                 else "passive"),
             "gpo_loadout": self.gpo_loadout,
@@ -402,7 +437,7 @@ class DigitalFlyLab:
         if not self.autonomy_requested:
             return
         if enabled:
-            if not self.brain.ready_event.is_set():
+            if (not self.ai_only and not self.brain.ready_event.is_set()):
                 print("[lab] movement remains disabled until brain READY",
                       flush=True)
                 return
@@ -418,17 +453,20 @@ class DigitalFlyLab:
                 "movement_control_available": True,
                 "autonomy": True,
                 "mode": (
-                    "quest_pve_v1" if self.quest_autonomy
+                    "ai_only_v1" if self.ai_only
+                    else "quest_pve_v1" if self.quest_autonomy
                     else "navigation_v1"),
                 "gpo_loadout": self.gpo_loadout,
                 "last_control_reason": str(reason),
                 "ts_ns": SHARED_CLOCK.now_ns(),
             })
             print(
-                ("[lab] QUEST/PVE AGENT ENABLED "
-                 f"({reason})")
-                if self.quest_autonomy else
-                f"[lab] MOVEMENT ENABLED ({reason})",
+                (f"[lab] AI-ONLY AUTOPILOT ENABLED ({reason})"
+                 if self.ai_only else
+                 ("[lab] QUEST/PVE AGENT ENABLED "
+                  f"({reason})")
+                 if self.quest_autonomy else
+                 f"[lab] MOVEMENT ENABLED ({reason})"),
                 flush=True)
         else:
             self.executor.set_autonomy(False, reason=reason)
@@ -436,7 +474,8 @@ class DigitalFlyLab:
                 "movement_control_available": self.autonomy_requested,
                 "autonomy": False,
                 "mode": (
-                    "quest_pve_v1" if self.quest_autonomy
+                    "ai_only_v1" if self.ai_only
+                    else "quest_pve_v1" if self.quest_autonomy
                     else "navigation_v1" if self.autonomy_requested
                     else "passive"),
                 "gpo_loadout": self.gpo_loadout,
@@ -444,7 +483,9 @@ class DigitalFlyLab:
                 "ts_ns": SHARED_CLOCK.now_ns(),
             })
             print(
-                (f"[lab] QUEST/PVE AGENT DISABLED ({reason})"
+                (f"[lab] AI-ONLY AUTOPILOT DISABLED ({reason})"
+                 if self.ai_only else
+                 f"[lab] QUEST/PVE AGENT DISABLED ({reason})"
                  if self.quest_autonomy else
                  f"[lab] MOVEMENT DISABLED ({reason})"),
                 flush=True)
@@ -527,7 +568,8 @@ class DigitalFlyLab:
                 "movement_control_available": True,
                 "autonomy": False,
                 "mode": (
-                    "quest_pve_v1" if self.quest_autonomy
+                    "ai_only_v1" if self.ai_only
+                    else "quest_pve_v1" if self.quest_autonomy
                     else "navigation_v1"),
                 "gpo_loadout": self.gpo_loadout,
                 "last_control_reason": "initial_focus_pending",
@@ -577,11 +619,11 @@ class DigitalFlyLab:
                     except (TypeError, ValueError):
                         health = None
                     if health is not None and units == "fraction":
-                        if self.quest_autonomy:
-                            # Gate-7 quest/PvE supervisor uses damage as a
-                            # defense-learning signal. Do not disable the
-                            # agent on every hit. A critically low-health
-                            # hard stop remains outside that learning loop.
+                        if self.quest_autonomy or self.ai_only:
+                            # Active quest/AI mode keeps running through ordinary
+                            # damage; only the critical-health hard stop lives
+                            # in this safety watcher.
+                            # Do not disable the agent on every hit.
                             if (health <= 0.12
                                     and self.executor.autonomy_enabled):
                                 self._set_navigation_enabled(
@@ -589,7 +631,9 @@ class DigitalFlyLab:
                                 self.action_meta.write({
                                     "movement_control_available": True,
                                     "autonomy": False,
-                                    "mode": "quest_pve_v1",
+                                    "mode": (
+                                        "ai_only_v1" if self.ai_only
+                                        else "quest_pve_v1"),
                                     "last_safety_event":
                                         "critical_health_stop",
                                     "last_control_reason":
@@ -691,7 +735,7 @@ class DigitalFlyLab:
                 (self.bus.state("quest.state").read().payload
                  if self.bus.state("quest.state").read() is not None
                  else None)
-                if self.quest_autonomy else None),
+                if (self.quest_autonomy or self.ai_only) else None),
             "engineered_values": self.value.snapshot(),
             "assessment": {
                 "started_ns": self.assessment_started_ns,
@@ -712,7 +756,7 @@ class DigitalFlyLab:
         return out
 
     def status_line(self) -> str:
-        brain = self.brain.current or {}
+        brain = {} if self.ai_only else (self.brain.current or {})
         intention = (brain.get("intention") or {}).get("name", "-")
         qenv = self.bus.state("quest.state").read()
         quest_phase = (
@@ -722,9 +766,13 @@ class DigitalFlyLab:
         coach_skill = (
             (cenv.payload or {}).get("skill", "-")
             if cenv is not None else "-")
+        brain_chunks = 0 if self.ai_only else self.brain.stats["steps"]
+        runtime_label = (
+            "disabled_ai_only" if self.ai_only
+            else self.brain.runtime.runtime_label)
         return (f"[lab] frames={self.capture.frames.published} "
-                f"brain_chunks={self.brain.stats['steps']} "
-                f"runtime={self.brain.runtime.runtime_label} "
+                f"brain_chunks={brain_chunks} "
+                f"runtime={runtime_label} "
                 f"intention={intention} "
                 f"quest_phase={quest_phase} "
                 f"coach={coach_skill} "
