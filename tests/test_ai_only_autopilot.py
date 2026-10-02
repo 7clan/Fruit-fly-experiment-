@@ -11,6 +11,7 @@ from lab.coach.ai_only import (
     AIOnlyGeminiCoachWorker, AIOnlyOllamaCoachWorker,
 )
 from lab.coach.ollama_cloud_probe import _candidate_models, _normalize_model
+from lab.perception.ai_visual_tracker import AIVisualTracker
 
 
 def _armed_bus(target, plan, notes=None):
