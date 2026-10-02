@@ -9,14 +9,16 @@ import urllib.error
 import urllib.request
 
 
-DEFAULT_MODEL = "qwen3.5"
+DEFAULT_MODEL = "gemma4:31b"
 DEFAULT_BASE = "https://ollama.com/api"
 PREFERRED_MODELS = (
-    "qwen3.5",
-    "qwen3.6",
-    "qwen3.8",
+    "gemma4:31b",
     "gemma4",
-    "kimi-k3",
+    "gpt-oss:120b",
+    "gpt-oss:20b",
+    "nemotron-3-nano:30b",
+    "nemotron-3-super",
+    "nemotron-3-ultra",
 )
 
 # 1x1 PNG only verifies that the selected hosted model accepts image input.
@@ -61,14 +63,19 @@ def _normalize_direct_model(model: str) -> str:
         model = model[:-6]
     if model.endswith(":cloud"):
         model = model[:-6]
-    # qwen3-vl:235b was retired June 2026; Ollama recommends qwen3.5.
+    # Old experiments used Qwen hosted models that are not in this account's
+    # free included usage. Prefer the current free multimodal Gemma model.
     if model in {
         "qwen3-vl:235b",
         "qwen3-vl:235b-instruct",
         "qwen3-vl:235b-a22b",
         "qwen3-vl:235b-a22b-instruct",
+        "qwen3.5",
+        "qwen3.6",
+        "qwen3.8",
+        "kimi-k3",
     }:
-        return "qwen3.5"
+        return "gemma4:31b"
     return model
 
 
@@ -104,7 +111,9 @@ def _candidate_models(requested: str, available: list[str]) -> list[str]:
         out.append(name)
     if not out and available:
         # Last resort: prefer any clearly multimodal/current family.
-        for prefix in ("qwen3.5", "qwen3.6", "qwen3.8", "gemma4", "kimi-k3"):
+        for prefix in ("gemma4:31b", "gemma4", "gpt-oss:120b",
+                       "gpt-oss:20b", "nemotron-3-nano:30b",
+                       "nemotron-3-super", "nemotron-3-ultra"):
             for x in available:
                 if x == prefix or x.startswith(prefix + ":"):
                     if x not in out:
@@ -114,47 +123,55 @@ def _candidate_models(requested: str, available: list[str]) -> list[str]:
 
 def _probe_chat(base_url: str, key: str, model: str,
                 timeout_s: float) -> tuple[bool, str]:
-    body = {
+    endpoint = base_url.rstrip("/") + "/chat"
+
+    # First verify the account can actually use the model. This is the
+    # critical preflight. A vision backend hiccup should not waste the whole
+    # Brian2 startup because structured CV state is sufficient as fallback.
+    text_body = {
         "model": model,
         "messages": [{
             "role": "user",
-            "content": "Look at this image and reply with JSON {\"ok\":true}.",
+            "content": "Reply only with: OK",
+        }],
+        "stream": False,
+    }
+    text_payload = _request(
+        endpoint, key, data=text_body, timeout_s=timeout_s)
+    text_reply = str(
+        ((text_payload.get("message") or {}).get("content")) or ""
+    ).strip()
+    if not text_reply:
+        return False, f"text access returned empty response: {str(text_payload)[:400]}"
+
+    # Then check image input. If the hosted vision path returns a transient
+    # 5xx, keep the model usable in structured-state mode instead of aborting.
+    vision_body = {
+        "model": model,
+        "messages": [{
+            "role": "user",
+            "content": "Look at this image and reply only: OK",
             "images": [_TINY_PNG_B64],
         }],
         "stream": False,
-        "format": {
-            "type": "object",
-            "properties": {"ok": {"type": "boolean"}},
-            "required": ["ok"],
-        },
     }
-    endpoint = base_url.rstrip("/") + "/chat"
     try:
         payload = _request(
-            endpoint, key, data=body, timeout_s=timeout_s)
+            endpoint, key, data=vision_body, timeout_s=timeout_s)
+        vision_reply = str(
+            ((payload.get("message") or {}).get("content")) or ""
+        ).strip()
+        if vision_reply:
+            return True, "text=yes vision=yes"
+        return True, "text=yes vision=empty_fallback_structured_state"
     except urllib.error.HTTPError as exc:
-        if int(exc.code) != 400:
-            raise
-        # Retry without structured output to separate model/auth problems
-        # from a hosted model's format support.
-        simple = {
-            "model": model,
-            "messages": [{
-                "role": "user",
-                "content": "Look at this image and reply only: OK",
-                "images": [_TINY_PNG_B64],
-            }],
-            "stream": False,
-        }
-        payload = _request(
-            endpoint, key, data=simple, timeout_s=timeout_s)
-
-    text = str(
-        ((payload.get("message") or {}).get("content")) or ""
-    ).strip()
-    if not text:
-        return False, f"empty response: {str(payload)[:400]}"
-    return True, text[:120]
+        detail = _error_detail(exc)[:220]
+        if int(exc.code) in {400, 500, 502, 503, 504}:
+            return True, (
+                f"text=yes vision=degraded_http_{exc.code} "
+                f"fallback=structured_state detail={detail}"
+            )
+        raise
 
 
 def probe(model: str = DEFAULT_MODEL, base_url: str = DEFAULT_BASE,
@@ -185,7 +202,7 @@ def probe(model: str = DEFAULT_MODEL, base_url: str = DEFAULT_BASE,
                     else f" fallback_from={model}")
                 return (
                     True,
-                    f"model={candidate} base={base_url} vision=yes"
+                    f"model={candidate} base={base_url} {detail}"
                     f"{fallback}{list_note}",
                     candidate,
                 )
@@ -200,7 +217,7 @@ def probe(model: str = DEFAULT_MODEL, base_url: str = DEFAULT_BASE,
     visible = ",".join(available[:20])
     return (
         False,
-        "no hosted vision model succeeded. "
+        "no included hosted coach model succeeded. "
         f"available=[{visible}] attempts={' | '.join(errors)[:1600]}"
         f"{list_note}",
         None,
