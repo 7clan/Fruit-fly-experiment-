@@ -36,6 +36,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._command_id = 0
         self._last_emit_ns = 0
         self._last_one_shot_plan_id = -1
+        self._last_fight_equip_plan_id = -1
         self._last_log_ns = 0
         self._last_log_sig = None
 
@@ -440,6 +441,47 @@ class AIOnlyAutopilotSupervisor(Worker):
             elif now < self._await_quest_until_ns:
                 self.stats["quest_interact_suppressed"] += 1
             else:
+                # If the CURRENT AI frame already sees a quest dialogue
+                # confirmation, execute that click in the same macro instead
+                # of waiting an entire cloud round-trip for UI_CLICK.
+                ui = plan.get("ui_click") or {}
+                dialogue = bool(ai_perception.get("dialogue_visible"))
+                try:
+                    ux = float(ui.get("x_norm", -1.0))
+                    uy = float(ui.get("y_norm", -1.0))
+                except (TypeError, ValueError):
+                    ux = uy = -1.0
+                ui_label = str(ui.get("label") or "")[:96]
+                ui_low = ui_label.strip().lower()
+                ui_safe = bool(
+                    dialogue
+                    and ui.get("needed")
+                    and confidence >= 0.80
+                    and 0.14 <= ux <= 0.86
+                    and 0.40 <= uy <= 0.99
+                    and not any(x in ui_low for x in (
+                        "quit", "cancel", "decline", "no thanks")))
+                if ui_safe:
+                    sig = (ui_low, round(ux, 2), round(uy, 2))
+                    if (sig != self._last_ui_sig
+                            or not self._last_ui_click_ns
+                            or now - self._last_ui_click_ns >= int(2.5e9)):
+                        self._emit(
+                            "UI_CLICK", now, reason=reason,
+                            x_norm=ux, y_norm=uy, confidence=confidence,
+                            ui_context=True, ui_label=ui_label,
+                            purchase_intent=False,
+                            coach_plan_id=pid,
+                            coach_confidence=confidence)
+                        self._last_ui_sig = sig
+                        self._last_ui_click_ns = now
+                        self._ui_epoch += 1
+                        self._action_epoch += 1
+                        self._await_quest_until_ns = now + int(5.0e9)
+                        self._quest_status = "pending_accept"
+                        self.stats["one_shot_commands"] += 1
+                        self._publish_state(now, obs, plan)
+                        return
                 yellow = bool(notes.get("quest_marker_detected", False))
                 ydir = self._f(notes.get("quest_marker_direction"))
                 yprox = self._f(notes.get("quest_marker_proximity"))
@@ -494,6 +536,29 @@ class AIOnlyAutopilotSupervisor(Worker):
                         self.stats["visual_track_steers"] += 1
 
         elif skill == "FIGHT_QUEST_TARGET":
+            # Allow one explicit equip precondition INSIDE the AI-selected
+            # fight macro. This removes a full cloud round-trip between
+            # "equip melee" and "start fighting". The AI must provide the
+            # verified equip_slot_N control itself.
+            fight_control = str(plan.get("control_id") or "")
+            melee_ready = bool(ai_perception.get("melee_ready_visible"))
+            if (not melee_ready
+                    and fight_control.startswith("equip_slot_")
+                    and self._last_fight_equip_plan_id != pid):
+                slot = fight_control.rsplit("_", 1)[-1]
+                if slot in set("0123456789"):
+                    self._emit(
+                        "EQUIP_SLOT", now, reason=reason,
+                        slot=slot,
+                        coach_plan_id=pid,
+                        coach_confidence=confidence)
+                    self._last_equipped_slot = slot
+                    self._last_fight_equip_plan_id = pid
+                    self._action_epoch += 1
+                    self.stats["one_shot_commands"] += 1
+                    self._publish_state(now, obs, plan)
+                    return
+
             # Never M1 a red objective dot. Require the persistent NPC body
             # associated with the active quest.
             actor = notes.get("quest_enemy_actor") or {}
