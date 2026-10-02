@@ -799,3 +799,55 @@ def test_ai_only_plan_validation_keeps_visual_target_grounding():
     assert plan["visual_target"]["kind"] == "quest_enemy_actor"
     assert plan["visual_target"]["x_norm"] == 0.62
     assert plan["visual_target"]["melee_ready"] is True
+
+
+
+def test_ai_visual_navigation_fallback_works_when_local_cv_has_no_target():
+    bus = _armed_bus(
+        {"type": "none", "direction": None, "distance": None,
+         "confidence": 0.0},
+        {
+            "plan_id": 124,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "red quest objective",
+            "confidence": 0.94,
+            "explanation": "objective is visible on the right",
+            "visual_target": {
+                "kind": "quest_objective",
+                "x_norm": 0.78,
+                "y_norm": 0.42,
+                "confidence": 0.93,
+                "melee_ready": False,
+            },
+        },
+        notes={},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["target_type"] == "ai_visual_quest_objective"
+
+
+def test_stuck_navigation_waits_for_recovery_replan_instead_of_driving_wall():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.0,
+            "distance": 0.25,
+            "confidence": 0.9,
+        },
+        {
+            "plan_id": 125,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "quest objective",
+            "confidence": 0.95,
+            "explanation": "go to marker",
+        },
+        notes={"quest_enemy_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup._stuck = True
+    sup.step()
+    assert bus.state("action.command").read() is None
