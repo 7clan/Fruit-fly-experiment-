@@ -21,7 +21,7 @@ Write-Host "Decision owner: Ollama Cloud AI ONLY." -ForegroundColor Green
 Write-Host "Fruit-fly brain: DISABLED / NOT STARTED." -ForegroundColor Yellow
 Write-Host "Local CV only measures the screen and realizes the AI-selected target." -ForegroundColor Yellow
 Write-Host "The AI owns quests, navigation goals, combat, equipment, abilities, shops and progression." -ForegroundColor Yellow
-Write-Host "Vision profile: full game capture -> 960px cloud frames; local detector stays 560px/5Hz." -ForegroundColor Yellow
+Write-Host "Vision profile: 736px fast cloud frames, 960px for UI/dialogue; local detector 560px/6Hz." -ForegroundColor Yellow
 Write-Host "F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Red
 
 & $mainPython -c "from lab.action.windows_input import _INPUT,_EXPECTED_INPUT_SIZE; import ctypes; s=ctypes.sizeof(_INPUT); print(f'[preflight] Win32 INPUT size={s} expected={_EXPECTED_INPUT_SIZE}'); raise SystemExit(0 if s==_EXPECTED_INPUT_SIZE else 2)"
@@ -80,9 +80,9 @@ $appArgs = @(
     "--runtime", "mock",
     "--capture", "windows",
     "--seconds", "0",
-    "--capture-fps", "5",
+    "--capture-fps", "6",
     "--capture-downsample", "1",
-    "--fast-hz", "5",
+    "--fast-hz", "6",
     "--heavy-hz", "0.10",
     "--fast-detect-width", "560",
     "--ai-only-autonomy",
@@ -90,7 +90,7 @@ $appArgs = @(
     "--coach-provider", "ollama_cloud",
     "--coach-model", $selectedModel,
     "--coach-url", $env:OLLAMA_CLOUD_BASE,
-    "--coach-hz", "2.0",
+    "--coach-hz", "4.0",
     "--gpo-loadout", "default_melee"
 )
 
