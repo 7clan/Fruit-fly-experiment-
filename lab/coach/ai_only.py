@@ -262,14 +262,14 @@ Return ONLY JSON with exactly:
   "confidence": 0.0,
   "explanation": "one short sentence",
   "next_after_success": "short",
-  "perception": {
+  "perception": {{
     "quest_state": "active|available|pending_accept|unknown",
     "dialogue_visible": false,
     "interaction_prompt_visible": false,
     "enemy_actor_visible": false,
     "player_dead": false,
     "safezone_visible": false
-  },
+  }},
   "knowledge_query": "short GPO wiki query or empty",
   "memory_updates": []
 }}"""
