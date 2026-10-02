@@ -1,5 +1,5 @@
 # setup_local_semantic_coach_windows.ps1
-# Installs llama.cpp and downloads/tests the tiny local SmolVLM2-256M model.
+# Installs llama.cpp and downloads/tests the tiny local SmolLM2-135M model.
 # No API key is used. Model inference stays on this PC.
 
 $ErrorActionPreference = "Stop"
@@ -9,8 +9,8 @@ Set-Location $root
 $mainPython = ".\.venv\Scripts\python.exe"
 if (-not (Test-Path $mainPython)) { throw "Main venv missing" }
 
-$modelSpec = "ggml-org/SmolVLM2-256M-Video-Instruct-GGUF:Q4_K_M"
-$modelAlias = "smolvlm2-256m"
+$modelSpec = "ggml-org/SmolLM2-135M-Instruct-GGUF:Q4_K_M"
+$modelAlias = "smollm2-135m"
 $port = 18080
 $baseUrl = "http://127.0.0.1:$port"
 $apiUrl = "$baseUrl/v1"
@@ -43,10 +43,10 @@ function Test-Health {
 }
 
 Write-Host "== LOCAL SEMANTIC COACH SETUP ==" -ForegroundColor Cyan
-Write-Host "Model: SmolVLM2-256M-Video-Instruct Q4_K_M" -ForegroundColor Yellow
-Write-Host "Runtime: llama.cpp, CPU-only, 2 low-priority inference threads" -ForegroundColor Yellow
+Write-Host "Model: SmolLM2-135M-Instruct Q4_K_M" -ForegroundColor Yellow
+Write-Host "Runtime: llama.cpp, CPU-only, ONE low-priority inference thread" -ForegroundColor Yellow
 Write-Host "No Gemini/API key is required." -ForegroundColor Green
-Write-Host "First setup downloads the small model and vision projector." -ForegroundColor DarkYellow
+Write-Host "First setup downloads only the tiny text model; there is no vision projector." -ForegroundColor DarkYellow
 
 Refresh-LocalPath
 $serverExe = Find-LlamaServer
@@ -73,7 +73,7 @@ if (Test-Health) {
     Write-Host "A local coach server is already running on port $port." -ForegroundColor Yellow
     & $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 60
     if ($LASTEXITCODE -ne 0) {
-        throw "Existing local server on port $port is not the expected SmolVLM coach."
+        throw "Existing local server on port $port is not the expected SmolLM coach."
     }
 }
 else {
@@ -81,12 +81,12 @@ else {
     $stderr = Join-Path $logDir "setup_server.stderr.log"
     Remove-Item $stdout,$stderr -Force -ErrorAction SilentlyContinue
 
-    $args = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "2", "--threads-batch", "2", "--ctx-size", "2048", "--parallel", "1", "--n-gpu-layers", "0", "--no-mmproj-offload", "--no-warmup", "--no-webui")
+    $args = @("-hf", $modelSpec, "--alias", $modelAlias, "--host", "127.0.0.1", "--port", "$port", "--threads", "1", "--threads-batch", "1", "--ctx-size", "1024", "--parallel", "1", "--n-gpu-layers", "0", "--no-warmup", "--no-webui")
 
     Write-Host "Downloading/loading local model. First run can take a few minutes..." -ForegroundColor Cyan
     $proc = Start-Process -FilePath $serverExe -ArgumentList $args -PassThru -WindowStyle Minimized -RedirectStandardOutput $stdout -RedirectStandardError $stderr
     try {
-        $proc.PriorityClass = "BelowNormal"
+        $proc.PriorityClass = "Idle"
     } catch {
         Write-Host "[local-ai] could not lower process priority; continuing." -ForegroundColor DarkYellow
     }
@@ -123,13 +123,13 @@ else {
                 $tailOut = (Get-Content $stdout -Tail 30 -ErrorAction SilentlyContinue) -join [Environment]::NewLine
             }
             $tail = "STDERR: " + $tailErr + " | STDOUT: " + $tailOut
-            throw "Local SmolVLM server did not become ready. Last server log: $tail"
+            throw "Local SmolLM server did not become ready. Last server log: $tail"
         }
 
-        Write-Host "Local server ready; testing one tiny text request (vision stays lazy)..." -ForegroundColor Cyan
+        Write-Host "Local server ready; testing the schema-constrained text selector..." -ForegroundColor Cyan
         & $mainPython -m lab.coach.local_probe --url $apiUrl --model $modelAlias --timeout 30
         if ($LASTEXITCODE -ne 0) {
-            throw "Local SmolVLM model probe failed. See $stderr"
+            throw "Local SmolLM model probe failed. See $stderr"
         }
     }
     finally {
@@ -149,7 +149,7 @@ Write-Host ""
 Write-Host "LOCAL COACH READY." -ForegroundColor Green
 Write-Host "Model: $modelAlias" -ForegroundColor Green
 Write-Host "Endpoint: $apiUrl" -ForegroundColor Green
-Write-Host "Gemini is no longer required for the local launcher." -ForegroundColor Green
+Write-Host "Gemini and the old SmolVLM vision model are not required." -ForegroundColor Green
 Write-Host ""
 Write-Host "Next command:" -ForegroundColor Cyan
 Write-Host ".\run_autonomous_questing_windows.ps1" -ForegroundColor White
