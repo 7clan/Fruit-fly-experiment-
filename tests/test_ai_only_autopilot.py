@@ -1943,3 +1943,66 @@ def test_navigation_recovery_is_bounded_and_never_blind_jump_or_climb():
     assert emitted is False
     assert sup.stats["navigation_recovery_cycles"] == 1
     assert sup._nav_recovery_suppress_until_ns > now
+
+
+def test_stale_ai_visual_waypoint_expires_and_forces_replan():
+    bus = _armed_bus(
+        {"type": "none", "direction": None, "distance": None,
+         "confidence": 0.0},
+        {
+            "plan_id": 261,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "short horizon path point",
+            "confidence": 0.94,
+            "explanation": "move through visible opening",
+            "perception": {
+                "quest_state": "active",
+                "quest_hud_visible": True,
+            },
+            "visual_target": {
+                "kind": "waypoint",
+                "x_norm": 0.68,
+                "y_norm": 0.36,
+                "bbox_norm": [0.62, 0.28, 0.74, 0.44],
+                "confidence": 0.91,
+                "melee_ready": False,
+            },
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup._quest_active_latched = True
+    # Make this short-horizon grounding older than the 8 s servo TTL.
+    penv = bus.state("coach.plan").read()
+    stale = dict(penv.payload)
+    stale["ts_ns"] = sup.clock.now_ns() - int(9e9)
+    bus.state("coach.plan").write(stale, ts_ns=stale["ts_ns"])
+
+    sup.step()
+
+    assert bus.state("action.command").read() is None
+    state = bus.state("quest.state").read().payload
+    assert state["visual_nav_epoch"] == 1
+
+    # Same stale plan increments only once.
+    sup.step()
+    state2 = bus.state("quest.state").read().payload
+    assert state2["visual_nav_epoch"] == 1
+
+
+def test_ai_only_signature_replans_on_visual_navigation_expiry():
+    bus = Bus()
+    coach = AIOnlyOllamaCoachWorker(
+        bus, model="gemma4:cloud", api_key="test-only")
+    obs = {"player": {"health": 1.0}}
+    q1 = {
+        "quest_status": "active",
+        "quest_enemy_actor_recent": False,
+        "awaiting_quest_confirmation": False,
+        "stuck": False,
+        "circling": False,
+        "ui_epoch": 0,
+        "visual_nav_epoch": 0,
+    }
+    q2 = dict(q1)
+    q2["visual_nav_epoch"] = 1
+    assert coach._signature(obs, q1, {}) != coach._signature(obs, q2, {})
