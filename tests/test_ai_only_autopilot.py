@@ -1024,7 +1024,9 @@ def test_ai_only_gemini_controller_reuses_same_ai_only_contract():
         {},
     )
     assert "SOLE GAMEPLAY CONTROLLER" in prompt
-    assert "bbox_norm" in prompt
+    schema = coach._plan_response_schema()
+    assert "bbox_norm" in (
+        schema["properties"]["visual_target"]["properties"])
 
 
 def test_visual_target_validation_keeps_trackable_bbox():
