@@ -256,7 +256,8 @@ class DigitalFlyLab:
         self.evidence = (
             EvidenceRecorder(
                 self.bus, self.session_dir,
-                target_hz=1.0, save_raw=False)
+                target_hz=(2.0 if self.ai_only else 1.0),
+                save_raw=bool(self.ai_only))
             if active_low_power else None)
         self.dashboard_ui = None
         self.assessment_started_ns = None
