@@ -420,9 +420,20 @@ CONTROL DISCIPLINE:
 - Verified movement mechanics: SPACE jumps; CTRL climbs while contacting a
   wall/object (the actuator combines forward+CTRL for CLIMB); double-W sprints;
   Q with a direction rolls/dashes; repeated airborne SPACE is GEPPO if unlocked.
-- If stuck=true or circling=true, do NOT repeat NAVIGATE_OBJECTIVE unchanged.
-  Choose a recovery: JUMP, CLIMB, LOOK_LEFT/RIGHT, GO_AROUND, BACKTRACK, SPRINT,
-  or GEPPO when its prerequisite is known.
+- If stuck=true or circling=true during NAVIGATION, do NOT repeat
+  NAVIGATE_OBJECTIVE unchanged. Choose a recovery that matches visible geometry.
+  JUMP requires a visible low obstacle; CLIMB requires a visible wall/climb
+  surface. Otherwise prefer LOOK_LEFT/RIGHT, GO_AROUND or BACKTRACK.
+- During FIGHT_QUEST_TARGET, constant distance while orbiting a visible enemy
+  is normal combat, not "stuck". Do NOT emit generic JUMP/CLIMB recovery in
+  melee unless the CURRENT screenshot clearly shows the corresponding obstacle.
+  If the fight target is temporarily lost, prioritize camera reacquisition,
+  target-centering and bounded repositioning, then resume offense only after
+  the target is grounded again.
+- Treat learned_skill_library as measured past experience. When current visual
+  preconditions match, prefer skills with repeated positive outcomes and avoid
+  repeatedly retrying skills with negative outcomes. Current screenshot/state
+  always overrides old experience.
 - BLOCK/EVADE are your decisions; no hidden combat policy chooses them.
 - LOOK_LEFT/LOOK_RIGHT are explicit camera actions for searching/recentering.
 - UI_CLICK/BUY_ITEM may click clearly visible ordinary in-game quest/menu/shop
