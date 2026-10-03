@@ -284,9 +284,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         # otherwise high-confidence Gemini perception below owns the latch.
         if self._quest_active_latched:
             self._quest_status = "active"
-        elif (actor and now_ns < self._await_quest_until_ns):
-            # Red HUD badges/arrows can look like an objective marker. Do not
-            # treat red alone as proof that TAKE_QUEST succeeded.
+        elif ((red or actor) and now_ns < self._await_quest_until_ns):
             self._quest_active_latched = True
             self._quest_completed_until_ns = 0
             self._quest_status = "active"
@@ -646,10 +644,16 @@ class AIOnlyAutopilotSupervisor(Worker):
             bbox_bottom = None
             if len(ai_visual_bbox) == 4:
                 bbox_bottom = self._f(ai_visual_bbox[3])
+            # High "waypoints" while the player is still in a protected
+            # spawn/safe-zone are often walls, sky, or water beyond a dock.
+            # Outside that context preserve the previous permissive visual
+            # waypoint contract.
             ai_waypoint_grounded = bool(
                 ai_visual_y is not None
-                and ai_visual_y >= 0.38
-                and (bbox_bottom is None or bbox_bottom >= 0.43))
+                and (not ai_safezone_visible
+                     or (ai_visual_y >= 0.38
+                         and (bbox_bottom is None
+                              or bbox_bottom >= 0.43))))
             if not ai_waypoint_grounded:
                 self.stats["visual_waypoint_geometry_vetoes"] += 1
                 self._reject_target_once(
@@ -683,6 +687,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             ai_perception.get("quest_state") or "unknown").lower()
         ai_progress_valid = self._valid_quest_progress(
             ai_perception.get("quest_progress_text"))
+        ai_safezone_visible = bool(ai_perception.get("safezone_visible"))
         ai_equipped = str(
             ai_perception.get("equipped_slot_visible") or "unknown").strip()
         if (confidence >= 0.88
@@ -692,12 +697,11 @@ class AIOnlyAutopilotSupervisor(Worker):
             # The visible accepted-quest HUD is stronger evidence than color
             # marker flicker. Keep the active latch while Gemini can actually
             # read that HUD, even if the NPC is temporarily behind terrain.
-            if (bool(ai_perception.get("quest_hud_visible"))
-                    and ai_progress_valid):
+            if bool(ai_perception.get("quest_hud_visible")):
                 self._quest_active_latched = True
                 self._quest_status = "active"
                 self._await_quest_until_ns = 0
-            elif ai_qstate == "active" and ai_progress_valid:
+            elif ai_qstate == "active":
                 self._quest_active_latched = True
                 self._quest_status = "active"
                 self._await_quest_until_ns = 0
@@ -960,10 +964,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             # AI-selected control channels alive together between 2-4 s cloud
             # replies: locomotion + camera + attack + defense + equipment.
             fight_active = bool(
-                self._quest_active_latched
-                or (ai_qstate == "active"
-                    and ai_progress_valid
-                    and confidence >= 0.82))
+                self._quest_status == "active"
+                or (ai_qstate == "active" and confidence >= 0.82))
             if not fight_active:
                 self._publish_state(now, obs, plan)
                 return
@@ -989,7 +991,7 @@ class AIOnlyAutopilotSupervisor(Worker):
 
             self_visual = self._visual_box_contains_player(
                 ai_visual, obs)
-            safezone_ai = bool(ai_perception.get("safezone_visible"))
+            safezone_ai = ai_safezone_visible
             if (ai_visual_kind == "quest_enemy_actor" and self_visual):
                 self.stats["self_target_vetoes"] += 1
                 self._reject_target_once(pid, "ai_enemy_box_contains_player")
@@ -1068,11 +1070,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             # Red-dot pursuit can attack once it is very close/centered even
             # if a wall briefly hides the body; this is the user's in-game
             # through-wall quest marker, not a generic red UI cue.
-            quest_validated = bool(
-                self._quest_active_latched or ai_progress_valid)
             close_marker = bool(
-                quest_validated
-                and target_source == "quest_enemy_marker"
+                target_source == "quest_enemy_marker"
                 and target_prox is not None
                 and target_prox >= 0.70
                 and abs(float(target_dir)) <= 0.62
