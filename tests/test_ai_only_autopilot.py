@@ -1837,3 +1837,109 @@ def test_close_stable_red_marker_can_drive_attack_through_occlusion():
     assert cmd.payload["name"] == "COMBAT_BUNDLE"
     assert cmd.payload["target_type"] == "quest_enemy_marker"
     assert cmd.payload["attack"] is True
+
+
+def test_active_quest_stale_yellow_giver_cannot_trigger_recovery_loop():
+    bus = _armed_bus(
+        {
+            # Exact failure mode from lab_20261004_005047: generic CV still
+            # sees the old yellow giver while the cloud goal is a waypoint.
+            "type": "quest_marker",
+            "direction": -1.20,
+            "distance": 0.25,
+            "confidence": 0.92,
+        },
+        {
+            "plan_id": 260,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "Corrupt Marines quest area",
+            "confidence": 0.95,
+            "explanation": "leave the giver and follow the active objective",
+            "perception": {
+                "quest_state": "active",
+                "quest_hud_visible": True,
+            },
+            "visual_target": {
+                "kind": "waypoint",
+                "x_norm": 0.70,
+                "y_norm": 0.35,
+                "bbox_norm": [0.64, 0.28, 0.76, 0.43],
+                "confidence": 0.92,
+                "melee_ready": False,
+            },
+        },
+        notes={
+            "quest_marker_detected": True,
+            "quest_marker_direction": -1.20,
+            "quest_marker_proximity": 0.25,
+        },
+    )
+    bus.state("ai.visual.track").write({
+        "plan_id": 260,
+        "kind": "waypoint",
+        "direction": 0.42,
+        "proximity_hint": 0.20,
+        "confidence": 0.90,
+    })
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup._quest_active_latched = True
+    sup._quest_status = "active"
+    sup._progress_target = "quest_marker"
+    sup._best_proximity = 0.80
+    sup._last_progress_ns = sup.clock.now_ns() - int(8e9)
+    sup._stuck = True
+    sup._circling = True
+
+    sup.step()
+
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["target_type"] == "ai_visual_waypoint"
+    assert sup.stats["micro_recoveries"] == 0
+    assert sup._progress_target is None
+    assert sup._stuck is False
+    assert sup._circling is False
+
+
+def test_navigation_recovery_is_bounded_and_never_blind_jump_or_climb():
+    bus = Bus()
+    sup = AIOnlyAutopilotSupervisor(bus)
+    names = []
+    now = sup.clock.now_ns()
+
+    for i in range(3):
+        if i:
+            sup._last_recovery_ns = now - int(2e9)
+        emitted = sup._recover_navigation(
+            now,
+            pid=300,
+            confidence=0.95,
+            reason="test_nav",
+            direction=0.30,
+            target_type="recommended_quest_waypoint",
+        )
+        assert emitted is True
+        env = bus.state("action.command").read()
+        assert env is not None
+        names.append(env.payload["name"])
+        now += int(2e9)
+
+    assert names == ["SEARCH_CAMERA", "DASH_BACK", "STEER_TARGET"]
+    assert "JUMP" not in names
+    assert "CLIMB" not in names
+    assert sup.stats["jump_recoveries"] == 0
+    assert sup.stats["climb_recoveries"] == 0
+
+    sup._last_recovery_ns = now - int(2e9)
+    emitted = sup._recover_navigation(
+        now,
+        pid=300,
+        confidence=0.95,
+        reason="test_nav",
+        direction=0.30,
+        target_type="recommended_quest_waypoint",
+    )
+    assert emitted is False
+    assert sup.stats["navigation_recovery_cycles"] == 1
+    assert sup._nav_recovery_suppress_until_ns > now
