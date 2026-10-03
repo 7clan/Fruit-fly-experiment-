@@ -390,10 +390,11 @@ CONTROL DISCIPLINE:
   Start M1 when the body is grounded/melee-ready OR the active-quest red target
   is very close and centered. If the red target is close but blocked, keep the
   fight goal and choose jump/climb/orbit instead of claiming no enemy exists.
-- SAFEZONE / PROTECTED text is PvP protection, not proof that a visible
-  character is an enemy. You may pursue verified quest NPCs from a safe zone,
-  but do NOT attack a target grounded only by your own visual guess while the
-  local hostile-body detector has no matching NPC.
+- SAFEZONE / PROTECTED text is PvP protection. It is NOT by itself a
+  reason to avoid or postpone fighting verified quest NPCs. However, SAFEZONE
+  is also not proof that a visible character is an enemy: do NOT attack a
+  target grounded only by your own visual guess while the local hostile-body
+  detector has no matching NPC.
 - TAKE_QUEST: move to the yellow QUEST/! giver. Whenever the giver is visible,
   visual_target.kind MUST be "quest_giver" with a tight bbox_norm around the
   NPC/interaction target. If the CURRENT screenshot visibly shows the
