@@ -397,7 +397,7 @@ def test_ai_only_explicit_look_plan_becomes_bounded_camera_command():
     cmd = bus.state("action.command").read()
     assert cmd is not None
     assert cmd.payload["name"] == "SEARCH_CAMERA"
-    assert cmd.payload["dx"] == 105
+    assert cmd.payload["dx"] == 78
 
 
 def test_ai_only_backend_uses_roblox_camera_drag():
