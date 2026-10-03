@@ -157,10 +157,14 @@ def _extract_text(payload: dict) -> str:
 
 
 def _generate(model: str, key: str, parts: list[dict],
-              timeout_s: float) -> dict:
+              timeout_s: float,
+              generation_config: dict | None = None) -> dict:
     endpoint = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
         f"{model}:generateContent")
+    config = {"maxOutputTokens": 24}
+    if generation_config:
+        config.update(dict(generation_config))
     return _request(
         endpoint, key,
         data={
@@ -168,9 +172,7 @@ def _generate(model: str, key: str, parts: list[dict],
                 "role": "user",
                 "parts": parts,
             }],
-            "generationConfig": {
-                "maxOutputTokens": 24,
-            },
+            "generationConfig": config,
         },
         timeout_s=timeout_s)
 
@@ -184,19 +186,76 @@ def _probe_chat(model: str, key: str, timeout_s: float) -> bool:
 
 
 def _probe_vision(model: str, key: str, timeout_s: float) -> bool:
-    payload = _generate(
-        model, key,
-        [
-            {
-                "inline_data": {
-                    "mime_type": "image/png",
-                    "data": TINY_PNG_B64,
+    """Verify image input AND structured controller-style JSON.
+
+    The 2026-10-03 run passed a text/image ping but then produced 42/42
+    unparseable controller responses. Preflight now exercises the actual
+    structured-output path so that failure is caught before a live run.
+    """
+    parts = [
+        {
+            "inline_data": {
+                "mime_type": "image/png",
+                "data": TINY_PNG_B64,
+            },
+        },
+        {"text": (
+            'Inspect the image and return JSON with '
+            '"skill":"WAIT","confidence":1.0'
+        )},
+    ]
+    schema = {
+        "type": "object",
+        "properties": {
+            "skill": {
+                "type": "string",
+                "enum": ["WAIT"],
+            },
+            "confidence": {
+                "type": "number",
+                "minimum": 0.0,
+                "maximum": 1.0,
+            },
+        },
+        "required": ["skill", "confidence"],
+    }
+    configs = [
+        {
+            "maxOutputTokens": 64,
+            "temperature": 0.0,
+            "responseFormat": {
+                "text": {
+                    "mimeType": "application/json",
+                    "schema": schema,
                 },
             },
-            {"text": "Reply with exactly: OK"},
-        ],
-        timeout_s)
-    return bool(_extract_text(payload))
+        },
+        {
+            "maxOutputTokens": 64,
+            "temperature": 0.0,
+            "responseMimeType": "application/json",
+            "responseSchema": schema,
+        },
+    ]
+    last = None
+    for config in configs:
+        try:
+            payload = _generate(
+                model, key, parts, timeout_s,
+                generation_config=config)
+            text = _extract_text(payload)
+            obj = json.loads(text)
+            return (
+                str(obj.get("skill") or "").upper() == "WAIT"
+                and float(obj.get("confidence", 0.0)) >= 0.5
+            )
+        except (urllib.error.HTTPError, json.JSONDecodeError,
+                TypeError, ValueError) as exc:
+            last = exc
+            continue
+    if last:
+        raise last
+    return False
 
 
 def _error_detail(exc: urllib.error.HTTPError) -> str:
