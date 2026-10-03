@@ -389,13 +389,17 @@ class MotorExecutor(Worker):
         self._camera_sign = 1
         self._camera_prev_direction = None
         self._camera_prev_target = None
+        self._camera_prev_plan_id = -1
         self._camera_prev_ns = 0
+        self._camera_bad_samples = 0
+        self._camera_last_flip_ns = 0
         self.stats.update({"inputs_emitted": 0, "shadow_only": 0,
                            "emergency_stops": 0, "hold_refreshes": 0,
                            "navigation_vetoes": 0,
                            "semantic_steers": 0,
                            "camera_aligns": 0,
                            "camera_sign_flips": 0,
+                           "camera_bad_samples": 0,
                            "command_only": self.command_only})
 
     # -- autonomy gate ----------------------------------------------------
@@ -788,28 +792,58 @@ class MotorExecutor(Worker):
                 # This prevents W+A/W+D orbiting around an objective for tens
                 # of seconds while the cloud waits for the next frame.
                 target_type = str(cmd.get("target_type") or "")
+                try:
+                    plan_id = int(cmd.get("coach_plan_id", -1))
+                except (TypeError, ValueError):
+                    plan_id = -1
                 if camera_align and abs(direction) > 0.24:
-                    # Learn drag polarity from fresh geometry while turning in
-                    # place. This avoids endless circles if Roblox/camera mode
-                    # interprets RMB drag opposite to our initial assumption.
-                    if (self._camera_prev_direction is not None
-                            and target_type == self._camera_prev_target
-                            and 0 < now_ns - self._camera_prev_ns < int(2.2e9)
-                            and abs(direction)
-                                > abs(self._camera_prev_direction) + 0.10
-                            and direction * self._camera_prev_direction > 0):
+                    same_servo = bool(
+                        self._camera_prev_direction is not None
+                        and target_type == self._camera_prev_target
+                        and plan_id == self._camera_prev_plan_id
+                        and 0 < now_ns - self._camera_prev_ns < int(2.4e9))
+                    worsened = bool(
+                        same_servo
+                        and direction * self._camera_prev_direction > 0
+                        and abs(direction)
+                            > abs(self._camera_prev_direction) + 0.10)
+                    improved = bool(
+                        same_servo
+                        and abs(direction)
+                            < abs(self._camera_prev_direction) - 0.05)
+
+                    if worsened:
+                        self._camera_bad_samples += 1
+                        self.stats["camera_bad_samples"] += 1
+                    elif improved:
+                        self._camera_bad_samples = 0
+                    elif not same_servo:
+                        self._camera_bad_samples = 0
+
+                    # One noisy CV frame used to reverse camera polarity. The
+                    # live run flipped 15 times. Require two consecutive
+                    # worsening observations from the SAME AI plan/target and
+                    # enforce a cooldown after a flip.
+                    if (self._camera_bad_samples >= 2
+                            and (not self._camera_last_flip_ns
+                                 or now_ns - self._camera_last_flip_ns
+                                     >= int(3.0e9))):
                         self._camera_sign *= -1
+                        self._camera_bad_samples = 0
+                        self._camera_last_flip_ns = now_ns
                         self.stats["camera_sign_flips"] += 1
+
                     dx = int(max(
-                        -92, min(
-                            92,
-                            self._camera_sign * direction * 72.0)))
-                    if abs(dx) < 18:
-                        dx = 18 if dx >= 0 else -18
+                        -72, min(
+                            72,
+                            self._camera_sign * direction * 56.0)))
+                    if abs(dx) < 14:
+                        dx = 14 if dx >= 0 else -14
                     self.backend.mouse_move(dx, 0)
                     self.stats["camera_aligns"] += 1
                     self._camera_prev_direction = direction
                     self._camera_prev_target = target_type
+                    self._camera_prev_plan_id = plan_id
                     self._camera_prev_ns = now_ns
 
                 # Turn first whenever the target is meaningfully off-axis.
