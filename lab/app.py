@@ -63,7 +63,8 @@ from .world.planner import PlannerWorker
 from .world.value import ValueTable
 from .skills import SkillLibrary
 from .training import (
-    TrajectoryRecorder, TeacherInputRecorder, load_teacher_priors)
+    TrajectoryRecorder, TeacherInputRecorder,
+    load_teacher_priors, rebuild_teacher_priors)
 
 AGENT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -137,6 +138,13 @@ class DigitalFlyLab:
         self.skill_library = SkillLibrary(
             self.training_root / "skills.json")
         self.teacher_priors = load_teacher_priors(self.training_root)
+        if (not self.teacher_priors
+                and (self.training_root / "trajectories").exists()):
+            try:
+                self.teacher_priors = rebuild_teacher_priors(
+                    self.training_root)
+            except Exception:
+                self.teacher_priors = {}
         self.teacher_prior_state = self.bus.state("training.teacher_priors")
 
         # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
@@ -805,6 +813,10 @@ class DigitalFlyLab:
             w.stop()
         self.capture.stop()
         self.memory.stop(persist=True)
+        # Teacher recorder may have rebuilt the persistent profile while its
+        # worker stopped. Refresh it so this session report reflects exactly
+        # what the next AI-only run will load.
+        self.teacher_priors = load_teacher_priors(self.training_root)
         try:
             self.value.save_file(self.value_path)
         except Exception as exc:
