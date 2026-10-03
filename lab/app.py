@@ -355,7 +355,7 @@ class DigitalFlyLab:
         # (it installs a SIGINT handler at import); do it before spawning
         # worker threads. No-op for the mock runtime.
         warm = (
-            None if self.ai_only
+            None if (self.ai_only or self.teacher_mode)
             else getattr(self.brain.runtime, "warm_import", None))
         if warm is not None:
             warm()
@@ -407,7 +407,8 @@ class DigitalFlyLab:
                                      getattr(self.capture, "fps", 0.0))),
                 "downsample": int(getattr(self.capture, "downsample", 1)),
             },
-            "low_power_profile": bool(self.autonomy_requested),
+            "low_power_profile": bool(
+                self.autonomy_requested or self.teacher_mode),
             "gpo_control_catalog": {
                 "count": len(CORE_CONTROLS) + len(
                     loadout_controls(self.gpo_loadout)),
@@ -448,7 +449,8 @@ class DigitalFlyLab:
             "movement_control_available": self.autonomy_requested,
             "autonomy": self.executor.autonomy_enabled,
             "mode": (
-                "ai_only_v1" if self.ai_only
+                "teacher_recording_v1" if self.teacher_mode
+                else "ai_only_v1" if self.ai_only
                 else "quest_pve_v1" if self.quest_autonomy
                 else "navigation_v1" if self.autonomy_requested
                 else "passive"),
