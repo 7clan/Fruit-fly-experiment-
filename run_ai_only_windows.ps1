@@ -35,6 +35,13 @@ if ($LASTEXITCODE -ne 0) {
 $provider = "gemini"
 $selectedModel = $null
 
+function Test-GeminiKeyShape([string]$Value) {
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
+    $k = $Value.Trim()
+    if ($k.Length -lt 20) { return $false }
+    return ($k.StartsWith("AIza") -or $k.StartsWith("AQ."))
+}
+
 if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
     $env:GEMINI_API_KEY = [Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
 }
@@ -45,8 +52,19 @@ if ([string]::IsNullOrWhiteSpace($env:GEMINI_MODEL)) {
     $env:GEMINI_MODEL = "gemini-3.5-flash-lite"
 }
 
-if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
-    throw "Gemini API key missing. Run .\setup_semantic_coach_windows.ps1 once, then retry."
+if (-not (Test-GeminiKeyShape $env:GEMINI_API_KEY)) {
+    $badLen = if ($null -eq $env:GEMINI_API_KEY) { 0 } else { $env:GEMINI_API_KEY.Trim().Length }
+    Write-Host "Stored Gemini key is missing/truncated (length=$badLen). It will be replaced before any API call." -ForegroundColor Yellow
+    [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", $null, "User")
+    Remove-Item Env:GEMINI_API_KEY -ErrorAction SilentlyContinue
+    & ".\setup_semantic_coach_windows.ps1" -ReplaceKey
+    if ($LASTEXITCODE -ne 0) { throw "Gemini API-key setup failed." }
+    if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+        $env:GEMINI_API_KEY = [Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
+    }
+}
+if (-not (Test-GeminiKeyShape $env:GEMINI_API_KEY)) {
+    throw "Gemini API key is still invalid/truncated after setup; AI-only run not started."
 }
 
 Write-Host "Benchmarking available Gemini Flash-Lite vision models for the lowest startup latency..." -ForegroundColor Cyan
