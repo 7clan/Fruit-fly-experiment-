@@ -19,6 +19,7 @@ _DEFAULT_SKILLS = {
         "preconditions": ["objective_or_waypoint_visible"],
         "success": ["objective_reached", "target_context_changes"],
         "failure": ["no_progress", "circling"],
+        "policy_version": 2,
     },
     "TAKE_QUEST": {
         "category": "quest",
@@ -99,7 +100,35 @@ class SkillLibrary:
                 rec.setdefault("reward_sum", 0.0)
                 rec.setdefault("last_reward", 0.0)
                 rec.setdefault("last_seen_ns", 0)
-                rec.setdefault("policy_version", 1)
+                desired_version = int(spec.get("policy_version", 1))
+                current_version = int(rec.get("policy_version", 1))
+                if current_version < desired_version:
+                    # Outcome statistics belong to the policy that generated
+                    # them. Preserve provenance, but do not let a known-buggy
+                    # v1 navigation policy poison the new v2 selector.
+                    history = rec.setdefault("retired_versions", [])
+                    history.append({
+                        "policy_version": current_version,
+                        "attempts": int(rec.get("attempts", 0)),
+                        "positive_outcomes": int(
+                            rec.get("positive_outcomes", 0)),
+                        "negative_outcomes": int(
+                            rec.get("negative_outcomes", 0)),
+                        "neutral_outcomes": int(
+                            rec.get("neutral_outcomes", 0)),
+                        "reward_sum": float(rec.get("reward_sum", 0.0)),
+                        "retired_reason": "policy_version_changed",
+                    })
+                    rec["attempts"] = 0
+                    rec["positive_outcomes"] = 0
+                    rec["negative_outcomes"] = 0
+                    rec["neutral_outcomes"] = 0
+                    rec["reward_sum"] = 0.0
+                    rec["last_reward"] = 0.0
+                    rec["last_seen_ns"] = 0
+                    rec["policy_version"] = desired_version
+                else:
+                    rec.setdefault("policy_version", desired_version)
 
     def record_segment(self, skill_id: str, reward: float,
                        ts_ns: int = 0) -> None:
