@@ -52,12 +52,12 @@ def main(argv=None):
                 reward_total = float(reward.get("total") or 0.0)
 
                 teacher = row.get("teacher_action") or {}
-                if teacher.get("focused") and teacher.get("actions"):
+                if teacher.get("focused"):
                     teacher_fh.write(json.dumps({
                         "session_id": row.get("session_id"),
                         "ts_ns": row.get("ts_ns"),
                         "input": compact_state(row),
-                        "target_actions": teacher.get("actions"),
+                        "target_actions": teacher.get("actions") or [],
                         "keys_down": teacher.get("keys_down"),
                         "mouse_left": teacher.get("mouse_left"),
                         "mouse_right": teacher.get("mouse_right"),
