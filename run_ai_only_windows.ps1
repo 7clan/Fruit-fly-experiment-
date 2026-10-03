@@ -17,6 +17,13 @@ $env:MKL_NUM_THREADS = "1"
 $env:NUMEXPR_NUM_THREADS = "1"
 
 Write-Host "== AI-ONLY AUTOPILOT EXPERIMENT ==" -ForegroundColor Cyan
+try {
+    $branchName = (& git branch --show-current 2>$null).Trim()
+    $commitId = (& git rev-parse --short HEAD 2>$null).Trim()
+    Write-Host "Build: branch=$branchName commit=$commitId" -ForegroundColor DarkCyan
+} catch {
+    Write-Host "Build: git metadata unavailable" -ForegroundColor DarkCyan
+}
 Write-Host "Decision owner: Gemini Flash-Lite AI ONLY." -ForegroundColor Green
 Write-Host "Fruit-fly brain: DISABLED / NOT STARTED." -ForegroundColor Yellow
 Write-Host "Local CV only measures the screen and realizes the AI-selected target." -ForegroundColor Yellow
