@@ -39,6 +39,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         self.unchanged_refresh_s = 18.0
         self.provider = "ollama_cloud_ai_only"
         self.skill_state = bus.state("training.skills")
+        self.teacher_prior_state = bus.state("training.teacher_priors")
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
         # One frame + compact JSON is enough for this controller. Sending the
@@ -296,6 +297,10 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                 "failure_conditions": rec.get("failure_conditions"),
             }
 
+        teacher_env = self.teacher_prior_state.read()
+        teacher_priors = (
+            teacher_env.payload if teacher_env is not None else {})
+
         situation = {
             "world": _compact(world_for_ai, 2600),
             "quest": _compact(quest, 2200),
@@ -306,6 +311,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
             },
             "verified_controls": controls,
             "learned_skill_library": _compact(compact_skills, 2600),
+            "human_teacher_priors": _compact(teacher_priors, 1800),
             "previous_plan": _compact(previous_plan, 1300),
             "persistent_character_profile": _compact(self.profile, 2400),
             "state_contract": {
@@ -434,6 +440,9 @@ CONTROL DISCIPLINE:
   preconditions match, prefer skills with repeated positive outcomes and avoid
   repeatedly retrying skills with negative outcomes. Current screenshot/state
   always overrides old experience.
+- human_teacher_priors are descriptive imitation statistics from recorded
+  human play, not reward. Use timing/coverage only when its readiness flag is
+  true. Missing BLOCK/EVADE coverage means "unknown", never "defense is bad".
 - BLOCK/EVADE are your decisions; no hidden combat policy chooses them.
 - LOOK_LEFT/LOOK_RIGHT are explicit camera actions for searching/recentering.
 - UI_CLICK/BUY_ITEM may click clearly visible ordinary in-game quest/menu/shop
@@ -620,6 +629,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         self.unchanged_refresh_s = 18.0
         self.provider = "gemini_ai_only"
         self.skill_state = bus.state("training.skills")
+        self.teacher_prior_state = bus.state("training.teacher_priors")
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
         self.max_output_tokens = 420
