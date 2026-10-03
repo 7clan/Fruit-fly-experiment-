@@ -43,6 +43,7 @@ class AIVisualTracker(Worker):
         self._misses = 0
         self._last_frame_seq = -1
         self._initialized_ns = 0
+        self._semantic_key = None
 
         self.stats.update({
             "initializations": 0,
@@ -52,6 +53,7 @@ class AIVisualTracker(Worker):
             "last_confidence": 0.0,
             "last_kind": "none",
             "last_plan_id": -1,
+            "plan_carries": 0,
         })
 
     @staticmethod
@@ -93,6 +95,15 @@ class AIVisualTracker(Worker):
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         return gray
 
+    @staticmethod
+    def _semantic_plan_key(plan: dict) -> tuple:
+        skill = str(plan.get("skill") or "").strip().upper()
+        target = " ".join(
+            str(plan.get("target") or "").strip().lower().split())
+        vt = plan.get("visual_target") or {}
+        kind = str(vt.get("kind") or "none").strip().lower()
+        return skill, target, kind
+
     def _initialize(self, frame, plan: dict, plan_id: int, now_ns: int):
         vt = plan.get("visual_target") or {}
         kind = str(vt.get("kind") or "none").strip().lower()
@@ -101,8 +112,43 @@ class AIVisualTracker(Worker):
             conf = float(vt.get("confidence", 0.0))
         except (TypeError, ValueError):
             conf = 0.0
-        if kind not in self.TRACKABLE or bbox is None or conf < 0.72:
+        semantic_key = self._semantic_plan_key(plan)
+        valid_seed = bool(
+            kind in self.TRACKABLE and bbox is not None and conf >= 0.72)
+        if not valid_seed:
+            # Gemini may repeat the SAME persistent fight/navigation goal but
+            # omit the bbox on a later compact response. Throwing away a good
+            # local track at that moment recreates cloud latency. Carry the
+            # existing AI-selected target only when the semantic goal is still
+            # the same; never jump to a new object on our own.
+            old_skill, old_target, old_kind = (
+                self._semantic_key
+                if self._semantic_key is not None
+                else ("", "", "none"))
+            new_skill, new_target, new_kind = semantic_key
+            same_goal = bool(
+                self._base_template is not None
+                and self._bbox is not None
+                and new_skill == old_skill
+                and new_target == old_target
+                and (new_kind in {"none", old_kind}
+                     or old_kind in {"none", new_kind}))
+            if same_goal:
+                self._plan_id = plan_id
+                self._semantic_key = (
+                    new_skill, new_target,
+                    old_kind if new_kind == "none" else new_kind)
+                self.stats["plan_carries"] += 1
+                self.stats["last_plan_id"] = plan_id
+                self._publish(
+                    now_ns,
+                    confidence=max(
+                        0.45, float(self.stats.get(
+                            "last_confidence", 0.55)) * 0.94),
+                    source="plan_carry")
+                return
             self._reset(plan_id=plan_id)
+            self._semantic_key = semantic_key
             return
 
         gray = self._prepare(frame)
@@ -126,6 +172,7 @@ class AIVisualTracker(Worker):
         self._bbox = list(bbox)
         self._misses = 0
         self._initialized_ns = now_ns
+        self._semantic_key = semantic_key
         self.stats["initializations"] += 1
         self.stats["last_kind"] = kind
         self.stats["last_plan_id"] = plan_id
@@ -140,6 +187,8 @@ class AIVisualTracker(Worker):
         self._scale = 1.0
         self._bbox = None
         self._misses = 0
+        if plan_id is None:
+            self._semantic_key = None
 
     def _publish(self, now_ns: int, confidence: float, source: str):
         if not self._bbox:
