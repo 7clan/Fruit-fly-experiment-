@@ -85,6 +85,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             "suppressed_duplicate_logs": 0,
             "quest_interact_suppressed": 0,
             "ui_clicks_suppressed": 0,
+            "quest_dialogue_followups": 0,
             "marker_melee_fallbacks": 0,
             "visual_track_steers": 0,
             "visual_track_attacks": 0,
@@ -970,71 +971,93 @@ class AIOnlyAutopilotSupervisor(Worker):
                     self.stats["one_shot_commands"] += 1
 
         elif skill in {"UI_CLICK", "BUY_ITEM"}:
-            if self._one_shot(pid):
-                ui = plan.get("ui_click") or {}
-                if (not bool(ui.get("needed"))
-                        and ai_visual_kind == "ui"
-                        and ai_visual_conf >= 0.82
-                        and ai_visual_x is not None):
-                    ui = dict(ui)
-                    ui["needed"] = True
-                    ui["x_norm"] = ai_visual_x
-                    ui["y_norm"] = ai_visual.get("y_norm", 0.5)
-                    ui["label"] = (
-                        str(ui.get("label") or "")
-                        or "AI grounded UI target")
-                if bool(ui.get("needed")) and confidence >= 0.80:
-                    try:
-                        x = float(ui.get("x_norm"))
-                        y = float(ui.get("y_norm"))
-                    except (TypeError, ValueError):
-                        x = y = -1.0
-                    if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
-                        label = str(ui.get("label") or "")[:96]
-                        low = label.strip().lower()
-                        dialogue = bool(
-                            ai_perception.get("dialogue_visible"))
-                        ambiguous_negative = (
-                            "quit" in low or "cancel" in low
-                            or "decline" in low or "no thanks" in low)
-                        # In the observed GPO quest UI, valid progression
-                        # buttons were central/lower-screen. Edge coordinates
-                        # such as x=0.05 came from hallucinated "QUIT/Accept"
-                        # targets and caused bad clicks.
-                        quest_dialogue_safe = (
-                            not dialogue
-                            or (0.14 <= x <= 0.86 and 0.42 <= y <= 0.99))
-                        sig = (
-                            low, round(x, 2), round(y, 2))
-                        if ambiguous_negative or not quest_dialogue_safe:
-                            self.stats["ui_clicks_suppressed"] += 1
-                        elif (sig == self._last_ui_sig
-                                and self._last_ui_click_ns
-                                and now - self._last_ui_click_ns < int(2.5e9)):
-                            self.stats["ui_clicks_suppressed"] += 1
-                        else:
-                            self._emit(
-                                "UI_CLICK", now, reason=reason,
-                                x_norm=x, y_norm=y, confidence=confidence,
-                                ui_context=True,
-                                ui_label=label,
-                                purchase_intent=(skill == "BUY_ITEM"),
-                                coach_plan_id=pid,
-                                coach_confidence=confidence)
-                            self._last_ui_sig = sig
-                            self._last_ui_click_ns = now
-                            self._ui_epoch += 1
-                            self._action_epoch += 1
-                            positive_quest = (
-                                dialogue and any(word in low for word in (
-                                    "accept", "alright", "yes",
-                                    "continue", "...", "okay", "ok")))
-                            if positive_quest:
-                                self._await_quest_until_ns = (
-                                    now + int(5.0e9))
-                                if self._quest_status != "active":
-                                    self._quest_status = "pending_accept"
-                            self.stats["one_shot_commands"] += 1
+            ui = plan.get("ui_click") or {}
+            if (not bool(ui.get("needed"))
+                    and ai_visual_kind == "ui"
+                    and ai_visual_conf >= 0.82
+                    and ai_visual_x is not None):
+                ui = dict(ui)
+                ui["needed"] = True
+                ui["x_norm"] = ai_visual_x
+                ui["y_norm"] = ai_visual.get("y_norm", 0.5)
+                ui["label"] = (
+                    str(ui.get("label") or "")
+                    or "AI grounded UI target")
+            if bool(ui.get("needed")) and confidence >= 0.80:
+                try:
+                    x = float(ui.get("x_norm"))
+                    y = float(ui.get("y_norm"))
+                except (TypeError, ValueError):
+                    x = y = -1.0
+                if 0.0 <= x <= 1.0 and 0.0 <= y <= 1.0:
+                    label = str(ui.get("label") or "")[:96]
+                    low = label.strip().lower()
+                    dialogue = bool(
+                        ai_perception.get("dialogue_visible"))
+                    ambiguous_negative = (
+                        "quit" in low or "cancel" in low
+                        or "decline" in low or "no thanks" in low)
+                    quest_dialogue_safe = (
+                        not dialogue
+                        or (0.14 <= x <= 0.86 and 0.42 <= y <= 0.99))
+                    positive_quest = (
+                        skill == "UI_CLICK"
+                        and dialogue
+                        and any(word in low for word in (
+                            "accept", "alright", "yes",
+                            "continue", "...", "okay", "ok")))
+
+                    # Normal UI actions are one-shot. For a clearly grounded
+                    # positive quest-dialogue button, allow at most ONE local
+                    # follow-up click while the SAME AI-selected UI target is
+                    # still being tracked. This removes a whole cloud
+                    # round-trip between consecutive "..." dialogue pages but
+                    # cannot become an unbounded click loop.
+                    if positive_quest:
+                        ok, attempt = self._repeat_allowed(
+                            pid, "QUEST_DIALOGUE_CLICK", now,
+                            interval_s=0.95, max_attempts=2)
+                        if attempt > 1:
+                            ok = bool(
+                                ok and track_fresh
+                                and track_kind == "ui"
+                                and track_conf >= 0.55)
+                            if ok:
+                                tx = self._f(track.get("x_norm"))
+                                ty = self._f(track.get("y_norm"))
+                                if tx is not None and ty is not None:
+                                    x, y = float(tx), float(ty)
+                                    self.stats[
+                                        "quest_dialogue_followups"] += 1
+                    else:
+                        ok = self._one_shot(pid)
+
+                    sig = (low, round(x, 2), round(y, 2))
+                    if ambiguous_negative or not quest_dialogue_safe:
+                        self.stats["ui_clicks_suppressed"] += 1
+                    elif (sig == self._last_ui_sig
+                            and self._last_ui_click_ns
+                            and now - self._last_ui_click_ns < int(0.75e9)):
+                        self.stats["ui_clicks_suppressed"] += 1
+                    elif ok:
+                        self._emit(
+                            "UI_CLICK", now, reason=reason,
+                            x_norm=x, y_norm=y, confidence=confidence,
+                            ui_context=True,
+                            ui_label=label,
+                            purchase_intent=(skill == "BUY_ITEM"),
+                            coach_plan_id=pid,
+                            coach_confidence=confidence)
+                        self._last_ui_sig = sig
+                        self._last_ui_click_ns = now
+                        self._ui_epoch += 1
+                        self._action_epoch += 1
+                        if positive_quest:
+                            self._await_quest_until_ns = (
+                                now + int(5.0e9))
+                            if self._quest_status != "active":
+                                self._quest_status = "pending_accept"
+                        self.stats["one_shot_commands"] += 1
 
         # WAIT and REOBSERVE intentionally emit no physical command.
         self._publish_state(now, obs, plan)
