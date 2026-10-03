@@ -972,6 +972,14 @@ class AIOnlyAutopilotSupervisor(Worker):
             actor_visible = bool(
                 notes.get("quest_enemy_actor_visible")
                 or ttype == "quest_enemy_actor")
+            # Strong local body/marker evidence may keep an AI-selected fight
+            # goal alive for pursuit even before OCR/Gemini has a clean 0/N
+            # counter. Actual marker-only melee still requires validated quest
+            # state below.
+            fight_active = bool(
+                fight_active
+                or actor_visible
+                or notes.get("quest_enemy_marker_detected"))
             adir = self._f(
                 actor.get("direction"),
                 direction if ttype == "quest_enemy_actor" else None)
@@ -1060,8 +1068,11 @@ class AIOnlyAutopilotSupervisor(Worker):
             # Red-dot pursuit can attack once it is very close/centered even
             # if a wall briefly hides the body; this is the user's in-game
             # through-wall quest marker, not a generic red UI cue.
+            quest_validated = bool(
+                self._quest_active_latched or ai_progress_valid)
             close_marker = bool(
-                target_source == "quest_enemy_marker"
+                quest_validated
+                and target_source == "quest_enemy_marker"
                 and target_prox is not None
                 and target_prox >= 0.70
                 and abs(float(target_dir)) <= 0.62
