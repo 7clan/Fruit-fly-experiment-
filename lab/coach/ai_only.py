@@ -88,6 +88,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
             bool(quest.get("stuck")),
             bool(quest.get("circling")),
             int(quest.get("ui_epoch") or 0),
+            int(quest.get("visual_nav_epoch") or 0),
             health_bucket,
         )
 
@@ -412,6 +413,12 @@ CONTROL DISCIPLINE:
   melee_ready=true only when the actual NPC body is visibly close enough to
   hit now. The local visual tracker follows YOUR selected box between cloud
   replies; it does not choose a target by itself.
+- visual_target kind="waypoint" is SHORT-HORIZON visual grounding, not an
+  imaginary objective marker. Box a real visible navigable cue/opening/path
+  you intend to walk toward. Never place a waypoint box on a wall merely
+  because the quest objective is somewhere behind that wall. If no safe
+  visible path point is grounded, choose LOOK_LEFT/LOOK_RIGHT, GO_AROUND,
+  BACKTRACK or REOBSERVE instead of fabricating a waypoint.
 - EQUIPMENT FOR COMBAT: inspect the CURRENT hotbar/hand/ability HUD. Report
   the visibly selected hotbar slot in perception.equipped_slot_visible. A
   selected fist/melee slot plus visible melee move HUD means the style is ready;
