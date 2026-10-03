@@ -317,6 +317,15 @@ class AIOnlyAutopilotSupervisor(Worker):
             "melee_ready_visible": bool(
                 ((plan or {}).get("perception") or {})
                 .get("melee_ready_visible")),
+            "quest_hud_ai_visible": bool(
+                ((plan or {}).get("perception") or {})
+                .get("quest_hud_visible")),
+            "quest_progress_text": str(
+                ((plan or {}).get("perception") or {})
+                .get("quest_progress_text") or "")[:96],
+            "equipped_style_visible": str(
+                ((plan or {}).get("perception") or {})
+                .get("equipped_style_visible") or "unknown")[:96],
             "action_epoch": int(self._action_epoch),
             "ui_epoch": int(self._ui_epoch),
             "ai_plan_id": (plan or {}).get("plan_id"),
@@ -486,7 +495,14 @@ class AIOnlyAutopilotSupervisor(Worker):
                 and ai_equipped in set("0123456789")):
             self._last_equipped_slot = ai_equipped
         if confidence >= 0.85:
-            if ai_qstate == "active":
+            # The visible accepted-quest HUD is stronger evidence than color
+            # marker flicker. Keep the active latch while Gemini can actually
+            # read that HUD, even if the NPC is temporarily behind terrain.
+            if bool(ai_perception.get("quest_hud_visible")):
+                self._quest_active_latched = True
+                self._quest_status = "active"
+                self._await_quest_until_ns = 0
+            elif ai_qstate == "active":
                 self._quest_active_latched = True
                 self._quest_status = "active"
                 self._await_quest_until_ns = 0
