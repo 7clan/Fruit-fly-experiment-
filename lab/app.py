@@ -122,6 +122,7 @@ class DigitalFlyLab:
             pass
         self.action_meta = self.bus.state("action.meta")
         self.control_catalog_state = self.bus.state("action.control_catalog")
+        self.skill_state = self.bus.state("training.skills")
 
         self.quest_autonomy = bool(quest_autonomy)
         self.ai_only = bool(ai_only)
@@ -463,6 +464,10 @@ class DigitalFlyLab:
             "controls": [x.to_dict() for x in controls],
             "dynamic_equipped_moves": True,
             "loadout": self.gpo_loadout,
+            "ts_ns": SHARED_CLOCK.now_ns(),
+        })
+        self.skill_state.write({
+            **self.skill_library.snapshot(),
             "ts_ns": SHARED_CLOCK.now_ns(),
         })
         self.memory.start()
