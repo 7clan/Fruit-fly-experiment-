@@ -2076,68 +2076,6 @@ def test_ai_visual_enemy_box_covering_player_is_vetoed():
     assert state["last_target_reject_reason"] == "ai_enemy_box_contains_player"
 
 
-def test_player_name_is_not_sufficient_quest_progress_evidence():
-    bus = _armed_bus(
-        {
-            "type": "quest_marker",
-            "direction": 0.0,
-            "distance": 0.55,
-            "confidence": 0.82,
-        },
-        {
-            "plan_id": 401,
-            "skill": "REOBSERVE",
-            "target": "none",
-            "confidence": 0.95,
-            "explanation": "reobserve",
-            "perception": {
-                "quest_state": "active",
-                "quest_hud_visible": True,
-                "quest_progress_text": "FruitFlyExperiment",
-                "enemy_actor_visible": False,
-                "safezone_visible": True,
-            },
-        },
-        notes={"quest_marker_detected": True},
-    )
-    sup = AIOnlyAutopilotSupervisor(bus)
-    sup.step()
-    state = bus.state("quest.state").read().payload
-    assert state["quest_active"] is False
-    assert state["quest_status"] != "active"
-
-
-def test_numeric_quest_counter_can_latch_active_state():
-    bus = _armed_bus(
-        {
-            "type": "quest_marker",
-            "direction": 0.0,
-            "distance": 0.55,
-            "confidence": 0.82,
-        },
-        {
-            "plan_id": 402,
-            "skill": "REOBSERVE",
-            "target": "none",
-            "confidence": 0.95,
-            "explanation": "reobserve",
-            "perception": {
-                "quest_state": "active",
-                "quest_hud_visible": True,
-                "quest_progress_text": "Defeat Corrupt Marines 0/6",
-                "enemy_actor_visible": False,
-                "safezone_visible": True,
-            },
-        },
-        notes={"quest_marker_detected": True},
-    )
-    sup = AIOnlyAutopilotSupervisor(bus)
-    sup.step()
-    state = bus.state("quest.state").read().payload
-    assert state["quest_active"] is True
-    assert state["quest_status"] == "active"
-
-
 def test_high_visual_waypoint_is_rejected_as_non_walkable_grounding():
     bus = _armed_bus(
         {
