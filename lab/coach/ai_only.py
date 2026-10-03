@@ -45,7 +45,10 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # One frame + compact JSON is enough for this controller. Sending the
         # previous frame doubled vision work while local CV already measures
         # progress/stuck state.
-        self.max_output_tokens = 420
+        # 420 tokens truncated 13/63 calls in lab_20261004_005047.
+        # Give the compact structured controller enough room to finish once
+        # instead of triggering a slower retry that can fail at the transport.
+        self.max_output_tokens = 640
         self.stats.update({
             "provider": self.provider,
             "decision_owner": "cloud_ai",
