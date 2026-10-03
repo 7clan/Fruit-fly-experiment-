@@ -364,7 +364,8 @@ class MotorExecutor(Worker):
                  autonomy_enabled: bool = False,
                  movement_only: bool = False,
                  questing: bool = False,
-                 command_only: bool = False):
+                 command_only: bool = False,
+                 combat_priors: dict | None = None):
         super().__init__(bus, target_hz=target_hz)
         self.brain_out: StateChannel = bus.state(self.TOPIC_IN)
         self.command_state: StateChannel = bus.state("action.command")
@@ -379,6 +380,25 @@ class MotorExecutor(Worker):
         self.movement_only = bool(movement_only)
         self.questing = bool(questing)
         self.command_only = bool(command_only)
+        self.combat_priors = dict(combat_priors or {})
+        self._bundle_attack_interval_s = 0.26
+        teacher_attack_applied = False
+        try:
+            ready = bool(
+                (self.combat_priors.get("readiness") or {})
+                .get("attack_timing"))
+            learned = float(
+                (self.combat_priors.get("timing") or {})
+                .get("m1_inter_onset_median_s"))
+            onsets = int(
+                ((self.combat_priors.get("coverage") or {})
+                 .get("onsets") or {}).get("m1", 0))
+            if ready and onsets >= 100 and 0.15 <= learned <= 0.35:
+                self._bundle_attack_interval_s = max(
+                    0.18, min(0.28, learned))
+                teacher_attack_applied = True
+        except (TypeError, ValueError):
+            teacher_attack_applied = False
         self._held: dict[str, float] = {}   # keyboard code -> hold-until ns
         self._held_mouse: dict[str, float] = {}  # mouse button -> hold-until ns
         self._lock = threading.Lock()
@@ -415,6 +435,10 @@ class MotorExecutor(Worker):
                            "bundle_guards": 0,
                            "bundle_evades": 0,
                            "bundle_orbits": 0,
+                           "bundle_attack_interval_s":
+                               self._bundle_attack_interval_s,
+                           "teacher_attack_timing_applied":
+                               teacher_attack_applied,
                            "command_only": self.command_only})
 
     # -- autonomy gate ----------------------------------------------------
@@ -1052,7 +1076,8 @@ class MotorExecutor(Worker):
                     elif (offense == "m1"
                           and (not self._bundle_last_attack_ns
                                or now_ns - self._bundle_last_attack_ns
-                               >= int(0.26e9))):
+                               >= int(
+                                   self._bundle_attack_interval_s * 1e9))):
                         self._left_click_target_locked()
                         self._bundle_last_attack_ns = now_ns
                         self.stats["bundle_attacks"] += 1
