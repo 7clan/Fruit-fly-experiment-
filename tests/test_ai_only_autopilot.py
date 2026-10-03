@@ -1014,7 +1014,7 @@ def test_ai_only_gemini_controller_reuses_same_ai_only_contract():
     assert coach.provider == "gemini_ai_only"
     assert coach.stats["decision_owner"] == "cloud_ai"
     assert coach.stats["fruit_fly_control"] is False
-    assert coach.max_output_tokens == 320
+    assert coach.max_output_tokens == 768
     prompt = coach._prompt(
         {"target": {"type": "none"}, "player": {}, "notes": {}},
         {"quest_status": "unknown"},
@@ -1328,3 +1328,48 @@ def test_dialogue_ui_visual_target_can_supply_click_coordinates():
     assert cmd.payload["name"] == "UI_CLICK"
     assert abs(cmd.payload["x_norm"] - 0.63) < 1e-6
     assert abs(cmd.payload["y_norm"] - 0.73) < 1e-6
+
+
+
+def test_gemini_controller_salvages_safe_skill_from_truncated_json():
+    bus = Bus()
+    coach = AIOnlyGeminiCoachWorker(
+        bus, model="gemini-3.5-flash-lite", api_key="test-only")
+    raw = (
+        '{"scene":"combat","objective":"fight","target":"enemy",'
+        '"skill":"FIGHT_QUEST_TARGET","confidence":0.91,'
+        '"explanation":"quest enemy visible","visual_target":{'
+    )
+    plan = coach._parse_plan_json(raw)
+    assert plan["skill"] == "FIGHT_QUEST_TARGET"
+    assert plan["confidence"] == 0.91
+    assert coach.stats["json_salvaged"] == 1
+
+
+def test_gemini_controller_never_salvages_risky_truncated_ui_action():
+    import pytest
+
+    bus = Bus()
+    coach = AIOnlyGeminiCoachWorker(
+        bus, model="gemini-3.5-flash-lite", api_key="test-only")
+    raw = (
+        '{"scene":"shop","objective":"buy","target":"button",'
+        '"skill":"UI_CLICK","confidence":0.99,'
+    )
+    with pytest.raises(Exception):
+        coach._parse_plan_json(raw)
+
+
+def test_gemini_plan_schema_requires_only_core_decision_fields():
+    bus = Bus()
+    coach = AIOnlyGeminiCoachWorker(
+        bus, model="gemini-3.5-flash-lite", api_key="test-only")
+    schema = coach._plan_response_schema()
+    assert schema["required"] == [
+        "scene", "objective", "target",
+        "skill", "confidence", "explanation",
+    ]
+    assert "FIGHT_QUEST_TARGET" in (
+        schema["properties"]["skill"]["enum"])
+    assert "ui_click" not in schema["required"]
+    assert coach.max_output_tokens >= 700
