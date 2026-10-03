@@ -796,9 +796,14 @@ class AIOnlyAutopilotSupervisor(Worker):
                 and abs(float(target_dir)) <= 0.62
                 and self._enemy_marker_since_ns
                 and now - self._enemy_marker_since_ns >= int(0.45e9))
+            grounded_melee = bool(
+                grounded
+                and target_prox is not None
+                and float(target_prox) >= 0.38
+                and abs(float(target_dir)) <= 0.95)
             attack_now = bool(
                 offense in {"m1", "observed_ability"}
-                and (grounded or close_marker))
+                and (grounded_melee or close_marker))
 
             equip_id = ch_equip
             if not equip_id:
