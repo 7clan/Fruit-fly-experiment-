@@ -35,15 +35,15 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # Keep decisions event-driven and let the local skill executor react
         # at 8-20 Hz. 2 s does not cause a 2 s cadence because unchanged
         # scenes are still held for the longer refresh interval.
-        self.min_call_interval_s = 0.45
-        self.unchanged_refresh_s = 20.0
+        self.min_call_interval_s = 1.0
+        self.unchanged_refresh_s = 12.0
         self.provider = "ollama_cloud_ai_only"
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
         # One frame + compact JSON is enough for this controller. Sending the
         # previous frame doubled vision work while local CV already measures
         # progress/stuck state.
-        self.max_output_tokens = 640
+        self.max_output_tokens = 560
         self.stats.update({
             "provider": self.provider,
             "decision_owner": "cloud_ai",
@@ -60,18 +60,17 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
             prompt, image_b64, previous_image_b64=None)
 
     def _signature(self, obs: dict, quest: dict, brain: dict) -> tuple:
-        """Event signature for cloud replanning.
+        """Semantic replan signature, not a motor-feedback signature.
 
-        Screen-space direction/proximity changes are handled by the local
-        servo and MUST NOT wake the cloud model. Cloud replanning is reserved
-        for semantic transitions: quest state, UI actions, enemy visibility,
-        recovery state, or meaningful health change.
+        The 2026-10-03 run spent 38/66 cloud calls on responses that became
+        "stale" merely because local execution changed action_epoch or a
+        marker flickered while Gemini was thinking. Motor geometry is handled
+        locally at 8-20 Hz. Wake the cloud for genuine state transitions.
         """
         player = obs.get("player") or {}
-        notes = obs.get("notes") or {}
         try:
             health_bucket = int(max(
-                0.0, min(1.0, float(player.get("health")))) * 5)
+                0.0, min(1.0, float(player.get("health")))) * 4)
         except (TypeError, ValueError):
             health_bucket = -1
         return (
@@ -83,12 +82,58 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
             bool(quest.get("awaiting_quest_confirmation")),
             bool(quest.get("stuck")),
             bool(quest.get("circling")),
-            int(quest.get("action_epoch") or 0),
             int(quest.get("ui_epoch") or 0),
-            bool(notes.get("quest_marker_detected")),
-            bool(notes.get("quest_enemy_marker_detected")),
             health_bucket,
         )
+
+    def _should_drop_stale_response(
+            self, plan: dict, start_sig: tuple, current_sig: tuple) -> bool:
+        """Keep persistent goal plans despite cloud latency.
+
+        Navigation/fight/recovery skills are revalidated against fresh local
+        perception before every key or mouse event, so they remain safe/useful
+        even if the scene changed during a 1-3 s cloud call. UI/equipment/world
+        interactions can become dangerous when stale and are still dropped.
+        """
+        if current_sig == start_sig:
+            return False
+        skill = str(plan.get("skill") or "").upper()
+        persistent = {
+            "WAIT", "REOBSERVE", "NAVIGATE_OBJECTIVE", "TRAVEL",
+            "FIGHT_QUEST_TARGET", "BLOCK", "EVADE", "JUMP", "CLIMB",
+            "GO_AROUND", "BACKTRACK", "SPRINT", "GEPPO",
+            "LOOK_LEFT", "LOOK_RIGHT",
+        }
+        return skill not in persistent
+
+    def _plan_response_schema(self) -> dict:
+        """Require minimal grounding fields in AI-only mode.
+
+        The prior run had FIGHT plans that claimed an enemy was visible while
+        visual_target was "none", leaving the fast tracker with zero
+        initializations. Requiring these small objects makes the plan
+        executable between cloud replies without adding a second model call.
+        """
+        schema = super()._plan_response_schema()
+        required = list(schema.get("required") or [])
+        for key in ("perception", "visual_target"):
+            if key not in required:
+                required.append(key)
+        schema["required"] = required
+
+        perception = schema["properties"]["perception"]
+        perception["required"] = [
+            "quest_state", "dialogue_visible",
+            "interaction_prompt_visible", "enemy_actor_visible",
+            "player_dead", "safezone_visible",
+            "equipped_slot_visible", "melee_ready_visible",
+        ]
+        visual = schema["properties"]["visual_target"]
+        visual["required"] = [
+            "kind", "x_norm", "y_norm", "bbox_norm",
+            "confidence", "melee_ready",
+        ]
+        return schema
 
     def _jpeg_b64(self, frame) -> tuple[str | None, float]:
         """Adaptive cloud frame.
@@ -114,8 +159,8 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                     "TAKE_QUEST", "INTERACT", "UI_CLICK",
                     "BUY_ITEM", "EQUIP_SLOT", "USE_OBSERVED_ABILITY",
                 })
-            max_w = 960 if detail_mode else 736
-            quality = 74 if detail_mode else 64
+            max_w = 896 if detail_mode else 640
+            quality = 72 if detail_mode else 62
             img = frame
             h, w = img.shape[:2]
             if w > max_w:
@@ -256,14 +301,20 @@ CONTROL DISCIPLINE:
     5) travel_to_quest_giver -> follow the green recommended waypoint.
 - A red quest_enemy_marker is an OBJECTIVE LOCATION/DIRECTION marker, not an
   enemy body. Do not claim an enemy is in melee from that marker alone.
-  FIGHT_QUEST_TARGET is appropriate when quest_enemy_actor_visible=true; if the
-  actor is not visible yet, NAVIGATE_OBJECTIVE toward the red objective.
+  FIGHT_QUEST_TARGET is appropriate only when the CURRENT screenshot visibly
+  contains the quest NPC body OR fresh state says quest_enemy_actor_visible.
+  When YOU visually see that body, visual_target.kind MUST be
+  "quest_enemy_actor" with a tight bbox_norm around the NPC. If you cannot
+  ground the body, choose NAVIGATE_OBJECTIVE/REOBSERVE instead of pretending
+  the marker itself is the enemy.
 - SAFEZONE / PROTECTED text is PvP protection in this experiment. It is NOT a
   reason to avoid or postpone fighting quest NPCs. Never invent a need to leave
   the safe zone before PvE.
-- TAKE_QUEST: move to the yellow QUEST/! giver. If the CURRENT screenshot
-  visibly shows the T/Interact prompt, TAKE_QUEST itself is enough: the
-  actuator presses T immediately even if geometric proximity is noisy.
+- TAKE_QUEST: move to the yellow QUEST/! giver. Whenever the giver is visible,
+  visual_target.kind MUST be "quest_giver" with a tight bbox_norm around the
+  NPC/interaction target. If the CURRENT screenshot visibly shows the
+  T/Interact prompt, TAKE_QUEST itself is enough: the actuator presses T
+  immediately even if geometric proximity is noisy.
   Otherwise it approaches until ready, presses T once, then waits. If a quest
   dialogue/Accept/Yes button is visible, fill ui_click AND preferably ground
   that same button as visual_target kind="ui". Do not repeatedly press T while
@@ -298,9 +349,9 @@ CONTROL DISCIPLINE:
 - BLOCK/EVADE are your decisions; no hidden combat policy chooses them.
 - LOOK_LEFT/LOOK_RIGHT are explicit camera actions for searching/recentering.
 - UI_CLICK/BUY_ITEM may click clearly visible ordinary in-game quest/menu/shop
-  buttons at confidence >= 0.80. When possible provide both ui_click normalized
-  center and visual_target kind="ui" bounding box so the local tracker can
-  preserve the AI-selected button without another cloud call. Never confirm Robux, premium/gamepass,
+  buttons at confidence >= 0.80. For any click, provide BOTH ui_click normalized
+  center and visual_target kind="ui" with a tight bbox_norm around that exact
+  button. If you cannot ground the button, do not click it. Never confirm Robux, premium/gamepass,
   account/security, external-link, or trade UI.
 - Use CURRENT screenshot/HUD + structured state as truth over static knowledge.
 - If the screenshot does not support a claim, do not invent it. Choose
@@ -419,8 +470,8 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
             self, bus,
             target_hz=target_hz,
             model=model,
-            min_call_interval_s=0.45,
-            unchanged_refresh_s=20.0,
+            min_call_interval_s=1.0,
+            unchanged_refresh_s=12.0,
             timeout_s=timeout_s,
             api_key=api_key,
         )
@@ -428,12 +479,12 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         # selector provided by OllamaCloudCoachWorker; initialize the same
         # cached section index without using its network transport.
         self._sections = self._split_sections(self.knowledge)
-        self.min_call_interval_s = 0.45
-        self.unchanged_refresh_s = 20.0
+        self.min_call_interval_s = 1.0
+        self.unchanged_refresh_s = 12.0
         self.provider = "gemini_ai_only"
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
-        self.max_output_tokens = 768
+        self.max_output_tokens = 560
         self.stats.update({
             "provider": self.provider,
             "model": self.model,
