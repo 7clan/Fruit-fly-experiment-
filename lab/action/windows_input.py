@@ -256,13 +256,14 @@ class WindowsInputBackend:
         return ok
 
     def camera_drag(self, dx: int, dy: int = 0) -> None:
-        """Roblox/GPO camera look without letting the cursor escape Roblox.
+        """Roblox/GPO camera look with a short shared-cursor lease.
 
-        Relative SendInput starts wherever the OS cursor currently sits. On a
-        small window that previously pushed the pointer onto the desktop. For
-        autonomous camera look, always start from the authorized Roblox client
-        center, clamp the drag to a fraction of that client, then recenter.
+        Windows has one desktop cursor. Save the user's current position,
+        borrow the cursor only for the bounded RMB drag, then restore it even
+        when the user had it outside Roblox. F12 still releases ClipCursor.
         """
+        old = _POINT()
+        have_old = bool(_user32.GetCursorPos(ctypes.byref(old)))
         bounds = self._client_screen_rect()
         clip_active = False
         if bounds is not None:
@@ -295,9 +296,6 @@ class WindowsInputBackend:
             self.mouse_up("right")
             if clip_active:
                 _user32.ClipCursor(None)
-            # Verify containment before recentering. This turns the user's
-            # "mouse went outside Roblox" observation into a measurable
-            # session-report counter.
             bounds_after = self._client_screen_rect()
             pos = _POINT()
             escaped = False
@@ -309,8 +307,8 @@ class WindowsInputBackend:
                     and top <= int(pos.y) <= bottom)
             if escaped:
                 self.cursor_escape_corrections += 1
-            # Leave the pointer in a deterministic safe place inside Roblox.
-            self.center_cursor_in_target()
+            if have_old:
+                _user32.SetCursorPos(int(old.x), int(old.y))
 
     # Compatibility names used by MotorExecutor/InputBackend.
     def mouse_button_down(self, button: str) -> None:
@@ -376,16 +374,10 @@ class WindowsInputBackend:
             time.sleep(0.025)
         finally:
             if restore_cursor and have_old:
-                bounds = self._client_screen_rect()
-                if bounds is not None:
-                    left, top, right, bottom = bounds
-                    if (left <= int(old.x) <= right
-                            and top <= int(old.y) <= bottom):
-                        _user32.SetCursorPos(int(old.x), int(old.y))
-                    else:
-                        self.center_cursor_in_target()
-                else:
-                    _user32.SetCursorPos(int(old.x), int(old.y))
+                # Restore the user's exact desktop cursor position. The AI
+                # does not own a second Windows pointer; it borrows this one
+                # for the click and immediately gives it back.
+                _user32.SetCursorPos(int(old.x), int(old.y))
 
     def release_all(self) -> None:
         # Fail-safe: release any temporary AI-only camera confinement first.
