@@ -36,7 +36,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # at 8-20 Hz. 2 s does not cause a 2 s cadence because unchanged
         # scenes are still held for the longer refresh interval.
         self.min_call_interval_s = 1.0
-        self.unchanged_refresh_s = 12.0
+        self.unchanged_refresh_s = 18.0
         self.provider = "ollama_cloud_ai_only"
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
@@ -73,12 +73,12 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                 0.0, min(1.0, float(player.get("health")))) * 4)
         except (TypeError, ValueError):
             health_bucket = -1
+        actor_recent = bool(
+            quest.get("quest_enemy_actor_recent",
+                      quest.get("quest_enemy_actor_visible")))
         return (
             str(quest.get("quest_status") or quest.get("phase") or "unknown"),
-            bool(quest.get("quest_enemy_actor_visible")),
-            bool(quest.get("quest_enemy_objective_visible")),
-            bool(quest.get("quest_giver_visible")),
-            bool(quest.get("recommended_waypoint_visible")),
+            actor_recent,
             bool(quest.get("awaiting_quest_confirmation")),
             bool(quest.get("stuck")),
             bool(quest.get("circling")),
@@ -133,6 +133,38 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
             "kind", "x_norm", "y_norm", "bbox_norm",
             "confidence", "melee_ready",
         ]
+        schema["properties"]["action_channels"] = {
+            "type": "object",
+            "properties": {
+                "locomotion": {
+                    "type": "string",
+                    "enum": [
+                        "none", "approach", "orbit_left", "orbit_right",
+                        "retreat", "hold", "sprint", "jump", "climb",
+                    ],
+                },
+                "offense": {
+                    "type": "string",
+                    "enum": ["none", "m1", "observed_ability"],
+                },
+                "defense": {
+                    "type": "string",
+                    "enum": ["none", "guard_between_attacks", "evade"],
+                },
+                "camera": {
+                    "type": "string",
+                    "enum": ["none", "track_target", "look_left", "look_right"],
+                },
+                "equip_control_id": {"type": "string"},
+            },
+            "required": [
+                "locomotion", "offense", "defense",
+                "camera", "equip_control_id",
+            ],
+        }
+        if "action_channels" not in required:
+            required.append("action_channels")
+        schema["required"] = required
         return schema
 
     def _jpeg_b64(self, frame) -> tuple[str | None, float]:
@@ -295,20 +327,21 @@ CONTROL DISCIPLINE:
 - Never output raw keys. EXEC_CONTROL must use a control_id from
   verified_controls.
 - Read quest state in this priority order:
-    1) quest_status=active -> DO NOT take another quest. Follow/fight its target.
-    2) quest_status=pending_accept -> wait for confirmation/dialogue change.
-    3) quest_status=completed -> the prior quest ended; locate/choose the next
-       appropriate quest instead of continuing to hunt a vanished target.
-    4) quest_status=available -> approach the yellow quest giver and interact.
-    5) travel_to_quest_giver -> follow the green recommended waypoint.
-- A red quest_enemy_marker is an OBJECTIVE LOCATION/DIRECTION marker, not an
-  enemy body. Do not claim an enemy is in melee from that marker alone.
-  FIGHT_QUEST_TARGET is appropriate only when the CURRENT screenshot visibly
-  contains the quest NPC body OR fresh state says quest_enemy_actor_visible.
-  When YOU visually see that body, visual_target.kind MUST be
-  "quest_enemy_actor" with a tight bbox_norm around the NPC. If you cannot
-  ground the body, choose NAVIGATE_OBJECTIVE/REOBSERVE instead of pretending
-  the marker itself is the enemy.
+    1) A visible top-left quest HUD such as "Defeat X 1/8", its progress bar,
+       Rewards and QUIT button is authoritative evidence that a quest is ACTIVE.
+       Set perception.quest_state="active" even if the NPC body is behind a wall.
+    2) quest_status=active -> DO NOT take another quest. Follow/fight its target.
+    3) quest_status=pending_accept -> wait for confirmation/dialogue change.
+    4) quest_status=completed -> locate/choose the next appropriate quest.
+    5) quest_status=available -> approach the yellow quest giver and interact.
+    6) travel_to_quest_giver -> follow the green recommended waypoint.
+    "Recommended Quest" alone is navigation guidance, not proof of acceptance.
+- The red quest marker/dot above a quest enemy is persistent target identity
+  and stays useful when the NPC body is occluded by a wall. Use it to PURSUE
+  the correct quest enemy through occlusion. Do not confuse it with red UI.
+  Start M1 when the body is grounded/melee-ready OR the active-quest red target
+  is very close and centered. If the red target is close but blocked, keep the
+  fight goal and choose jump/climb/orbit instead of claiming no enemy exists.
 - SAFEZONE / PROTECTED text is PvP protection in this experiment. It is NOT a
   reason to avoid or postpone fighting quest NPCs. Never invent a need to leave
   the safe zone before PvE.
@@ -321,8 +354,14 @@ CONTROL DISCIPLINE:
   dialogue/Accept/Yes button is visible, fill ui_click AND preferably ground
   that same button as visual_target kind="ui". Do not repeatedly press T while
   awaiting_quest_confirmation=true.
-- FIGHT_QUEST_TARGET: the actuator closes distance on the tracked quest NPC and
-  emits M1 clicks once melee geometry is reached. Do not attack ordinary players.
+- FIGHT_QUEST_TARGET is a MULTI-CHANNEL combat policy. Fill action_channels:
+    locomotion=approach while far, orbit_left/orbit_right when close;
+    offense=m1 for the normal melee combo;
+    defense=guard_between_attacks for ordinary melee pressure or evade if needed;
+    camera=track_target during combat;
+    equip_control_id=the verified combat hotbar slot when needed, else "".
+  The executor runs movement + attacks + guarding concurrently/interleaved while
+  this cloud plan stays current. Do not attack ordinary players.
 - Whenever you can visually identify the object/person you are acting on, fill
   visual_target with its CURRENT normalized screen center, confidence, AND a
   tight normalized bounding box [x1,y1,x2,y2]. For a quest NPC enemy use
@@ -331,9 +370,11 @@ CONTROL DISCIPLINE:
   hit now. The local visual tracker follows YOUR selected box between cloud
   replies; it does not choose a target by itself.
 - EQUIPMENT FOR COMBAT: inspect the CURRENT hotbar/hand/ability HUD. Report
-  the visibly selected hotbar slot in perception.equipped_slot_visible when
-  readable. Set perception.melee_ready_visible=true only when the current
-  hand/loadout is visibly ready to M1/use melee moves.
+  the visibly selected hotbar slot in perception.equipped_slot_visible. A
+  selected fist/melee slot plus visible melee move HUD means the style is ready;
+  do not toggle the same slot repeatedly. Put a needed equip_slot_N in
+  action_channels.equip_control_id so it can equip inside the same fight plan.
+  Set perception.melee_ready_visible=true only when visibly ready.
   * If you only need to equip, choose EQUIP_SLOT with verified equip_slot_N.
   * If the quest enemy is already present and you know the needed slot, you
     may choose FIGHT_QUEST_TARGET AND set control_id="equip_slot_N". The local
@@ -370,6 +411,10 @@ CURRENT STATE:
 Return one compact JSON decision matching the API schema.
 REQUIRED: scene, objective, target, skill, confidence, explanation.
 Keep scene/objective/target/explanation short.
+
+REQUIRED in AI-only mode:
+- action_channels with locomotion/offense/defense/camera/equip_control_id.
+  Use several non-"none" channels when simultaneous behavior is useful.
 
 OPTIONAL — include only when useful for THIS action:
 - control_id for EXEC_CONTROL/EQUIP_SLOT/Haki.
@@ -446,6 +491,43 @@ Do not pad the response with empty/default objects. Do not repeat the rules.
             "confidence": round(vc, 4),
             "melee_ready": bool(vt.get("melee_ready")) and vc >= 0.82,
         }
+
+        channels = raw.get("action_channels") or {}
+        locomotion = str(
+            channels.get("locomotion") or "none").strip().lower()
+        offense = str(
+            channels.get("offense") or "none").strip().lower()
+        defense = str(
+            channels.get("defense") or "none").strip().lower()
+        camera = str(
+            channels.get("camera") or "none").strip().lower()
+        equip_id = str(channels.get("equip_control_id") or "").strip()
+        if locomotion not in {
+                "none", "approach", "orbit_left", "orbit_right",
+                "retreat", "hold", "sprint", "jump", "climb"}:
+            locomotion = "none"
+        if offense not in {"none", "m1", "observed_ability"}:
+            offense = "none"
+        if defense not in {
+                "none", "guard_between_attacks", "evade"}:
+            defense = "none"
+        if camera not in {
+                "none", "track_target", "look_left", "look_right"}:
+            camera = "none"
+        valid_ids = {
+            str(x.get("control_id"))
+            for x in (catalog.get("controls") or [])
+            if x.get("control_id")
+        }
+        if equip_id not in valid_ids or not equip_id.startswith("equip_slot_"):
+            equip_id = ""
+        plan["action_channels"] = {
+            "locomotion": locomotion,
+            "offense": offense,
+            "defense": defense,
+            "camera": camera,
+            "equip_control_id": equip_id,
+        }
         return plan
 
 
@@ -473,7 +555,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
             target_hz=target_hz,
             model=model,
             min_call_interval_s=1.0,
-            unchanged_refresh_s=12.0,
+            unchanged_refresh_s=18.0,
             timeout_s=timeout_s,
             api_key=api_key,
         )
@@ -482,7 +564,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         # cached section index without using its network transport.
         self._sections = self._split_sections(self.knowledge)
         self.min_call_interval_s = 1.0
-        self.unchanged_refresh_s = 12.0
+        self.unchanged_refresh_s = 18.0
         self.provider = "gemini_ai_only"
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
