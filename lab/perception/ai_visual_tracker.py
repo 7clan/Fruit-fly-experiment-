@@ -98,8 +98,20 @@ class AIVisualTracker(Worker):
     @staticmethod
     def _semantic_plan_key(plan: dict) -> tuple:
         skill = str(plan.get("skill") or "").strip().upper()
-        target = " ".join(
-            str(plan.get("target") or "").strip().lower().split())
+        raw_target = str(plan.get("target") or "").strip().lower()
+        # Cloud wording is not identity. "Corrupt Marine", "Corrupt Marine
+        # NPC" and "the quest enemy Corrupt Marine" are the same semantic
+        # target. Canonicalize generic role words so a harmless wording change
+        # cannot drop a good local track.
+        cleaned = "".join(
+            ch if (ch.isalnum() or ch.isspace()) else " "
+            for ch in raw_target)
+        stop = {
+            "the", "a", "an", "npc", "quest", "enemy", "actor",
+            "target", "objective", "marker",
+        }
+        tokens = [t for t in cleaned.split() if t not in stop]
+        target = " ".join(tokens)
         vt = plan.get("visual_target") or {}
         kind = str(vt.get("kind") or "none").strip().lower()
         return skill, target, kind
