@@ -163,7 +163,7 @@ def test_far_quest_enemy_actor_is_approached_before_attack():
 
 
 
-def test_close_stable_red_marker_can_fallback_to_m1_when_body_tracker_misses():
+def test_close_red_marker_without_grounded_body_is_approached_not_attacked():
     bus = _armed_bus(
         {
             "type": "quest_enemy_marker",
@@ -174,20 +174,27 @@ def test_close_stable_red_marker_can_fallback_to_m1_when_body_tracker_misses():
         {
             "plan_id": 31,
             "skill": "FIGHT_QUEST_TARGET",
-            "target": "red-marked quest NPC",
+            "target": "red quest objective",
             "confidence": 0.94,
-            "explanation": "fight the close quest objective",
+            "explanation": "find the actual quest NPC",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": False,
+            },
         },
-        notes={"quest_enemy_marker_detected": True},
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.05,
+            "quest_enemy_marker_proximity": 0.86,
+        },
     )
     sup = AIOnlyAutopilotSupervisor(bus)
-    sup._enemy_marker_since_ns = sup.clock.now_ns() - int(1.0e9)
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "ATTACK_LIGHT"
-    assert cmd.payload["target_type"] == "quest_enemy_marker_close_fallback"
-
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["target_type"] == "quest_enemy_marker"
+    assert sup.stats["combat_commands"] == 0
 
 def test_navigation_servo_does_not_reissue_same_command_every_worker_tick():
     bus = _armed_bus(
@@ -269,9 +276,15 @@ def test_active_quest_blocks_retake_even_if_yellow_marker_is_visible():
             "target": "quest giver",
             "confidence": 0.95,
             "explanation": "take a quest",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": False,
+            },
         },
         notes={
             "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.2,
+            "quest_enemy_marker_proximity": 0.4,
             "quest_marker_detected": True,
             "quest_marker_direction": 0.0,
             "quest_marker_proximity": 0.9,
@@ -283,7 +296,6 @@ def test_active_quest_blocks_retake_even_if_yellow_marker_is_visible():
     state = bus.state("quest.state").read().payload
     assert state["quest_status"] == "active"
     assert state["quest_active"] is True
-
 
 def test_command_only_executor_does_not_consume_brain_output():
     bus = Bus()
@@ -547,7 +559,7 @@ def test_ai_visible_interact_prompt_can_trigger_t_despite_noisy_geometry():
     assert state["action_epoch"] == 1
 
 
-def test_ai_visual_enemy_confirmation_relaxes_marker_melee_gate():
+def test_ai_claim_of_enemy_without_grounding_does_not_click_marker():
     bus = _armed_bus(
         {
             "type": "quest_enemy_marker",
@@ -560,22 +572,32 @@ def test_ai_visual_enemy_confirmation_relaxes_marker_melee_gate():
             "skill": "FIGHT_QUEST_TARGET",
             "target": "Corrupt Marine",
             "confidence": 0.95,
-            "explanation": "NPC is visibly in front",
+            "explanation": "NPC may be ahead",
             "perception": {
                 "quest_state": "active",
                 "enemy_actor_visible": True,
             },
+            "visual_target": {
+                "kind": "none",
+                "x_norm": 0.5,
+                "y_norm": 0.5,
+                "bbox_norm": None,
+                "confidence": 0.0,
+                "melee_ready": False,
+            },
         },
-        notes={"quest_enemy_marker_detected": True},
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.20,
+            "quest_enemy_marker_proximity": 0.66,
+        },
     )
     sup = AIOnlyAutopilotSupervisor(bus)
-    sup._enemy_marker_since_ns = sup.clock.now_ns() - int(1.0e9)
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] in {"ATTACK_LIGHT", "ATTACK_ADVANCE"}
-    assert sup.stats["marker_melee_fallbacks"] == 1
-
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert sup.stats["combat_commands"] == 0
 
 def test_jump_is_one_shot_per_ai_plan_not_spammed():
     bus = _armed_bus(
@@ -839,7 +861,7 @@ def test_ai_visual_navigation_fallback_works_when_local_cv_has_no_target():
     assert cmd.payload["target_type"] == "ai_visual_quest_objective"
 
 
-def test_stuck_navigation_waits_for_recovery_replan_instead_of_driving_wall():
+def test_stuck_navigation_runs_fast_bounded_recovery_without_cloud_wait():
     bus = _armed_bus(
         {
             "type": "quest_enemy_marker",
@@ -853,20 +875,26 @@ def test_stuck_navigation_waits_for_recovery_replan_instead_of_driving_wall():
             "target": "quest objective",
             "confidence": 0.95,
             "explanation": "go to marker",
+            "perception": {"quest_state": "active"},
         },
-        notes={"quest_enemy_marker_detected": True},
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.0,
+            "quest_enemy_marker_proximity": 0.25,
+        },
     )
     sup = AIOnlyAutopilotSupervisor(bus)
-    # Seed the same target as already being pursued without progress long
-    # enough for _observe() to derive the real stuck state.
+    sup._quest_active_latched = True
     sup._progress_target = "quest_enemy_marker"
     sup._best_proximity = 0.25
     sup._last_progress_ns = sup.clock.now_ns() - int(5.0e9)
     sup.step()
     assert sup._stuck is True
-    assert bus.state("action.command").read() is None
-
-
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "JUMP"
+    assert sup.stats["micro_recoveries"] == 1
+    assert sup.stats["jump_recoveries"] == 1
 
 def test_active_quest_latches_through_brief_marker_loss():
     bus = _armed_bus(
@@ -1375,3 +1403,123 @@ def test_gemini_plan_schema_requires_only_core_decision_fields():
         schema["properties"]["skill"]["enum"])
     assert "ui_click" not in schema["required"]
     assert coach.max_output_tokens >= 700
+
+
+
+def test_red_marker_alone_does_not_latch_quest_active():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.1,
+            "distance": 0.5,
+            "confidence": 0.94,
+        },
+        {
+            "plan_id": 200,
+            "skill": "REOBSERVE",
+            "target": "unknown objective",
+            "confidence": 0.80,
+            "explanation": "verify quest state",
+            "perception": {"quest_state": "unknown"},
+        },
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.1,
+            "quest_enemy_marker_proximity": 0.5,
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["quest_active_latched"] is False
+    assert state["quest_status"] != "active"
+
+
+def test_pending_accept_plus_red_objective_confirms_quest_active():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.2,
+            "distance": 0.4,
+            "confidence": 0.94,
+        },
+        {
+            "plan_id": 201,
+            "skill": "REOBSERVE",
+            "target": "quest objective",
+            "confidence": 0.80,
+            "explanation": "verify quest accepted",
+            "perception": {"quest_state": "unknown"},
+        },
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.2,
+            "quest_enemy_marker_proximity": 0.4,
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup._await_quest_until_ns = sup.clock.now_ns() + int(5e9)
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["quest_active_latched"] is True
+    assert state["quest_status"] == "active"
+
+
+def test_active_navigation_ignores_visible_yellow_giver_and_uses_red_objective():
+    bus = _armed_bus(
+        {
+            # Generic target deliberately points at the yellow giver.
+            "type": "quest_marker",
+            "direction": -0.9,
+            "distance": 0.8,
+            "confidence": 0.9,
+        },
+        {
+            "plan_id": 202,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "active quest objective",
+            "confidence": 0.96,
+            "explanation": "follow active objective",
+            "perception": {"quest_state": "active"},
+        },
+        notes={
+            "quest_marker_detected": True,
+            "quest_marker_direction": -0.9,
+            "quest_marker_proximity": 0.8,
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.55,
+            "quest_enemy_marker_proximity": 0.3,
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["target_type"] == "quest_enemy_marker"
+    assert cmd.payload["direction"] == 0.55
+
+
+def test_ai_only_schema_requires_perception_and_visual_grounding():
+    bus = Bus()
+    coach = AIOnlyGeminiCoachWorker(
+        bus, model="gemini-3.5-flash-lite", api_key="test-only")
+    schema = coach._plan_response_schema()
+    assert "perception" in schema["required"]
+    assert "visual_target" in schema["required"]
+    assert "bbox_norm" in (
+        schema["properties"]["visual_target"]["required"])
+
+
+def test_ai_only_stale_hook_keeps_persistent_nav_and_drops_stale_ui():
+    bus = Bus()
+    coach = AIOnlyGeminiCoachWorker(
+        bus, model="gemini-3.5-flash-lite", api_key="test-only")
+    old = ("active", False)
+    new = ("active", True)
+    assert coach._should_drop_stale_response(
+        {"skill": "NAVIGATE_OBJECTIVE"}, old, new) is False
+    assert coach._should_drop_stale_response(
+        {"skill": "FIGHT_QUEST_TARGET"}, old, new) is False
+    assert coach._should_drop_stale_response(
+        {"skill": "UI_CLICK"}, old, new) is True
