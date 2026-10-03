@@ -43,7 +43,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # One frame + compact JSON is enough for this controller. Sending the
         # previous frame doubled vision work while local CV already measures
         # progress/stuck state.
-        self.max_output_tokens = 320
+        self.max_output_tokens = 640
         self.stats.update({
             "provider": self.provider,
             "decision_owner": "cloud_ai",
@@ -314,39 +314,22 @@ GPO PLAYBOOK / STRATEGY KNOWLEDGE:
 CURRENT STATE:
 {situation_text}
 
-Return ONLY JSON with exactly:
-{{
-  "scene": "short",
-  "objective": "short",
-  "target": "specific target or none",
-  "skill": "ONE OF: {skills}",
-  "control_id": "verified control id or empty",
-  "observed_ability": {{"binding":"","label":""}},
-  "visual_target": {{
-    "kind": "none|quest_giver|quest_enemy_actor|quest_objective|waypoint|ui",
-    "x_norm": 0.5,
-    "y_norm": 0.5,
-    "bbox_norm": [0.0, 0.0, 0.0, 0.0],
-    "confidence": 0.0,
-    "melee_ready": false
-  }},
-  "ui_click": {{"needed":false,"x_norm":0.0,"y_norm":0.0,"label":""}},
-  "confidence": 0.0,
-  "explanation": "one short sentence",
-  "next_after_success": "short",
-  "perception": {{
-    "quest_state": "active|available|pending_accept|completed|unknown",
-    "dialogue_visible": false,
-    "interaction_prompt_visible": false,
-    "enemy_actor_visible": false,
-    "player_dead": false,
-    "safezone_visible": false,
-    "equipped_slot_visible": "0-9 or unknown",
-    "melee_ready_visible": false
-  }},
-  "knowledge_query": "short GPO wiki query or empty",
-  "memory_updates": []
-}}"""
+Return one compact JSON decision matching the API schema.
+REQUIRED: scene, objective, target, skill, confidence, explanation.
+Keep scene/objective/target/explanation short.
+
+OPTIONAL — include only when useful for THIS action:
+- control_id for EXEC_CONTROL/EQUIP_SLOT/Haki.
+- observed_ability only for a move visibly read from the current HUD.
+- visual_target when you can ground the chosen quest giver/enemy/UI target.
+- ui_click only for a clearly visible in-game button.
+- perception only for facts you can actually see now.
+- knowledge_query only when current GPO detail is genuinely missing.
+- memory_updates only for high-confidence persistent facts.
+
+skill must be one of: {skills}
+Do not pad the response with empty/default objects. Do not repeat the rules.
+"""
 
 
     def _validate_plan(self, raw: dict, catalog: dict) -> dict:
@@ -450,7 +433,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         self.provider = "gemini_ai_only"
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
-        self.max_output_tokens = 320
+        self.max_output_tokens = 768
         self.stats.update({
             "provider": self.provider,
             "model": self.model,
