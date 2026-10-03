@@ -374,7 +374,10 @@ CONTROL DISCIPLINE:
 - Read quest state in this priority order:
     1) A visible top-left quest HUD such as "Defeat X 1/8", its progress bar,
        Rewards and QUIT button is authoritative evidence that a quest is ACTIVE.
-       Set perception.quest_state="active" even if the NPC body is behind a wall.
+       For this controller, report quest_state="active" only when you can copy
+       a real numeric progress counter such as 0/6 or 1/8 into
+       perception.quest_progress_text. A player name/nameplate is NOT quest
+       progress.
     2) quest_status=active -> DO NOT take another quest. Follow/fight its target.
     3) quest_status=pending_accept -> wait for confirmation/dialogue change.
     4) quest_status=completed -> locate/choose the next appropriate quest.
@@ -387,9 +390,10 @@ CONTROL DISCIPLINE:
   Start M1 when the body is grounded/melee-ready OR the active-quest red target
   is very close and centered. If the red target is close but blocked, keep the
   fight goal and choose jump/climb/orbit instead of claiming no enemy exists.
-- SAFEZONE / PROTECTED text is PvP protection in this experiment. It is NOT a
-  reason to avoid or postpone fighting quest NPCs. Never invent a need to leave
-  the safe zone before PvE.
+- SAFEZONE / PROTECTED text is PvP protection, not proof that a visible
+  character is an enemy. You may pursue verified quest NPCs from a safe zone,
+  but do NOT attack a target grounded only by your own visual guess while the
+  local hostile-body detector has no matching NPC.
 - TAKE_QUEST: move to the yellow QUEST/! giver. Whenever the giver is visible,
   visual_target.kind MUST be "quest_giver" with a tight bbox_norm around the
   NPC/interaction target. If the CURRENT screenshot visibly shows the
@@ -414,6 +418,10 @@ CONTROL DISCIPLINE:
   melee_ready=true only when the actual NPC body is visibly close enough to
   hit now. The local visual tracker follows YOUR selected box between cloud
   replies; it does not choose a target by itself.
+- NEVER box the player's own third-person avatar/nameplate as
+  quest_enemy_actor. The player's avatar is the camera-followed character near
+  the lower center of the frame; its overhead name (for example the account's
+  own name) is not an NPC identity.
 - visual_target kind="waypoint" is SHORT-HORIZON visual grounding, not an
   imaginary objective marker. Box a real visible navigable cue/opening/path
   you intend to walk toward. Never place a waypoint box on a wall merely
@@ -492,8 +500,9 @@ OPTIONAL — include only when useful for THIS action:
 - ui_click only for a clearly visible in-game button.
 - perception only for facts you can actually see now. In particular,
   quest_hud_visible must mean the CURRENT frame actually shows the accepted
-  quest/progress HUD, and quest_progress_text should copy only the short
-  visible objective/progress phrase (for example "Defeat Corrupt Marines 1/8").
+  quest/progress HUD. For quest_state="active", quest_progress_text must copy a
+  visible numeric counter such as "Defeat Corrupt Marines 1/8"; never copy a
+  player nameplate into this field.
 - knowledge_query only when current GPO detail is genuinely missing.
 - memory_updates only for high-confidence persistent facts.
 
