@@ -252,7 +252,7 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self._circling = False
                 self._recovery_stage = 0
             elif (self._last_progress_ns
-                  and now_ns - self._last_progress_ns > int(4.5e9)
+                  and now_ns - self._last_progress_ns > int(3.2e9)
                   and proximity < 0.72):
                 self._stuck = True
 
@@ -327,7 +327,7 @@ class AIOnlyAutopilotSupervisor(Worker):
     def _steer(self, now_ns: int, *, direction: float, pid: int,
                confidence: float, reason: str, target_type: str,
                hold_s: float = 1.05) -> None:
-        if now_ns - self._last_emit_ns < int(0.86e9):
+        if now_ns - self._last_emit_ns < int(0.62e9):
             return
         self._emit(
             "STEER_TARGET", now_ns, reason=reason, ttl_s=1.6,
@@ -351,7 +351,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             self._recovery_target = target_type
             self._recovery_stage = 0
         if (self._last_recovery_ns
-                and now_ns - self._last_recovery_ns < int(1.25e9)):
+                and now_ns - self._last_recovery_ns < int(1.00e9)):
             return False
 
         stage = self._recovery_stage % 4
