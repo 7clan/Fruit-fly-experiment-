@@ -77,6 +77,8 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._recovery_target = None
         self._nav_recovery_attempts = 0
         self._nav_recovery_suppress_until_ns = 0
+        self._visual_nav_epoch = 0
+        self._visual_nav_stale_plan_id = -1
 
         self.stats.update({
             "commands": 0,
@@ -361,6 +363,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             "target_direction": target.get("direction"),
             "stuck": bool(self._stuck),
             "circling": bool(self._circling),
+            "visual_nav_epoch": int(self._visual_nav_epoch),
             "last_action": self._last_action_name,
             "last_action_age_s": action_age,
             "last_quest_interact_age_s": interact_age,
@@ -638,6 +641,9 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self._ai_enemy_confirmed_until_ns = (
                     now + int(8.0e9))
 
+        visual_nav_fresh = bool(
+            now - pts <= int(8.0e9))
+
         if skill in {"NAVIGATE_OBJECTIVE", "TRAVEL"}:
             # Select geometry according to semantic quest state instead of the
             # generic detector's last-writer-wins target. During an ACTIVE
@@ -722,9 +728,12 @@ class AIOnlyAutopilotSupervisor(Worker):
                         "quest_giver", "quest_enemy_actor",
                         "quest_objective", "waypoint"}
                       and ai_visual_conf >= 0.82
-                      and ai_visual_dir is not None):
-                    # The VLM selected this target; local tracking realizes
-                    # the same goal while the next cloud call is in flight.
+                      and ai_visual_dir is not None
+                      and visual_nav_fresh):
+                    # The VLM selected this short-horizon visible target;
+                    # local tracking realizes the SAME target while the next
+                    # cloud call is in flight. Do not chase an old wall/patch
+                    # indefinitely when a cloud call fails.
                     if not (self._quest_status == "active"
                             and ai_visual_kind == "quest_giver"):
                         self._steer(
@@ -735,6 +744,16 @@ class AIOnlyAutopilotSupervisor(Worker):
                             hold_s=0.78)
                         if track_fresh:
                             self.stats["visual_track_steers"] += 1
+                elif (ai_visual_kind in {
+                        "quest_objective", "waypoint"}
+                      and ai_visual_conf >= 0.82
+                      and ai_visual_dir is not None
+                      and not visual_nav_fresh
+                      and self._visual_nav_stale_plan_id != pid):
+                    # Force one semantic replan instead of continuing to
+                    # pursue a stale short-horizon screenshot target.
+                    self._visual_nav_stale_plan_id = pid
+                    self._visual_nav_epoch += 1
 
         elif skill in {"TAKE_QUEST", "INTERACT"}:
             # Never retake while perception says an objective is already live.
