@@ -13,6 +13,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import time
 import urllib.error
 import urllib.request
 
@@ -144,7 +145,8 @@ def _error_detail(exc: urllib.error.HTTPError) -> str:
 
 def probe(model: str | None = None,
           timeout_s: float = 10.0,
-          require_vision: bool = False) -> tuple[bool, str, str | None]:
+          require_vision: bool = False,
+          prefer_fastest_vision: bool = False) -> tuple[bool, str, str | None]:
     key = str(os.getenv("GEMINI_API_KEY") or "").strip()
     requested = str(
         model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL).strip()
@@ -173,6 +175,51 @@ def probe(model: str | None = None,
 
     seen = set()
     errors = []
+
+    # AI-only control benefits more from lower reaction latency than from a
+    # particular Flash-Lite generation. Benchmark one tiny multimodal request
+    # per accessible candidate at startup and keep the fastest successful one.
+    if require_vision and prefer_fastest_vision:
+        timed = []
+        for candidate in candidates:
+            candidate = str(candidate or "").strip()
+            if not candidate or candidate in seen:
+                continue
+            seen.add(candidate)
+            if available and candidate not in available:
+                continue
+            try:
+                t0 = time.perf_counter()
+                if not _probe_vision(candidate, key, timeout_s):
+                    errors.append(f"{candidate}:vision_empty_response")
+                    continue
+                ms = (time.perf_counter() - t0) * 1000.0
+                timed.append((ms, candidate))
+            except urllib.error.HTTPError as exc:
+                errors.append(
+                    f"{candidate}:vision_HTTP{exc.code}:"
+                    f"{_error_detail(exc)[:260]}")
+            except Exception as exc:
+                errors.append(
+                    f"{candidate}:vision_{type(exc).__name__}:{exc}")
+        if timed:
+            ms, selected = min(timed, key=lambda x: x[0])
+            note = (
+                "" if selected == requested
+                else f" fallback_from={requested}")
+            tested = ",".join(
+                f"{m}={round(t,1)}ms" for t, m in sorted(timed))
+            return (
+                True,
+                f"model={selected}{note} transport=openai_compat "
+                f"vision=yes startup_vision_ms={round(ms,1)} "
+                f"bench=[{tested}]{list_note}",
+                selected,
+            )
+        # Rebuild seen so the ordinary diagnostic loop can report text/vision
+        # failures consistently if every benchmark candidate failed.
+        seen = set()
+
     for candidate in candidates:
         candidate = str(candidate or "").strip()
         if not candidate or candidate in seen:
@@ -234,10 +281,14 @@ def main(argv=None) -> int:
     ap.add_argument(
         "--require-vision", action="store_true",
         help="only accept a model that successfully processes image input")
+    ap.add_argument(
+        "--fastest-vision", action="store_true",
+        help="benchmark accessible Flash-Lite models and select the fastest")
     args = ap.parse_args(argv)
     ok, detail, selected = probe(
         args.model, timeout_s=args.timeout,
-        require_vision=bool(args.require_vision))
+        require_vision=bool(args.require_vision),
+        prefer_fastest_vision=bool(args.fastest_vision))
     print(f"[coach-probe] {'OK' if ok else 'FAILED'} {detail}")
     if ok and selected:
         print(f"COACH_MODEL={selected}")
