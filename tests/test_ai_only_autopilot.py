@@ -616,8 +616,10 @@ def test_ai_claim_of_enemy_without_grounding_does_not_click_marker():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "STEER_TARGET"
-    assert sup.stats["combat_commands"] == 0
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
+    assert cmd.payload["target_type"] == "quest_enemy_marker"
+    assert cmd.payload["attack"] is False
+    assert sup.stats["combat_commands"] == 1
 
 def test_jump_is_one_shot_per_ai_plan_not_spammed():
     bus = _armed_bus(
