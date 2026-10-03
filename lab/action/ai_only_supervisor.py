@@ -15,6 +15,7 @@ Only the last item is eligible for melee clicks.
 
 from __future__ import annotations
 
+import re
 from collections import deque
 
 from ..bus import Bus, StateChannel
@@ -79,6 +80,9 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._nav_recovery_suppress_until_ns = 0
         self._visual_nav_epoch = 0
         self._visual_nav_stale_plan_id = -1
+        self._target_reject_epoch = 0
+        self._target_reject_plan_id = -1
+        self._last_target_reject_reason = ""
 
         self.stats.update({
             "commands": 0,
@@ -103,6 +107,9 @@ class AIOnlyAutopilotSupervisor(Worker):
             "invalid_progress_targets_ignored": 0,
             "navigation_recovery_cycles": 0,
             "navigation_recovery_suppressed": 0,
+            "self_target_vetoes": 0,
+            "safezone_attack_vetoes": 0,
+            "visual_waypoint_geometry_vetoes": 0,
             "combat_recoveries": 0,
             "combat_reacquire_searches": 0,
             "combat_reposition_recoveries": 0,
@@ -116,6 +123,53 @@ class AIOnlyAutopilotSupervisor(Worker):
             return float(v)
         except (TypeError, ValueError):
             return default
+
+    _QUEST_PROGRESS_RE = re.compile(r"(?<!\\d)(\\d+)\\s*/\\s*(\\d+)(?!\\d)")
+
+    @classmethod
+    def _valid_quest_progress(cls, text) -> bool:
+        match = cls._QUEST_PROGRESS_RE.search(str(text or ""))
+        if not match:
+            return False
+        try:
+            cur, total = int(match.group(1)), int(match.group(2))
+        except (TypeError, ValueError):
+            return False
+        return total > 0 and 0 <= cur <= total
+
+    @staticmethod
+    def _visual_box_contains_player(ai_visual: dict, obs: dict) -> bool:
+        """Reject a VLM enemy box that encloses the local player anchor.
+
+        GPO's third-person camera keeps the player's own avatar in the lower
+        center. The 2026-10-04 run boxed the local avatar/nameplate
+        FruitFlyExperiment as quest_enemy_actor and attacked it for ~1 minute.
+        Fast CV already exposes a player anchor, so use that independent
+        evidence rather than trusting the VLM label.
+        """
+        bbox = list((ai_visual or {}).get("bbox_norm") or [])
+        player = (obs or {}).get("player") or {}
+        pos = list(player.get("position") or [])
+        if len(bbox) != 4 or len(pos) < 2:
+            return False
+        try:
+            x1, y1, x2, y2 = [float(v) for v in bbox]
+            px, py = float(pos[0]), float(pos[1])
+        except (TypeError, ValueError):
+            return False
+        if not (0.0 <= x1 < x2 <= 1.0 and 0.0 <= y1 < y2 <= 1.0):
+            return False
+        return (
+            x1 - 0.015 <= px <= x2 + 0.015
+            and y1 - 0.020 <= py <= y2 + 0.050
+        )
+
+    def _reject_target_once(self, pid: int, reason: str) -> None:
+        if self._target_reject_plan_id == int(pid):
+            return
+        self._target_reject_plan_id = int(pid)
+        self._target_reject_epoch += 1
+        self._last_target_reject_reason = str(reason)[:96]
 
     def _armed(self) -> bool:
         env = self.meta.read()
@@ -230,7 +284,9 @@ class AIOnlyAutopilotSupervisor(Worker):
         # otherwise high-confidence Gemini perception below owns the latch.
         if self._quest_active_latched:
             self._quest_status = "active"
-        elif ((red or actor) and now_ns < self._await_quest_until_ns):
+        elif (actor and now_ns < self._await_quest_until_ns):
+            # Red HUD badges/arrows can look like an objective marker. Do not
+            # treat red alone as proof that TAKE_QUEST succeeded.
             self._quest_active_latched = True
             self._quest_completed_until_ns = 0
             self._quest_status = "active"
@@ -364,6 +420,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             "stuck": bool(self._stuck),
             "circling": bool(self._circling),
             "visual_nav_epoch": int(self._visual_nav_epoch),
+            "target_reject_epoch": int(self._target_reject_epoch),
+            "last_target_reject_reason": self._last_target_reject_reason,
             "last_action": self._last_action_name,
             "last_action_age_s": action_age,
             "last_quest_interact_age_s": interact_age,
@@ -581,6 +639,21 @@ class AIOnlyAutopilotSupervisor(Worker):
         ai_visual_dir = (
             (float(ai_visual_x) - 0.5) * 2.8
             if ai_visual_x is not None else None)
+        ai_visual_y = self._f(ai_visual.get("y_norm"))
+        ai_visual_bbox = list(ai_visual.get("bbox_norm") or [])
+        ai_waypoint_grounded = True
+        if ai_visual_kind == "waypoint":
+            bbox_bottom = None
+            if len(ai_visual_bbox) == 4:
+                bbox_bottom = self._f(ai_visual_bbox[3])
+            ai_waypoint_grounded = bool(
+                ai_visual_y is not None
+                and ai_visual_y >= 0.38
+                and (bbox_bottom is None or bbox_bottom >= 0.43))
+            if not ai_waypoint_grounded:
+                self.stats["visual_waypoint_geometry_vetoes"] += 1
+                self._reject_target_once(
+                    pid, "visual_waypoint_not_on_walkable_ground")
 
         # A cloud response can be 1-3 seconds old. If the AI supplied a
         # bounding box, AIVisualTracker follows that SAME AI-selected target
@@ -608,6 +681,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             ai_visual_conf = max(ai_visual_conf, track_conf)
         ai_qstate = str(
             ai_perception.get("quest_state") or "unknown").lower()
+        ai_progress_valid = self._valid_quest_progress(
+            ai_perception.get("quest_progress_text"))
         ai_equipped = str(
             ai_perception.get("equipped_slot_visible") or "unknown").strip()
         if (confidence >= 0.88
@@ -617,11 +692,12 @@ class AIOnlyAutopilotSupervisor(Worker):
             # The visible accepted-quest HUD is stronger evidence than color
             # marker flicker. Keep the active latch while Gemini can actually
             # read that HUD, even if the NPC is temporarily behind terrain.
-            if bool(ai_perception.get("quest_hud_visible")):
+            if (bool(ai_perception.get("quest_hud_visible"))
+                    and ai_progress_valid):
                 self._quest_active_latched = True
                 self._quest_status = "active"
                 self._await_quest_until_ns = 0
-            elif ai_qstate == "active":
+            elif ai_qstate == "active" and ai_progress_valid:
                 self._quest_active_latched = True
                 self._quest_status = "active"
                 self._await_quest_until_ns = 0
@@ -729,6 +805,8 @@ class AIOnlyAutopilotSupervisor(Worker):
                         "quest_objective", "waypoint"}
                       and ai_visual_conf >= 0.82
                       and ai_visual_dir is not None
+                      and (ai_visual_kind != "waypoint"
+                           or ai_waypoint_grounded)
                       and visual_nav_fresh):
                     # The VLM selected this short-horizon visible target;
                     # local tracking realizes the SAME target while the next
@@ -748,7 +826,9 @@ class AIOnlyAutopilotSupervisor(Worker):
                         "quest_objective", "waypoint"}
                       and ai_visual_conf >= 0.82
                       and ai_visual_dir is not None
-                      and not visual_nav_fresh
+                      and ((not visual_nav_fresh)
+                           or (ai_visual_kind == "waypoint"
+                               and not ai_waypoint_grounded))
                       and self._visual_nav_stale_plan_id != pid):
                     # Force one semantic replan instead of continuing to
                     # pursue a stale short-horizon screenshot target.
@@ -880,8 +960,10 @@ class AIOnlyAutopilotSupervisor(Worker):
             # AI-selected control channels alive together between 2-4 s cloud
             # replies: locomotion + camera + attack + defense + equipment.
             fight_active = bool(
-                self._quest_status == "active"
-                or (ai_qstate == "active" and confidence >= 0.82))
+                self._quest_active_latched
+                or (ai_qstate == "active"
+                    and ai_progress_valid
+                    and confidence >= 0.82))
             if not fight_active:
                 self._publish_state(now, obs, plan)
                 return
@@ -897,6 +979,17 @@ class AIOnlyAutopilotSupervisor(Worker):
                 actor.get("distance"),
                 proximity if ttype == "quest_enemy_actor" else None)
 
+            self_visual = self._visual_box_contains_player(
+                ai_visual, obs)
+            safezone_ai = bool(ai_perception.get("safezone_visible"))
+            if (ai_visual_kind == "quest_enemy_actor" and self_visual):
+                self.stats["self_target_vetoes"] += 1
+                self._reject_target_once(pid, "ai_enemy_box_contains_player")
+            if (ai_visual_kind == "quest_enemy_actor"
+                    and safezone_ai and not actor_visible):
+                self.stats["safezone_attack_vetoes"] += 1
+                self._reject_target_once(pid, "ai_enemy_in_safezone_unverified")
+
             grounded = False
             target_source = None
             target_dir = None
@@ -909,7 +1002,9 @@ class AIOnlyAutopilotSupervisor(Worker):
                 target_prox = aprox
             elif (ai_visual_kind == "quest_enemy_actor"
                   and ai_visual_conf >= 0.70
-                  and ai_visual_dir is not None):
+                  and ai_visual_dir is not None
+                  and not self_visual
+                  and not safezone_ai):
                 grounded = True
                 target_source = "quest_enemy_actor_ai_visual"
                 target_dir = ai_visual_dir
