@@ -34,6 +34,33 @@ if ($LASTEXITCODE -ne 0) {
 # the local SmolVLM branch separately.
 $provider = "gemini"
 $selectedModel = $null
+$secretPath = Join-Path $root "runtime_state\gemini_key.dpapi"
+
+function Import-GeminiLocalSecret {
+    param([string]$Path)
+    if (-not (Test-Path $Path)) { return $false }
+    try {
+        $protected = [IO.File]::ReadAllText($Path, [Text.Encoding]::UTF8).Trim()
+        if ([string]::IsNullOrWhiteSpace($protected)) { return $false }
+        $secure = ConvertTo-SecureString $protected
+        $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+        try {
+            $plain = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
+        }
+        finally {
+            if ($ptr -ne [IntPtr]::Zero) {
+                [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
+            }
+        }
+        if ([string]::IsNullOrWhiteSpace($plain)) { return $false }
+        $env:GEMINI_API_KEY = $plain.Trim()
+        return $true
+    }
+    catch {
+        Write-Host "Local DPAPI Gemini secret could not be read; setup will replace it." -ForegroundColor Yellow
+        return $false
+    }
+}
 
 function Test-GeminiKeyShape([string]$Value) {
     if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
@@ -42,7 +69,10 @@ function Test-GeminiKeyShape([string]$Value) {
     return ($k.StartsWith("AIza") -or $k.StartsWith("AQ."))
 }
 
-if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+# Prefer the repo-local DPAPI secret. This avoids stale/truncated USER
+# environment values and keeps the actual key out of source/history.
+$loadedDpapi = Import-GeminiLocalSecret $secretPath
+if (-not $loadedDpapi -and [string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
     $env:GEMINI_API_KEY = [Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
 }
 if ([string]::IsNullOrWhiteSpace($env:GEMINI_MODEL)) {
@@ -54,13 +84,18 @@ if ([string]::IsNullOrWhiteSpace($env:GEMINI_MODEL)) {
 
 if (-not (Test-GeminiKeyShape $env:GEMINI_API_KEY)) {
     $badLen = if ($null -eq $env:GEMINI_API_KEY) { 0 } else { $env:GEMINI_API_KEY.Trim().Length }
-    Write-Host "Stored Gemini key is missing/truncated (length=$badLen). It will be replaced before any API call." -ForegroundColor Yellow
+    Write-Host "Stored Gemini key is missing/truncated (length=$badLen). Running one-time local setup." -ForegroundColor Yellow
     [Environment]::SetEnvironmentVariable("GEMINI_API_KEY", $null, "User")
     Remove-Item Env:GEMINI_API_KEY -ErrorAction SilentlyContinue
+    if (Test-Path $secretPath) {
+        Remove-Item $secretPath -Force -ErrorAction SilentlyContinue
+    }
     & ".\setup_semantic_coach_windows.ps1" -ReplaceKey
     if ($LASTEXITCODE -ne 0) { throw "Gemini API-key setup failed." }
-    if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
-        $env:GEMINI_API_KEY = [Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
+    if (-not (Import-GeminiLocalSecret $secretPath)) {
+        if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
+            $env:GEMINI_API_KEY = [Environment]::GetEnvironmentVariable("GEMINI_API_KEY", "User")
+        }
     }
 }
 if (-not (Test-GeminiKeyShape $env:GEMINI_API_KEY)) {
