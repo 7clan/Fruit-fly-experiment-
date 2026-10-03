@@ -20,21 +20,40 @@ class EvidenceRecorder(Worker):
         super().__init__(bus, target_hz=target_hz)
         self.capture = bus.state("capture.frames.latest")
         self.brain = bus.state("brain.output")
+        self.coach = bus.state("coach.plan")
         self.obs = bus.state("world.observation")
         self.out_dir = Path(session_dir) / "evidence"
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self._last_chunk = None
+        self._last_plan = None
         self.save_raw = bool(save_raw)
-        self.stats.update({"saved": 0, "raw_saved": 0})
+        self.stats.update({
+            "saved": 0, "raw_saved": 0,
+            "brain_frames": 0, "ai_plan_frames": 0,
+        })
 
     def step(self) -> None:
         b = self.brain.read()
+        p = self.coach.read()
         c = self.capture.read()
-        if b is None or c is None:
+        if c is None:
             return
-        chunk = b.payload.get("chunk_id")
-        if chunk is None or chunk == self._last_chunk:
+
+        chunk = (b.payload or {}).get("chunk_id") if b is not None else None
+        try:
+            plan_id = int((p.payload or {}).get("plan_id", -1)) if p else -1
+        except (TypeError, ValueError):
+            plan_id = -1
+
+        source = None
+        source_id = None
+        if plan_id >= 0 and plan_id != self._last_plan:
+            source, source_id = "ai_plan", plan_id
+        elif chunk is not None and chunk != self._last_chunk:
+            source, source_id = "brain_chunk", int(chunk)
+        else:
             return
+
         img = c.payload.get("data_ref")
         if img is None:
             return
@@ -83,7 +102,28 @@ class EvidenceRecorder(Worker):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1,
                     cv2.LINE_AA)
 
-            stem = f"brain_chunk_{int(chunk):06d}"
+            # Overlay the exact visual target the cloud AI grounded.
+            if p is not None:
+                plan = p.payload or {}
+                vt = plan.get("visual_target") or {}
+                box = vt.get("bbox_norm")
+                if (isinstance(box, (list, tuple)) and len(box) == 4):
+                    try:
+                        x1, y1, x2, y2 = [float(v) for v in box]
+                        p1 = (int(x1 * w), int(y1 * h))
+                        p2 = (int(x2 * w), int(y2 * h))
+                        cv2.rectangle(
+                            annotated, p1, p2, (255, 0, 255), 2)
+                        cv2.putText(
+                            annotated,
+                            "AI " + str(vt.get("kind") or "target"),
+                            (p1[0], max(16, p1[1] - 5)),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.48,
+                            (255, 0, 255), 1, cv2.LINE_AA)
+                    except (TypeError, ValueError):
+                        pass
+
+            stem = f"{source}_{int(source_id):06d}"
             if self.save_raw:
                 cv2.imwrite(
                     str(self.out_dir / f"{stem}_raw.jpg"), raw,
@@ -92,7 +132,12 @@ class EvidenceRecorder(Worker):
             cv2.imwrite(
                 str(self.out_dir / f"{stem}_annotated.jpg"), annotated,
                 [int(cv2.IMWRITE_JPEG_QUALITY), 78])
-            self._last_chunk = chunk
+            if source == "ai_plan":
+                self._last_plan = int(source_id)
+                self.stats["ai_plan_frames"] += 1
+            else:
+                self._last_chunk = chunk
+                self.stats["brain_frames"] += 1
             self.stats["saved"] += 1
         except Exception as exc:
             self.stats["errors"] += 1
