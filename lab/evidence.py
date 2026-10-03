@@ -22,19 +22,23 @@ class EvidenceRecorder(Worker):
         self.brain = bus.state("brain.output")
         self.coach = bus.state("coach.plan")
         self.obs = bus.state("world.observation")
+        self.teacher = bus.state("teacher.action")
         self.out_dir = Path(session_dir) / "evidence"
         self.out_dir.mkdir(parents=True, exist_ok=True)
         self._last_chunk = None
         self._last_plan = None
+        self._last_teacher_ts = -1
         self.save_raw = bool(save_raw)
         self.stats.update({
             "saved": 0, "raw_saved": 0,
             "brain_frames": 0, "ai_plan_frames": 0,
+            "teacher_frames": 0,
         })
 
     def step(self) -> None:
         b = self.brain.read()
         p = self.coach.read()
+        t = self.teacher.read()
         c = self.capture.read()
         if c is None:
             return
@@ -47,7 +51,14 @@ class EvidenceRecorder(Worker):
 
         source = None
         source_id = None
-        if plan_id >= 0 and plan_id != self._last_plan:
+        teacher_payload = (t.payload or {}) if t is not None else {}
+        teacher_ts = int(teacher_payload.get("ts_ns", -1))
+        if (teacher_payload.get("enabled")
+                and teacher_payload.get("focused")
+                and teacher_ts != self._last_teacher_ts):
+            source = "teacher_sample"
+            source_id = int(self.stats["teacher_frames"]) + 1
+        elif plan_id >= 0 and plan_id != self._last_plan:
             source, source_id = "ai_plan", plan_id
         elif chunk is not None and chunk != self._last_chunk:
             source, source_id = "brain_chunk", int(chunk)
@@ -102,6 +113,16 @@ class EvidenceRecorder(Worker):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1,
                     cv2.LINE_AA)
 
+            if source == "teacher_sample":
+                actions = ", ".join(
+                    str(x) for x in (teacher_payload.get("actions") or []))
+                cv2.putText(
+                    annotated,
+                    "TEACHER: " + (actions[:90] or "no_action"),
+                    (16, 28),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.58,
+                    (255, 255, 255), 2, cv2.LINE_AA)
+
             # Overlay the exact visual target the cloud AI grounded.
             if p is not None:
                 plan = p.payload or {}
@@ -132,7 +153,10 @@ class EvidenceRecorder(Worker):
             cv2.imwrite(
                 str(self.out_dir / f"{stem}_annotated.jpg"), annotated,
                 [int(cv2.IMWRITE_JPEG_QUALITY), 78])
-            if source == "ai_plan":
+            if source == "teacher_sample":
+                self._last_teacher_ts = teacher_ts
+                self.stats["teacher_frames"] += 1
+            elif source == "ai_plan":
                 self._last_plan = int(source_id)
                 self.stats["ai_plan_frames"] += 1
             else:
