@@ -354,6 +354,10 @@ class _FakeCameraInput:
     def camera_drag(self, dx, dy):
         self.events.append(("camera_drag", int(dx), int(dy)))
 
+    def center_cursor_in_target(self):
+        self.events.append(("center_cursor",))
+        return True
+
     def key_down(self, key):
         self.events.append(("key_down", key))
 
@@ -1193,3 +1197,42 @@ def test_ai_only_backend_ui_click_never_restores_cursor_outside_game():
     backend = AIOnlyBackend(fake)
     backend.ui_click(0.55, 0.72)
     assert ("ui_click", 0.55, 0.72, "left") in fake.events
+
+
+
+def test_ai_only_combat_click_is_centered_inside_game():
+    fake = _FakeCameraInput()
+    backend = AIOnlyBackend(fake)
+    backend.mouse_button_down("left")
+    backend.mouse_button_up("left")
+    assert fake.events[0] == ("center_cursor",)
+    assert ("mouse_down", "left") in fake.events
+    assert ("mouse_up", "left") in fake.events
+
+
+def test_ai_only_recovery_skill_retries_are_bounded():
+    bus = Bus()
+    sup = AIOnlyAutopilotSupervisor(bus)
+    now = sup.clock.now_ns()
+    ok1, n1 = sup._repeat_allowed(
+        10, "CLIMB", now, interval_s=1.0, max_attempts=3)
+    assert (ok1, n1) == (True, 1)
+    ok2, n2 = sup._repeat_allowed(
+        10, "CLIMB", now, interval_s=1.0, max_attempts=3)
+    assert (ok2, n2) == (False, 1)
+    sup._repeat_last_ns[(10, "CLIMB")] = 0
+    assert sup._repeat_allowed(
+        10, "CLIMB", now, interval_s=1.0, max_attempts=3) == (True, 2)
+    sup._repeat_last_ns[(10, "CLIMB")] = 0
+    assert sup._repeat_allowed(
+        10, "CLIMB", now, interval_s=1.0, max_attempts=3) == (True, 3)
+    sup._repeat_last_ns[(10, "CLIMB")] = 0
+    assert sup._repeat_allowed(
+        10, "CLIMB", now, interval_s=1.0, max_attempts=3) == (False, 3)
+
+
+def test_ai_only_cloud_workers_drop_stale_responses():
+    bus = Bus()
+    coach = AIOnlyOllamaCoachWorker(
+        bus, model="gemma4:cloud", api_key="test-only")
+    assert coach.drop_stale_responses is True
