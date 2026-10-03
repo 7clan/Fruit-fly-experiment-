@@ -37,6 +37,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._last_emit_ns = 0
         self._last_one_shot_plan_id = -1
         self._last_fight_equip_plan_id = -1
+        self._last_combat_bundle_ns = 0
         self._last_log_ns = 0
         self._last_log_sig = None
 
@@ -79,6 +80,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             "commands": 0,
             "navigation_commands": 0,
             "combat_commands": 0,
+            "compound_combat_commands": 0,
             "interaction_commands": 0,
             "one_shot_commands": 0,
             "ignored_plans": 0,
@@ -132,7 +134,9 @@ class AIOnlyAutopilotSupervisor(Worker):
         # Persistent servo/attack commands must repeat physically, but the
         # terminal should not print the same objective 20 times.
         sig = (name, extra.get("coach_plan_id"), extra.get("target_type"))
-        repeat = name in {"STEER_TARGET", "ATTACK_LIGHT"}
+        repeat = name in {
+            "STEER_TARGET", "ATTACK_LIGHT",
+            "ATTACK_ADVANCE", "COMBAT_BUNDLE"}
         log_due = (
             sig != self._last_log_sig
             or not repeat
@@ -297,6 +301,9 @@ class AIOnlyAutopilotSupervisor(Worker):
                 if self._enemy_marker_since_ns else 0.0),
             "quest_enemy_actor_visible": bool(
                 notes.get("quest_enemy_actor_visible")),
+            "quest_enemy_actor_recent": bool(
+                self._last_actor_ns
+                and now_ns - self._last_actor_ns < int(2.2e9)),
             "quest_enemy_actor": actor,
             "target_type": target.get("type"),
             "target_proximity": target.get("distance"),
@@ -423,6 +430,17 @@ class AIOnlyAutopilotSupervisor(Worker):
         proximity = self._f(target.get("distance"))
         reason = "ai_only:" + str(plan.get("explanation") or skill)
         ai_perception = plan.get("perception") or {}
+        channels = plan.get("action_channels") or {}
+        ch_locomotion = str(
+            channels.get("locomotion") or "none").strip().lower()
+        ch_offense = str(
+            channels.get("offense") or "none").strip().lower()
+        ch_defense = str(
+            channels.get("defense") or "none").strip().lower()
+        ch_camera = str(
+            channels.get("camera") or "none").strip().lower()
+        ch_equip = str(
+            channels.get("equip_control_id") or "").strip()
         ai_visual = plan.get("visual_target") or {}
         ai_visual_kind = str(
             ai_visual.get("kind") or "none").strip().lower()
@@ -689,45 +707,16 @@ class AIOnlyAutopilotSupervisor(Worker):
                         self.stats["visual_track_steers"] += 1
 
         elif skill == "FIGHT_QUEST_TARGET":
-            # A fight plan is executable only for an active quest. Do not let
-            # a hallucinated red cue turn ordinary nearby players/NPCs into
-            # targets.
+            # The cloud AI chose the fight goal. This adapter keeps several
+            # AI-selected control channels alive together between 2-4 s cloud
+            # replies: locomotion + camera + attack + defense + equipment.
             fight_active = bool(
                 self._quest_status == "active"
-                or (ai_qstate == "active" and confidence >= 0.85))
+                or (ai_qstate == "active" and confidence >= 0.82))
             if not fight_active:
                 self._publish_state(now, obs, plan)
                 return
 
-            # Allow one explicit equip precondition INSIDE the AI-selected
-            # fight macro. This removes a full cloud round-trip between
-            # "equip melee" and "start fighting". The AI must provide the
-            # verified equip_slot_N control itself.
-            fight_control = str(plan.get("control_id") or "")
-            melee_ready = bool(ai_perception.get("melee_ready_visible"))
-            if (not melee_ready
-                    and fight_control.startswith("equip_slot_")
-                    and self._last_fight_equip_plan_id != pid):
-                slot = fight_control.rsplit("_", 1)[-1]
-                # Physical equip state persists until another equip command or
-                # high-confidence HUD observation says otherwise. Do not
-                # hammer the same number key on every fresh cloud FIGHT plan.
-                if slot in set("0123456789") and slot != self._last_equipped_slot:
-                    self._emit(
-                        "EQUIP_SLOT", now, reason=reason,
-                        slot=slot,
-                        coach_plan_id=pid,
-                        coach_confidence=confidence)
-                    self._last_equipped_slot = slot
-                    self._action_epoch += 1
-                    self.stats["one_shot_commands"] += 1
-                    self._publish_state(now, obs, plan)
-                    self._last_fight_equip_plan_id = pid
-                    return
-                self._last_fight_equip_plan_id = pid
-
-            # Never M1 a red objective dot. Require the persistent NPC body
-            # associated with the active quest.
             actor = notes.get("quest_enemy_actor") or {}
             actor_visible = bool(
                 notes.get("quest_enemy_actor_visible")
@@ -738,86 +727,126 @@ class AIOnlyAutopilotSupervisor(Worker):
             aprox = self._f(
                 actor.get("distance"),
                 proximity if ttype == "quest_enemy_actor" else None)
-            if actor_visible and adir is not None and aprox is not None:
-                ai_recent_enemy = (
-                    now <= self._ai_enemy_confirmed_until_ns)
-                attack_floor = 0.18 if ai_recent_enemy else 0.36
-                if aprox >= attack_floor and abs(adir) <= 0.95:
-                    if now - self._last_emit_ns >= int(0.34e9):
-                        command = (
-                            "ATTACK_LIGHT" if aprox >= 0.46
-                            else "ATTACK_ADVANCE")
-                        self._emit(
-                            command, now, reason=reason,
-                            ttl_s=0.8,
-                            coach_plan_id=pid,
-                            coach_confidence=confidence,
-                            target_type="quest_enemy_actor")
-                        self.stats["combat_commands"] += 1
-                else:
-                    self._steer(
-                        now, direction=adir, pid=pid,
-                        confidence=confidence, reason=reason,
-                        target_type="quest_enemy_actor",
-                        hold_s=0.92)
-            elif (ai_visual_kind == "quest_enemy_actor"
-                  and ai_visual_conf >= 0.72
-                  and ai_visual_dir is not None
-                  and self._quest_status == "active"):
-                # Cloud chose this NPC. The local tracker keeps its direction
-                # fresh between replies, fixing the "AI saw it three seconds
-                # ago" latency problem without selecting a new target.
-                tracked_melee = bool(
-                    track_fresh and track_kind == "quest_enemy_actor"
-                    and track_prox is not None and track_prox >= 0.68)
-                if ((ai_visual_melee or tracked_melee)
-                        and abs(ai_visual_dir) <= 0.72):
-                    if now - self._last_emit_ns >= int(0.30e9):
-                        self._emit(
-                            "ATTACK_LIGHT", now, reason=reason,
-                            ttl_s=0.8,
-                            coach_plan_id=pid,
-                            coach_confidence=confidence,
-                            target_type="quest_enemy_actor_ai_visual")
-                        self.stats["combat_commands"] += 1
-                        if track_fresh:
-                            self.stats["visual_track_attacks"] += 1
-                elif abs(ai_visual_dir) <= 0.88:
-                    if now - self._last_emit_ns >= int(0.34e9):
-                        self._emit(
-                            "ATTACK_ADVANCE", now, reason=reason,
-                            ttl_s=0.9,
-                            coach_plan_id=pid,
-                            coach_confidence=confidence,
-                            target_type="quest_enemy_actor_ai_visual")
-                        self.stats["combat_commands"] += 1
-                        if track_fresh:
-                            self.stats["visual_track_steers"] += 1
-                else:
-                    self._steer(
-                        now, direction=ai_visual_dir, pid=pid,
-                        confidence=min(confidence, ai_visual_conf),
-                        reason=reason,
-                        target_type="quest_enemy_actor_ai_visual",
-                        hold_s=0.82)
-                    if track_fresh:
-                        self.stats["visual_track_steers"] += 1
 
-            elif (bool(notes.get("quest_enemy_marker_detected"))):
-                # Red dot = objective direction only. Never click empty space
-                # just because the dot is centered/large; wait for a grounded
-                # NPC body from local role tracking or Gemini visual_target.
-                mdir = self._f(notes.get("quest_enemy_marker_direction"))
-                mprox = self._f(notes.get("quest_enemy_marker_proximity"))
-                if mdir is None:
-                    mdir = direction
-                if mprox is None:
-                    mprox = proximity
-                if mdir is not None and mprox is not None:
-                    self._steer(
-                        now, direction=mdir, pid=pid,
-                        confidence=confidence, reason=reason,
-                        target_type="quest_enemy_marker")
+            grounded = False
+            target_source = None
+            target_dir = None
+            target_prox = None
+
+            if actor_visible and adir is not None:
+                grounded = True
+                target_source = "quest_enemy_actor"
+                target_dir = adir
+                target_prox = aprox
+            elif (ai_visual_kind == "quest_enemy_actor"
+                  and ai_visual_conf >= 0.70
+                  and ai_visual_dir is not None):
+                grounded = True
+                target_source = "quest_enemy_actor_ai_visual"
+                target_dir = ai_visual_dir
+                target_prox = (
+                    track_prox if track_fresh and track_prox is not None
+                    else (0.70 if ai_visual_melee else 0.36))
+            elif bool(notes.get("quest_enemy_marker_detected")):
+                # In GPO the red quest dot remains tied to the target through
+                # walls. It is valid pursuit identity even when the body is
+                # occluded; it is not by itself proof of melee contact.
+                target_source = "quest_enemy_marker"
+                target_dir = self._f(
+                    notes.get("quest_enemy_marker_direction"), direction)
+                target_prox = self._f(
+                    notes.get("quest_enemy_marker_proximity"), proximity)
+
+            if target_dir is None:
+                self._publish_state(now, obs, plan)
+                return
+
+            if self._stuck or self._circling:
+                self._recover_navigation(
+                    now, pid=pid, confidence=confidence,
+                    reason=reason, direction=target_dir,
+                    target_type=target_source or "quest_enemy")
+                self._publish_state(now, obs, plan)
+                return
+
+            # AI channels are required by the schema. Keep conservative
+            # defaults for old cached plans during branch upgrades.
+            locomotion = ch_locomotion
+            if locomotion in {"", "none"}:
+                locomotion = (
+                    "orbit_right"
+                    if grounded and target_prox is not None
+                    and target_prox >= 0.48
+                    else "approach")
+            offense = ch_offense or "none"
+            if offense == "none" and skill == "FIGHT_QUEST_TARGET":
+                offense = "m1"
+            defense = ch_defense or "none"
+            camera = ch_camera or "track_target"
+            if camera == "none":
+                camera = "track_target"
+
+            # Red-dot pursuit can attack once it is very close/centered even
+            # if a wall briefly hides the body; this is the user's in-game
+            # through-wall quest marker, not a generic red UI cue.
+            close_marker = bool(
+                target_source == "quest_enemy_marker"
+                and target_prox is not None
+                and target_prox >= 0.70
+                and abs(float(target_dir)) <= 0.62
+                and self._enemy_marker_since_ns
+                and now - self._enemy_marker_since_ns >= int(0.45e9))
+            attack_now = bool(
+                offense in {"m1", "observed_ability"}
+                and (grounded or close_marker))
+
+            equip_id = ch_equip
+            if not equip_id:
+                legacy = str(plan.get("control_id") or "")
+                if legacy.startswith("equip_slot_"):
+                    equip_id = legacy
+            equip_slot = ""
+            if equip_id.startswith("equip_slot_"):
+                slot = equip_id.rsplit("_", 1)[-1]
+                if slot in set("0123456789"):
+                    # Do not repeatedly toggle an already selected tool.
+                    if slot != self._last_equipped_slot:
+                        equip_slot = slot
+                        self._last_equipped_slot = slot
+                        self._action_epoch += 1
+
+            ability = plan.get("observed_ability") or {}
+            ability_binding = ""
+            ability_label = ""
+            if offense == "observed_ability":
+                binding = str(
+                    ability.get("binding") or "").strip().upper()
+                label = str(ability.get("label") or "").strip()[:96]
+                if binding and label:
+                    ability_binding = "key:" + binding
+                    ability_label = label
+
+            if now - self._last_combat_bundle_ns >= int(0.30e9):
+                self._emit(
+                    "COMBAT_BUNDLE", now, reason=reason, ttl_s=1.0,
+                    direction=float(target_dir),
+                    proximity=(
+                        float(target_prox)
+                        if target_prox is not None else 0.0),
+                    locomotion=locomotion,
+                    offense=offense,
+                    defense=defense,
+                    camera=camera,
+                    attack=attack_now,
+                    equip_slot=equip_slot,
+                    ability_binding=ability_binding,
+                    ability_label=ability_label,
+                    coach_plan_id=pid,
+                    coach_confidence=confidence,
+                    target_type=target_source or "quest_enemy")
+                self._last_combat_bundle_ns = now
+                self.stats["combat_commands"] += 1
+                self.stats["compound_combat_commands"] += 1
 
         elif skill == "BLOCK":
             if self._one_shot(pid):
