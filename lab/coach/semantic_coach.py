@@ -198,6 +198,17 @@ class SemanticCoachWorker(Worker):
         env = channel.read()
         return dict(env.payload or {}) if env is not None else {}
 
+    def _should_drop_stale_response(
+            self, plan: dict, start_sig: tuple, current_sig: tuple) -> bool:
+        """Hook for providers/controllers with a live execution adapter.
+
+        Default semantic-coach behavior is conservative: any semantic state
+        change while the cloud call is in flight makes the response stale.
+        AI-only mode overrides this for persistent skills whose local executor
+        revalidates fresh geometry before every physical input.
+        """
+        return current_sig != start_sig
+
     def _signature(self, obs: dict, quest: dict, brain: dict) -> tuple:
         target = obs.get("target") or {}
         player = obs.get("player") or {}
@@ -940,13 +951,15 @@ Return ONLY a JSON object with exactly these fields:
                 cur_quest = self._state(self.quest_state)
                 cur_brain = self._state(self.brain_state)
                 cur_sig = self._signature(cur_obs, cur_quest, cur_brain)
-                if cur_sig != sig:
+                if self._should_drop_stale_response(
+                        plan, sig, cur_sig):
                     self.stats["stale_responses"] += 1
                     self._last_signature = None
                     self.events.publish({
                         "kind": "coach_stale_response_dropped",
                         "ts_ns": SHARED_CLOCK.now_ns(),
                         "model": self.model,
+                        "skill": plan.get("skill"),
                     })
                     return
         except (urllib.error.URLError, urllib.error.HTTPError,
