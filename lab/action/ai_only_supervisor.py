@@ -614,6 +614,7 @@ class AIOnlyAutopilotSupervisor(Worker):
         proximity = self._f(target.get("distance"))
         reason = "ai_only:" + str(plan.get("explanation") or skill)
         ai_perception = plan.get("perception") or {}
+        ai_safezone_visible = bool(ai_perception.get("safezone_visible"))
         channels = plan.get("action_channels") or {}
         ch_locomotion = str(
             channels.get("locomotion") or "none").strip().lower()
@@ -687,7 +688,6 @@ class AIOnlyAutopilotSupervisor(Worker):
             ai_perception.get("quest_state") or "unknown").lower()
         ai_progress_valid = self._valid_quest_progress(
             ai_perception.get("quest_progress_text"))
-        ai_safezone_visible = bool(ai_perception.get("safezone_visible"))
         ai_equipped = str(
             ai_perception.get("equipped_slot_visible") or "unknown").strip()
         if (confidence >= 0.88
