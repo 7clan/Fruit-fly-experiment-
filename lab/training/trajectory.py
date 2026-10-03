@@ -31,6 +31,7 @@ class TrajectoryRecorder(Worker):
         self.meta = bus.state("action.meta")
         self.ai_track = bus.state("ai.visual.track")
         self.teacher = bus.state("teacher.action")
+        self.skill_state = bus.state("training.skills")
 
         self.session_dir = Path(session_dir)
         self.persistent_root = Path(persistent_root)
@@ -83,6 +84,10 @@ class TrajectoryRecorder(Worker):
                 self._active_skill_reward,
                 ts_ns=ts_ns,
             )
+            self.skill_state.write({
+                **self.skill_library.snapshot(),
+                "ts_ns": int(ts_ns),
+            }, ts_ns=int(ts_ns))
         self._active_skill_reward = 0.0
 
     def _write(self, rec: dict):
