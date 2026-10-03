@@ -19,6 +19,7 @@ import json
 import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from typing import Any
@@ -66,6 +67,27 @@ IMMEDIATE_SKILLS = frozenset({
 })
 
 
+def _sanitize_api_key(value: str | None) -> str:
+    key = str(value or "").strip()
+    for prefix in ("GEMINI_API_KEY=", "GOOGLE_API_KEY=", "x-goog-api-key:"):
+        if key.lower().startswith(prefix.lower()):
+            key = key[len(prefix):].strip()
+            break
+    if len(key) >= 2 and key[0] == key[-1] and key[0] in {"'", '"'}:
+        key = key[1:-1].strip()
+    return key.replace("\r", "").replace("\n", "").strip()
+
+
+def _url_with_key(url: str, key: str) -> str:
+    parts = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    query = [(k, v) for k, v in query if k.lower() != "key"]
+    query.append(("key", key))
+    return urllib.parse.urlunsplit((
+        parts.scheme, parts.netloc, parts.path,
+        urllib.parse.urlencode(query), parts.fragment))
+
+
 def _compact(value: Any, limit: int = 1600) -> Any:
     """Cheap JSON-safe compacting for state sent to the API."""
     try:
@@ -105,8 +127,8 @@ class SemanticCoachWorker(Worker):
 
         self.model = str(
             model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL).strip()
-        self.api_key = str(
-            api_key or os.getenv("GEMINI_API_KEY") or "").strip()
+        self.api_key = _sanitize_api_key(
+            api_key or os.getenv("GEMINI_API_KEY"))
         self.min_call_interval_s = max(2.0, float(min_call_interval_s))
         self.unchanged_refresh_s = max(
             self.min_call_interval_s, float(unchanged_refresh_s))
@@ -375,21 +397,37 @@ Return ONLY a JSON object with exactly these fields:
 
         def send(request_body):
             raw = json.dumps(request_body).encode("utf-8")
-            req = urllib.request.Request(
-                endpoint,
-                data=raw,
-                headers={
-                    "Accept": "application/json",
-                    "Content-Type": "application/json",
-                    "x-goog-api-key": self.api_key,
-                    "x-goog-api-client": "digitalflylab-native/1.0",
-                    "User-Agent": "DigitalFlyLab/1.0",
-                },
-                method="POST",
-            )
-            with urllib.request.urlopen(
-                    req, timeout=self.timeout_s) as resp:
-                return json.loads(resp.read().decode("utf-8"))
+
+            def request(target_url: str, use_header: bool):
+                headers = {"Content-Type": "application/json"}
+                if use_header:
+                    headers["x-goog-api-key"] = self.api_key
+                req = urllib.request.Request(
+                    target_url,
+                    data=raw,
+                    headers=headers,
+                    method="POST",
+                )
+                with urllib.request.urlopen(
+                        req, timeout=self.timeout_s) as resp:
+                    return json.loads(resp.read().decode("utf-8"))
+
+            try:
+                return request(endpoint, True)
+            except urllib.error.HTTPError as exc:
+                try:
+                    detail = exc.read().decode(
+                        "utf-8", errors="replace")
+                except Exception:
+                    detail = ""
+                if (int(getattr(exc, "code", 0)) != 400
+                        or "<html" not in detail.lower()):
+                    raise
+            # Google's official multimodal curl example documents ?key=.
+            # Use it when this Windows/network path rejects the custom header
+            # before the Gemini service can return its normal JSON error.
+            return request(
+                _url_with_key(endpoint, self.api_key), False)
 
         try:
             payload = send(body)
