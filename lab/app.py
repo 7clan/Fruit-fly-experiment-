@@ -62,7 +62,8 @@ from .world.memory import MemoryStore
 from .world.planner import PlannerWorker
 from .world.value import ValueTable
 from .skills import SkillLibrary
-from .training import TrajectoryRecorder, TeacherInputRecorder
+from .training import (
+    TrajectoryRecorder, TeacherInputRecorder, load_teacher_priors)
 
 AGENT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -135,6 +136,8 @@ class DigitalFlyLab:
         self.training_root = AGENT_ROOT / "runtime_state" / "training"
         self.skill_library = SkillLibrary(
             self.training_root / "skills.json")
+        self.teacher_priors = load_teacher_priors(self.training_root)
+        self.teacher_prior_state = self.bus.state("training.teacher_priors")
 
         # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
         # canonical Brian2 subprocess is the dominant workload.
@@ -207,7 +210,8 @@ class DigitalFlyLab:
             autonomy_enabled=False if self.autonomy_requested else autonomy,
             movement_only=movement_only,
             questing=(self.quest_autonomy or self.ai_only),
-            command_only=self.ai_only)
+            command_only=self.ai_only,
+            combat_priors=(self.teacher_priors if self.ai_only else None))
 
         if self.ai_only:
             if not semantic_coach:
@@ -473,6 +477,10 @@ class DigitalFlyLab:
         })
         self.skill_state.write({
             **self.skill_library.snapshot(),
+            "ts_ns": SHARED_CLOCK.now_ns(),
+        })
+        self.teacher_prior_state.write({
+            **dict(self.teacher_priors),
             "ts_ns": SHARED_CLOCK.now_ns(),
         })
         self.memory.start()
@@ -832,6 +840,7 @@ class DigitalFlyLab:
                 dict(self.trajectory.stats)
                 if self.trajectory is not None else None),
             "skills": self.skill_library.snapshot(),
+            "teacher_priors": dict(self.teacher_priors),
             "teacher": (
                 dict(self.teacher_recorder.stats)
                 if self.teacher_recorder is not None else None),
