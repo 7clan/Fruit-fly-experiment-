@@ -393,6 +393,10 @@ class MotorExecutor(Worker):
         self._camera_prev_ns = 0
         self._camera_bad_samples = 0
         self._camera_last_flip_ns = 0
+        self._bundle_last_attack_ns = 0
+        self._bundle_last_guard_ns = 0
+        self._bundle_last_evade_ns = 0
+        self._bundle_last_ability_ns = 0
         self.stats.update({"inputs_emitted": 0, "shadow_only": 0,
                            "emergency_stops": 0, "hold_refreshes": 0,
                            "navigation_vetoes": 0,
@@ -400,6 +404,11 @@ class MotorExecutor(Worker):
                            "camera_aligns": 0,
                            "camera_sign_flips": 0,
                            "camera_bad_samples": 0,
+                           "combat_bundles": 0,
+                           "bundle_attacks": 0,
+                           "bundle_guards": 0,
+                           "bundle_evades": 0,
+                           "bundle_orbits": 0,
                            "command_only": self.command_only})
 
     # -- autonomy gate ----------------------------------------------------
@@ -913,6 +922,112 @@ class MotorExecutor(Worker):
                 self.backend.mouse_button_down("left")
                 self.backend.mouse_button_up("left")
                 self.action_lock_until_ns = now_ns + int(0.16e9)
+            elif name == "COMBAT_BUNDLE":
+                # One AI plan may intentionally control several channels at
+                # once. This is the latency bridge: movement/camera/attack/
+                # guard continue locally while Gemini is thinking.
+                try:
+                    direction = float(cmd.get("direction", 0.0))
+                except (TypeError, ValueError):
+                    direction = 0.0
+                try:
+                    proximity = float(cmd.get("proximity", 0.0))
+                except (TypeError, ValueError):
+                    proximity = 0.0
+                locomotion = str(
+                    cmd.get("locomotion") or "approach").lower()
+                offense = str(cmd.get("offense") or "m1").lower()
+                defense = str(cmd.get("defense") or "none").lower()
+                camera = str(cmd.get("camera") or "track_target").lower()
+                attack = bool(cmd.get("attack", False))
+
+                # Equipment is a precondition channel, not a separate cloud
+                # plan. Supervisor only supplies it once when state changes.
+                slot = str(cmd.get("equip_slot") or "")
+                if slot in set("0123456789"):
+                    self._hold_key_locked(slot, now_ns, 0.06)
+
+                if camera == "track_target" and abs(direction) > 0.16:
+                    dx = int(max(-58, min(58, direction * 42.0)))
+                    if abs(dx) >= 8:
+                        self.backend.mouse_move(dx, 0)
+                        self.stats["camera_aligns"] += 1
+                elif camera in {"look_left", "look_right"}:
+                    self.backend.mouse_move(
+                        -52 if camera == "look_left" else 52, 0)
+
+                move_hold = 0.34
+                if locomotion == "approach":
+                    self._hold_key_locked("W", now_ns, move_hold)
+                elif locomotion == "orbit_left":
+                    self._hold_key_locked("A", now_ns, move_hold)
+                    self._hold_key_locked("W", now_ns, 0.16)
+                    self.stats["bundle_orbits"] += 1
+                elif locomotion == "orbit_right":
+                    self._hold_key_locked("D", now_ns, move_hold)
+                    self._hold_key_locked("W", now_ns, 0.16)
+                    self.stats["bundle_orbits"] += 1
+                elif locomotion == "retreat":
+                    self._hold_key_locked("S", now_ns, move_hold)
+                elif locomotion == "sprint":
+                    self._hold_key_locked("W", now_ns, 0.05)
+                    if self.autonomy_enabled:
+                        self.backend.key_up("W")
+                        self.backend.key_down("W")
+                    self._held["W"] = now_ns + int(0.55e9)
+                elif locomotion == "jump":
+                    self._hold_key_locked("W", now_ns, 0.28)
+                    self._hold_key_locked("SPACE", now_ns, 0.10)
+                elif locomotion == "climb":
+                    self._hold_key_locked("SPACE", now_ns, 0.10)
+                    self._hold_key_locked("W", now_ns, 0.72)
+                    self._hold_key_locked("CTRL", now_ns, 0.72)
+
+                # Defense is interleaved with offense, while locomotion keeps
+                # running. Holding F and M1 at the exact same instant is not a
+                # useful combat action, so guard windows suppress that one M1
+                # pulse rather than serializing the whole behavior.
+                guarding = False
+                if (defense == "guard_between_attacks"
+                        and (not self._bundle_last_guard_ns
+                             or now_ns - self._bundle_last_guard_ns
+                             >= int(1.25e9))):
+                    self._hold_key_locked("F", now_ns, 0.24)
+                    self._bundle_last_guard_ns = now_ns
+                    self.stats["bundle_guards"] += 1
+                    guarding = True
+                elif (defense == "evade"
+                      and (not self._bundle_last_evade_ns
+                           or now_ns - self._bundle_last_evade_ns
+                           >= int(1.50e9))):
+                    self._hold_key_locked("S", now_ns, 0.15)
+                    self._hold_key_locked("Q", now_ns, 0.12)
+                    self._bundle_last_evade_ns = now_ns
+                    self.stats["bundle_evades"] += 1
+                    guarding = True
+
+                if attack and not guarding:
+                    ability_binding = str(
+                        cmd.get("ability_binding") or "")
+                    if (offense == "observed_ability"
+                            and ability_binding.startswith("key:")
+                            and (not self._bundle_last_ability_ns
+                                 or now_ns - self._bundle_last_ability_ns
+                                 >= int(1.25e9))):
+                        self._hold_key_locked(
+                            ability_binding[4:].upper(), now_ns, 0.07)
+                        self._bundle_last_ability_ns = now_ns
+                    elif (offense == "m1"
+                          and (not self._bundle_last_attack_ns
+                               or now_ns - self._bundle_last_attack_ns
+                               >= int(0.26e9))):
+                        self.backend.mouse_button_down("left")
+                        self.backend.mouse_button_up("left")
+                        self._bundle_last_attack_ns = now_ns
+                        self.stats["bundle_attacks"] += 1
+
+                self.stats["combat_bundles"] += 1
+                self.action_lock_until_ns = now_ns + int(0.12e9)
             elif name == "ATTACK_ADVANCE":
                 # Realize the AI's persistent FIGHT skill while the quest NPC
                 # is visible but just outside reliable melee geometry.
