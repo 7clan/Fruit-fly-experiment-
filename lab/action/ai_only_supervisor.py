@@ -71,6 +71,9 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._direction_history = deque(maxlen=20)
         self._stuck = False
         self._circling = False
+        self._recovery_stage = 0
+        self._last_recovery_ns = 0
+        self._recovery_target = None
 
         self.stats.update({
             "commands": 0,
@@ -85,6 +88,11 @@ class AIOnlyAutopilotSupervisor(Worker):
             "marker_melee_fallbacks": 0,
             "visual_track_steers": 0,
             "visual_track_attacks": 0,
+            "micro_recoveries": 0,
+            "jump_recoveries": 0,
+            "climb_recoveries": 0,
+            "backtrack_recoveries": 0,
+            "camera_recoveries": 0,
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
         })
@@ -200,16 +208,18 @@ class AIOnlyAutopilotSupervisor(Worker):
         if actor:
             self._last_actor_ns = now_ns
 
-        # Quest status is perception-derived and sticky. Once the live HUD or
-        # cloud vision confirms a quest is active, do NOT forget it merely
-        # because the red marker leaves the camera for a few seconds.
-        if red or actor:
+        # Quest status is sticky, but a red color cue alone does NOT prove a
+        # quest is active. In the 2026-10-03 run a false red/objective cue
+        # latched "active" before the cloud had confirmed the HUD. Local cues
+        # may confirm acceptance only during the short post-interact window;
+        # otherwise high-confidence Gemini perception below owns the latch.
+        if self._quest_active_latched:
+            self._quest_status = "active"
+        elif ((red or actor) and now_ns < self._await_quest_until_ns):
             self._quest_active_latched = True
             self._quest_completed_until_ns = 0
             self._quest_status = "active"
             self._await_quest_until_ns = 0
-        elif self._quest_active_latched:
-            self._quest_status = "active"
         elif now_ns < self._quest_completed_until_ns:
             self._quest_status = "completed"
         elif now_ns < self._await_quest_until_ns:
@@ -230,6 +240,8 @@ class AIOnlyAutopilotSupervisor(Worker):
             self._direction_history.clear()
             self._stuck = False
             self._circling = False
+            self._recovery_stage = 0
+            self._recovery_target = target_key
         elif proximity is not None:
             if (self._best_proximity is None
                     or proximity > self._best_proximity + 0.035):
@@ -237,6 +249,7 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self._last_progress_ns = now_ns
                 self._stuck = False
                 self._circling = False
+                self._recovery_stage = 0
             elif (self._last_progress_ns
                   and now_ns - self._last_progress_ns > int(4.5e9)
                   and proximity < 0.72):
@@ -322,6 +335,50 @@ class AIOnlyAutopilotSupervisor(Worker):
             coach_plan_id=pid, coach_confidence=confidence,
             target_type=target_type)
         self.stats["navigation_commands"] += 1
+
+    def _recover_navigation(
+            self, now_ns: int, *, pid: int, confidence: float,
+            reason: str, direction: float | None,
+            target_type: str) -> bool:
+        """Fast motor recovery under an already AI-selected navigation goal.
+
+        Gemini takes ~3 s on the target laptop. Waiting for another cloud
+        round-trip after detecting no progress makes walls feel fatal. These
+        are bounded locomotor primitives only; they do not choose a new goal.
+        """
+        if self._recovery_target != target_type:
+            self._recovery_target = target_type
+            self._recovery_stage = 0
+        if (self._last_recovery_ns
+                and now_ns - self._last_recovery_ns < int(1.25e9)):
+            return False
+
+        stage = self._recovery_stage % 4
+        if stage == 0:
+            name, extra = "JUMP", {}
+            self.stats["jump_recoveries"] += 1
+        elif stage == 1:
+            name, extra = "CLIMB", {"hold_s": 1.10}
+            self.stats["climb_recoveries"] += 1
+        elif stage == 2:
+            name, extra = "DASH_BACK", {}
+            self.stats["backtrack_recoveries"] += 1
+        else:
+            # Search toward the last-known target bearing, but keep cursor
+            # confinement/camera drag at the Windows backend boundary.
+            dx = 64 if (direction is None or direction >= 0) else -64
+            name, extra = "SEARCH_CAMERA", {"dx": dx}
+            self.stats["camera_recoveries"] += 1
+
+        self._emit(
+            name, now_ns,
+            reason=reason + f":micro_recovery_{stage + 1}",
+            coach_plan_id=pid, coach_confidence=confidence,
+            target_type=target_type, **extra)
+        self._last_recovery_ns = now_ns
+        self._recovery_stage += 1
+        self.stats["micro_recoveries"] += 1
+        return True
 
     def step(self) -> None:
         if not self._armed():
@@ -431,34 +488,84 @@ class AIOnlyAutopilotSupervisor(Worker):
                     now + int(8.0e9))
 
         if skill in {"NAVIGATE_OBJECTIVE", "TRAVEL"}:
-            # When local progress monitoring says we are stuck, stop driving
-            # the old plan into the same wall while the cloud model is still
-            # thinking. The stuck/circling event forces a replan signature.
+            # Select geometry according to semantic quest state instead of the
+            # generic detector's last-writer-wins target. During an ACTIVE
+            # quest, a yellow giver may remain visible behind us; steering to
+            # it caused the long circular loops in the 2026-10-03 run.
+            nav_type = None
+            nav_dir = None
+            nav_prox = None
+
+            actor = notes.get("quest_enemy_actor") or {}
+            actor_visible = bool(notes.get("quest_enemy_actor_visible"))
+            if self._quest_status == "active":
+                if actor_visible:
+                    nav_type = "quest_enemy_actor"
+                    nav_dir = self._f(actor.get("direction"))
+                    nav_prox = self._f(actor.get("distance"))
+                elif bool(notes.get("quest_enemy_marker_detected")):
+                    nav_type = "quest_enemy_marker"
+                    nav_dir = self._f(
+                        notes.get("quest_enemy_marker_direction"))
+                    nav_prox = self._f(
+                        notes.get("quest_enemy_marker_proximity"))
+                elif bool(notes.get("recommended_waypoint_detected")):
+                    nav_type = "recommended_quest_waypoint"
+                    nav_dir = self._f(
+                        notes.get("recommended_waypoint_direction"))
+                    nav_prox = self._f(
+                        notes.get("recommended_waypoint_proximity"))
+            else:
+                if bool(notes.get("quest_marker_detected")):
+                    nav_type = "quest_marker"
+                    nav_dir = self._f(notes.get("quest_marker_direction"))
+                    nav_prox = self._f(notes.get("quest_marker_proximity"))
+                elif bool(notes.get("recommended_waypoint_detected")):
+                    nav_type = "recommended_quest_waypoint"
+                    nav_dir = self._f(
+                        notes.get("recommended_waypoint_direction"))
+                    nav_prox = self._f(
+                        notes.get("recommended_waypoint_proximity"))
+
+            # Generic target is only a fallback when it is semantically
+            # compatible with the current quest state.
+            if nav_dir is None and direction is not None and proximity is not None:
+                allowed_types = (
+                    {"quest_enemy_marker", "quest_enemy_actor",
+                     "recommended_quest_waypoint"}
+                    if self._quest_status == "active"
+                    else {"quest_marker", "recommended_quest_waypoint"})
+                if ttype in allowed_types:
+                    nav_type, nav_dir, nav_prox = (
+                        ttype, direction, proximity)
+
             if self._stuck or self._circling:
-                pass
-            elif (ttype in {
-                    "recommended_quest_waypoint", "quest_marker",
-                    "quest_enemy_marker", "quest_enemy_actor"}
-                    and direction is not None and proximity is not None):
+                self._recover_navigation(
+                    now, pid=pid, confidence=confidence,
+                    reason=reason, direction=nav_dir,
+                    target_type=nav_type or ttype or "objective")
+            elif nav_type and nav_dir is not None and nav_prox is not None:
                 self._steer(
-                    now, direction=direction, pid=pid,
+                    now, direction=nav_dir, pid=pid,
                     confidence=confidence, reason=reason,
-                    target_type=ttype)
+                    target_type=nav_type)
             elif (ai_visual_kind in {
                     "quest_giver", "quest_enemy_actor",
                     "quest_objective", "waypoint"}
                   and ai_visual_conf >= 0.82
                   and ai_visual_dir is not None):
-                # The VLM just saw a target that cheap CV did not. Use that
-                # fresh grounding long enough to rotate/acquire it locally.
-                self._steer(
-                    now, direction=ai_visual_dir, pid=pid,
-                    confidence=min(confidence, ai_visual_conf),
-                    reason=reason,
-                    target_type="ai_visual_" + ai_visual_kind,
-                    hold_s=0.78)
-                if track_fresh:
-                    self.stats["visual_track_steers"] += 1
+                # The VLM selected this target; local tracking realizes the
+                # same goal while the next cloud call is in flight.
+                if not (self._quest_status == "active"
+                        and ai_visual_kind == "quest_giver"):
+                    self._steer(
+                        now, direction=ai_visual_dir, pid=pid,
+                        confidence=min(confidence, ai_visual_conf),
+                        reason=reason,
+                        target_type="ai_visual_" + ai_visual_kind,
+                        hold_s=0.78)
+                    if track_fresh:
+                        self.stats["visual_track_steers"] += 1
 
         elif skill in {"TAKE_QUEST", "INTERACT"}:
             # Never retake while perception says an objective is already live.
@@ -581,6 +688,16 @@ class AIOnlyAutopilotSupervisor(Worker):
                         self.stats["visual_track_steers"] += 1
 
         elif skill == "FIGHT_QUEST_TARGET":
+            # A fight plan is executable only for an active quest. Do not let
+            # a hallucinated red cue turn ordinary nearby players/NPCs into
+            # targets.
+            fight_active = bool(
+                self._quest_status == "active"
+                or (ai_qstate == "active" and confidence >= 0.85))
+            if not fight_active:
+                self._publish_state(now, obs, plan)
+                return
+
             # Allow one explicit equip precondition INSIDE the AI-selected
             # fight macro. This removes a full cloud round-trip between
             # "equip melee" and "start fighting". The AI must provide the
@@ -681,37 +798,19 @@ class AIOnlyAutopilotSupervisor(Worker):
                     if track_fresh:
                         self.stats["visual_track_steers"] += 1
 
-            elif (bool(notes.get("quest_enemy_marker_detected"))
-                  and direction is not None and proximity is not None):
-                # Prefer a resolved body. As a conservative fallback for the
-                # game's red dot sitting directly on a quest NPC's head, M1
-                # is allowed only when the marker has remained continuously
-                # visible, is strongly centered, and is visually very close.
-                marker_stable_s = (
-                    (now - self._enemy_marker_since_ns) / 1e9
-                    if self._enemy_marker_since_ns else 0.0)
-                ai_recent_enemy = (
-                    now <= self._ai_enemy_confirmed_until_ns)
-                marker_melee = (
-                    proximity >= (0.62 if ai_recent_enemy else 0.74)
-                    and abs(direction) <= (0.55 if ai_recent_enemy else 0.40)
-                    and marker_stable_s >= 0.65)
-                if marker_melee:
-                    if now - self._last_emit_ns >= int(0.34e9):
-                        self._emit(
-                            ("ATTACK_LIGHT" if proximity >= 0.78
-                             else "ATTACK_ADVANCE"),
-                            now, reason=reason,
-                            ttl_s=0.8,
-                            coach_plan_id=pid,
-                            coach_confidence=confidence,
-                            target_type="quest_enemy_marker_close_fallback")
-                        self.stats["combat_commands"] += 1
-                        self.stats["marker_melee_fallbacks"] += 1
-                else:
-                    # Objective not yet in verified melee geometry: approach.
+            elif (bool(notes.get("quest_enemy_marker_detected"))):
+                # Red dot = objective direction only. Never click empty space
+                # just because the dot is centered/large; wait for a grounded
+                # NPC body from local role tracking or Gemini visual_target.
+                mdir = self._f(notes.get("quest_enemy_marker_direction"))
+                mprox = self._f(notes.get("quest_enemy_marker_proximity"))
+                if mdir is None:
+                    mdir = direction
+                if mprox is None:
+                    mprox = proximity
+                if mdir is not None and mprox is not None:
                     self._steer(
-                        now, direction=direction, pid=pid,
+                        now, direction=mdir, pid=pid,
                         confidence=confidence, reason=reason,
                         target_type="quest_enemy_marker")
 
