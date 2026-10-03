@@ -274,6 +274,14 @@ class AIOnlyBackend(QuestingBackend):
         center = getattr(self.inner, "center_cursor_in_target", None)
         return bool(center()) if center is not None else False
 
+    def mouse_button_down(self, button: str) -> None:
+        # SendInput mouse clicks go to the window under the OS pointer, not
+        # magically to the foreground game. In AI-only mode center the pointer
+        # inside the authorized Roblox client before every combat M1.
+        if str(button).lower() == "left":
+            self.center_cursor_in_target()
+        super().mouse_button_down(button)
+
     def ui_click(self, x_norm: float, y_norm: float,
                  button: str = "left", restore_cursor: bool = True) -> None:
         # In AI-only mode there is no human cursor ownership to restore. Keep
