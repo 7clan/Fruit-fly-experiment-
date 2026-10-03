@@ -642,7 +642,9 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         self.teacher_prior_state = bus.state("training.teacher_priors")
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
-        self.max_output_tokens = 420
+        # Live run lab_20261004_005047 truncated 13/63 responses at 420.
+        # Match the AI-only controller budget used by the Ollama-derived path.
+        self.max_output_tokens = 640
         self.stats.update({
             "provider": self.provider,
             "model": self.model,
