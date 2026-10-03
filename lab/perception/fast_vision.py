@@ -707,6 +707,15 @@ class GPOHeuristicFastVision:
         # Real actionable enemy markers need to enter the gameplay viewport.
         rx0, rx1 = int(0.12 * w), int(0.90 * w)
         red_obj_roi[ry0:ry1, rx0:rx1] = red[ry0:ry1, rx0:rx1]
+        # GPO's fixed "Recommended Quest" card has a compact red notification
+        # badge in the lower-left HUD. In lab_20261004_012551 that badge was
+        # repeatedly promoted to quest_enemy_marker before any quest had been
+        # accepted. Mask only that fixed HUD rectangle; upper-left world space
+        # remains available for legitimate objective markers.
+        red_obj_roi[
+            int(0.40 * h):int(0.68 * h),
+            :int(0.22 * w),
+        ] = 0
         nr, _rrlab, rrstats, rrcents = cv2.connectedComponentsWithStats(
             red_obj_roi)
         red_objective_candidates = []
