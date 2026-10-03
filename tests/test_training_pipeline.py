@@ -3,12 +3,14 @@ from __future__ import annotations
 import json
 
 from lab.action.ai_only_supervisor import AIOnlyAutopilotSupervisor
+from lab.action.motor_executor import MotorExecutor
 from lab.bus import Bus
 from lab.clock import SHARED_CLOCK
 from lab.evidence import EvidenceRecorder
 from lab.skills import SkillLibrary
 from lab.training.reward import OnlineReward
 from lab.training.trajectory import TrajectoryRecorder
+from lab.training.teacher_miner import mine_teacher_priors
 
 
 def test_online_reward_detects_progress_completion_and_death():
@@ -258,3 +260,58 @@ def test_teacher_evidence_is_compact_raw_only_and_aligned(tmp_path):
     assert manifest[0]["teacher_actions"] == ["m1"]
     assert manifest[0]["width"] == 320
     assert manifest[0]["annotated_file"] is None
+
+
+def test_teacher_prior_miner_gates_defense_and_learns_m1_timing(tmp_path):
+    path = tmp_path / "teacher.jsonl"
+    rows = []
+    ts = 1_000_000_000
+    # 120 short M1 presses, ~0.20 s onset cadence inside bursts.
+    for i in range(120):
+        rows.append({
+            "ts_ns": ts,
+            "teacher_action": {
+                "enabled": True, "focused": True, "actions": ["m1"],
+            },
+        })
+        ts += 100_000_000
+        rows.append({
+            "ts_ns": ts,
+            "teacher_action": {
+                "enabled": True, "focused": True, "actions": [],
+            },
+        })
+        ts += 100_000_000
+    path.write_text(
+        "\n".join(json.dumps(x) for x in rows) + "\n",
+        encoding="utf-8")
+
+    priors = mine_teacher_priors([path])
+    assert priors["readiness"]["attack_timing"] is True
+    assert priors["readiness"]["defense"] is False
+    assert priors["coverage"]["onsets"]["m1"] == 120
+    assert 0.19 <= priors["timing"]["m1_inter_onset_median_s"] <= 0.21
+    assert any("Defense is not training-ready" in x
+               for x in priors["warnings"])
+
+
+def test_motor_executor_applies_only_training_ready_attack_timing():
+    bus = Bus()
+    good = {
+        "readiness": {"attack_timing": True},
+        "coverage": {"onsets": {"m1": 414}},
+        "timing": {"m1_inter_onset_median_s": 0.203},
+    }
+    ex = MotorExecutor(bus, combat_priors=good)
+    assert ex.stats["teacher_attack_timing_applied"] is True
+    assert abs(ex.stats["bundle_attack_interval_s"] - 0.203) < 1e-9
+
+    bus2 = Bus()
+    insufficient = {
+        "readiness": {"attack_timing": False},
+        "coverage": {"onsets": {"m1": 20}},
+        "timing": {"m1_inter_onset_median_s": 0.19},
+    }
+    ex2 = MotorExecutor(bus2, combat_priors=insufficient)
+    assert ex2.stats["teacher_attack_timing_applied"] is False
+    assert ex2.stats["bundle_attack_interval_s"] == 0.26
