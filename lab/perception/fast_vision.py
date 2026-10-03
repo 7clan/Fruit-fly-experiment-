@@ -669,6 +669,8 @@ class GPOHeuristicFastVision:
 
         waypoint_found = False
         waypoint_xy = None
+        waypoint_direction = None
+        waypoint_proximity = None
         if waypoint_candidates:
             _score, tx, ty, _ga, _gw, _gh = max(waypoint_candidates)
             bearing = self._bearing(px, py, tx, ty, w, h)
@@ -682,6 +684,8 @@ class GPOHeuristicFastVision:
             }
             waypoint_found = True
             waypoint_xy = (float(tx), float(ty))
+            waypoint_direction = float(bearing)
+            waypoint_proximity = float(proximity)
 
         red = (
             cv2.inRange(hsv, np.array([0, 120, 100], dtype=np.uint8),
@@ -743,6 +747,8 @@ class GPOHeuristicFastVision:
 
         enemy_marker_found = False
         enemy_marker_xy = None
+        enemy_marker_direction = None
+        enemy_marker_proximity = None
         enemies = []
         if red_objective_candidates:
             _rscore, etx, ety, _ra, _rw, _rh = max(
@@ -805,21 +811,21 @@ class GPOHeuristicFastVision:
             role_mode = "disabled_navigation_light"
 
         # Resolve an actual quest-enemy BODY separately from the red
-        # objective marker. The marker tells us where the quest wants us to
-        # go; it is not proof that M1 is in range. Only a persistent tracked
-        # hostile humanoid spatially associated with that marker is promoted
-        # to quest_enemy_actor.
+        # objective marker. Marker-to-BODY association is deliberately based
+        # on the NPC's head/top edge, not generic center distance: the
+        # 2026-10-03 run promoted a nearby humanoid_unknown even though Gemini
+        # could not visually ground the enemy.
         quest_enemy_actor = None
-        actor_candidates = [
-            t for t in stable_tracks
-            if (
-                (t.get("kind") == "hostile_candidate"
-                 and float(t.get("confidence", 0.0)) >= 0.58)
-                or
-                (t.get("kind") == "humanoid_unknown"
-                 and float(t.get("confidence", 0.0)) >= 0.42)
-            )
-        ]
+        actor_candidates = []
+        for tr in stable_tracks:
+            kind = str(tr.get("kind") or "")
+            conf = float(tr.get("confidence", 0.0))
+            hits = int(tr.get("hits", 0))
+            if kind == "hostile_candidate" and conf >= 0.60 and hits >= 3:
+                actor_candidates.append(tr)
+            elif kind == "humanoid_unknown" and conf >= 0.55 and hits >= 5:
+                actor_candidates.append(tr)
+
         if enemy_marker_found and enemy_marker_xy and actor_candidates:
             emx = float(enemy_marker_xy[0]) / max(float(w), 1.0)
             emy = float(enemy_marker_xy[1]) / max(float(h), 1.0)
@@ -828,64 +834,83 @@ class GPOHeuristicFastVision:
                 box = list(tr.get("bbox") or [])
                 if len(box) != 4:
                     continue
-                cx = (float(box[0]) + float(box[2])) * 0.5
-                cy = (float(box[1]) + float(box[3])) * 0.5
-                association = math.hypot(cx - emx, cy - emy)
-                ranked.append((association, tr, cx, cy, box))
+                x1, y1, x2, y2 = [float(v) for v in box]
+                cx = (x1 + x2) * 0.5
+                cy = (y1 + y2) * 0.5
+                bw = max(0.001, x2 - x1)
+                bh = max(0.001, y2 - y1)
+
+                # GPO quest/enemy dots/names sit above the character body.
+                # Score association to a head/overhead anchor rather than to
+                # the torso center so nearby players/scenery cannot inherit
+                # the quest marker merely by being close on screen.
+                head_y = y1 - min(0.035, 0.22 * bh)
+                x_err = abs(cx - emx)
+                y_err = abs(head_y - emy)
+                marker_above_or_head = (
+                    emy <= y1 + 0.22 * bh
+                    and emy >= y1 - max(0.10, 0.80 * bh))
+                if str(tr.get("kind")) == "hostile_candidate":
+                    x_limit = max(0.045, 0.85 * bw)
+                    y_limit = max(0.075, 0.80 * bh)
+                else:
+                    # Unknown humanoids need much stronger geometry.
+                    x_limit = max(0.032, 0.55 * bw)
+                    y_limit = max(0.050, 0.52 * bh)
+                if (not marker_above_or_head
+                        or x_err > x_limit or y_err > y_limit):
+                    continue
+                score = x_err / x_limit + y_err / y_limit
+                ranked.append((score, tr, cx, cy, box, x_err, y_err))
+
             if ranked:
-                association, tr, cx, cy, box = min(
+                score, tr, cx, cy, box, x_err, y_err = min(
                     ranked, key=lambda x: x[0])
-                # A track with its own red hostile cue gets a wider gate.
-                # A generic humanoid can still be promoted when the quest
-                # objective sits almost directly on that persistent body.
-                association_limit = (
-                    0.24 if tr.get("kind") == "hostile_candidate"
-                    else 0.13)
-                if association <= association_limit:
-                    qx, qy = cx * w, cy * h
-                    actor_bearing = self._bearing(px, py, qx, qy, w, h)
-                    center_d = math.hypot(
-                        cx - float(px / w), cy - float(py / h))
-                    center_prox = max(
-                        0.0, min(1.0, 1.0 - center_d / 0.52))
-                    body_h = max(0.0, float(box[3]) - float(box[1]))
-                    scale_prox = max(
-                        0.0, min(1.0, body_h / 0.24))
-                    actor_proximity = max(
-                        0.0, min(
-                            1.0,
-                            0.62 * center_prox + 0.38 * scale_prox))
-                    actor_conf = min(
-                        0.95,
-                        max(
-                            0.70 if tr.get("kind") == "hostile_candidate"
-                            else 0.66,
-                            float(tr.get("confidence", 0.0)))
-                        + 0.08)
-                    quest_enemy_actor = {
-                        "track_id": tr.get("track_id"),
-                        "bbox": box,
-                        "direction": float(actor_bearing),
-                        "distance": float(actor_proximity),
-                        "confidence": float(actor_conf),
-                        "association_to_objective": float(association),
-                        "role_evidence": str(tr.get("kind") or "unknown"),
-                    }
-                    target = {
-                        "type": "quest_enemy_actor",
-                        "direction": float(actor_bearing),
-                        "distance": float(actor_proximity),
-                        "confidence": float(actor_conf),
-                    }
-                    enemies = [{
-                        "direction": float(actor_bearing),
-                        "distance": float(actor_proximity),
-                        "attacking": False,
-                        "threat": float(max(
-                            0.0, (actor_proximity - 0.40) / 0.60)),
-                        "confidence": float(actor_conf),
-                        "type": "quest_enemy_actor",
-                    }]
+                qx, qy = cx * w, cy * h
+                actor_bearing = self._bearing(px, py, qx, qy, w, h)
+                center_d = math.hypot(
+                    cx - float(px / w), cy - float(py / h))
+                center_prox = max(
+                    0.0, min(1.0, 1.0 - center_d / 0.52))
+                body_h = max(0.0, float(box[3]) - float(box[1]))
+                scale_prox = max(
+                    0.0, min(1.0, body_h / 0.24))
+                actor_proximity = max(
+                    0.0, min(
+                        1.0,
+                        0.62 * center_prox + 0.38 * scale_prox))
+                base_conf = (
+                    0.82 if tr.get("kind") == "hostile_candidate"
+                    else 0.72)
+                actor_conf = min(
+                    0.96, max(base_conf, float(tr.get("confidence", 0.0))))
+                quest_enemy_actor = {
+                    "track_id": tr.get("track_id"),
+                    "bbox": box,
+                    "direction": float(actor_bearing),
+                    "distance": float(actor_proximity),
+                    "confidence": float(actor_conf),
+                    "marker_head_score": float(score),
+                    "marker_x_error": float(x_err),
+                    "marker_y_error": float(y_err),
+                    "role_evidence": str(tr.get("kind") or "unknown"),
+                    "hits": int(tr.get("hits", 0)),
+                }
+                target = {
+                    "type": "quest_enemy_actor",
+                    "direction": float(actor_bearing),
+                    "distance": float(actor_proximity),
+                    "confidence": float(actor_conf),
+                }
+                enemies = [{
+                    "direction": float(actor_bearing),
+                    "distance": float(actor_proximity),
+                    "attacking": False,
+                    "threat": float(max(
+                        0.0, (actor_proximity - 0.40) / 0.60)),
+                    "confidence": float(actor_conf),
+                    "type": "quest_enemy_actor",
+                }]
 
         ui = {
             "loading": False,
@@ -908,8 +933,12 @@ class GPOHeuristicFastVision:
                 "quest_marker_confidence": quest_confidence,
                 "recommended_waypoint_detected": waypoint_found,
                 "recommended_waypoint_xy": waypoint_xy,
+                "recommended_waypoint_direction": waypoint_direction,
+                "recommended_waypoint_proximity": waypoint_proximity,
                 "quest_enemy_marker_detected": enemy_marker_found,
                 "quest_enemy_marker_xy": enemy_marker_xy,
+                "quest_enemy_marker_direction": enemy_marker_direction,
+                "quest_enemy_marker_proximity": enemy_marker_proximity,
                 "quest_enemy_actor_visible": quest_enemy_actor is not None,
                 "quest_enemy_actor": quest_enemy_actor,
                 "quest_phase_hint": (
