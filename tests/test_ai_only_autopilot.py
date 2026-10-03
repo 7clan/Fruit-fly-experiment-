@@ -2009,3 +2009,176 @@ def test_ai_only_signature_replans_on_visual_navigation_expiry():
     q2 = dict(q1)
     q2["visual_nav_epoch"] = 1
     assert coach._signature(obs, q1, {}) != coach._signature(obs, q2, {})
+
+
+def test_ai_visual_enemy_box_covering_player_is_vetoed():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.0,
+            "distance": 0.46,
+            "confidence": 0.94,
+        },
+        {
+            "plan_id": 400,
+            "skill": "FIGHT_QUEST_TARGET",
+            "target": "FruitFlyExperiment",
+            "confidence": 0.95,
+            "explanation": "fight visible quest enemy",
+            "perception": {
+                "quest_state": "active",
+                "quest_hud_visible": True,
+                "quest_progress_text": "Defeat Corrupt Marines 0/6",
+                "enemy_actor_visible": True,
+                "safezone_visible": True,
+                "melee_ready_visible": True,
+            },
+            "visual_target": {
+                "kind": "quest_enemy_actor",
+                "x_norm": 0.495,
+                "y_norm": 0.476,
+                "bbox_norm": [0.342, 0.301, 0.612, 0.650],
+                "confidence": 0.94,
+                "melee_ready": True,
+            },
+            "action_channels": {
+                "locomotion": "approach",
+                "offense": "m1",
+                "defense": "guard_between_attacks",
+                "camera": "track_target",
+                "equip_control_id": "",
+            },
+        },
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.0,
+            "quest_enemy_marker_proximity": 0.46,
+            "quest_enemy_actor_visible": False,
+        },
+    )
+    world = bus.state("world.observation").read().payload
+    world = dict(world)
+    world["player"] = dict(world["player"])
+    world["player"]["position"] = [0.4483, 0.5553]
+    bus.state("world.observation").write(world)
+
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
+    assert cmd.payload["target_type"] == "quest_enemy_marker"
+    assert cmd.payload["attack"] is False
+    assert sup.stats["self_target_vetoes"] >= 1
+    state = bus.state("quest.state").read().payload
+    assert state["target_reject_epoch"] == 1
+    assert state["last_target_reject_reason"] == "ai_enemy_box_contains_player"
+
+
+def test_player_name_is_not_sufficient_quest_progress_evidence():
+    bus = _armed_bus(
+        {
+            "type": "quest_marker",
+            "direction": 0.0,
+            "distance": 0.55,
+            "confidence": 0.82,
+        },
+        {
+            "plan_id": 401,
+            "skill": "REOBSERVE",
+            "target": "none",
+            "confidence": 0.95,
+            "explanation": "reobserve",
+            "perception": {
+                "quest_state": "active",
+                "quest_hud_visible": True,
+                "quest_progress_text": "FruitFlyExperiment",
+                "enemy_actor_visible": False,
+                "safezone_visible": True,
+            },
+        },
+        notes={"quest_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["quest_active"] is False
+    assert state["quest_status"] != "active"
+
+
+def test_numeric_quest_counter_can_latch_active_state():
+    bus = _armed_bus(
+        {
+            "type": "quest_marker",
+            "direction": 0.0,
+            "distance": 0.55,
+            "confidence": 0.82,
+        },
+        {
+            "plan_id": 402,
+            "skill": "REOBSERVE",
+            "target": "none",
+            "confidence": 0.95,
+            "explanation": "reobserve",
+            "perception": {
+                "quest_state": "active",
+                "quest_hud_visible": True,
+                "quest_progress_text": "Defeat Corrupt Marines 0/6",
+                "enemy_actor_visible": False,
+                "safezone_visible": True,
+            },
+        },
+        notes={"quest_marker_detected": True},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["quest_active"] is True
+    assert state["quest_status"] == "active"
+
+
+def test_high_visual_waypoint_is_rejected_as_non_walkable_grounding():
+    bus = _armed_bus(
+        {
+            "type": "none",
+            "direction": None,
+            "distance": None,
+            "confidence": 0.0,
+        },
+        {
+            "plan_id": 403,
+            "skill": "NAVIGATE_OBJECTIVE",
+            "target": "quest objective waypoint",
+            "confidence": 0.95,
+            "explanation": "sprint toward waypoint",
+            "perception": {
+                "quest_state": "active",
+                "quest_hud_visible": True,
+                "quest_progress_text": "Defeat Corrupt Marines 0/6",
+                "enemy_actor_visible": False,
+                "safezone_visible": True,
+            },
+            "visual_target": {
+                "kind": "waypoint",
+                "x_norm": 0.67,
+                "y_norm": 0.31,
+                "bbox_norm": [0.60, 0.22, 0.72, 0.45],
+                "confidence": 0.85,
+                "melee_ready": False,
+            },
+            "action_channels": {
+                "locomotion": "sprint",
+                "offense": "none",
+                "defense": "none",
+                "camera": "track_target",
+                "equip_control_id": "",
+            },
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    assert bus.state("action.command").read() is None
+    assert sup.stats["visual_waypoint_geometry_vetoes"] >= 1
+    state = bus.state("quest.state").read().payload
+    assert state["visual_nav_epoch"] == 1
