@@ -61,6 +61,8 @@ from .replay import ReplayRecorder
 from .world.memory import MemoryStore
 from .world.planner import PlannerWorker
 from .world.value import ValueTable
+from .skills import SkillLibrary
+from .training import TrajectoryRecorder, TeacherInputRecorder
 
 AGENT_ROOT = Path(__file__).resolve().parents[1]
 
@@ -77,6 +79,7 @@ class DigitalFlyLab:
                  movement_only: bool = False,
                  quest_autonomy: bool = False,
                  ai_only: bool = False,
+                 teacher_mode: bool = False,
                  gpo_loadout: str = "default_melee",
                  semantic_coach: bool = False,
                  coach_provider: str = "gemini",
@@ -122,9 +125,15 @@ class DigitalFlyLab:
 
         self.quest_autonomy = bool(quest_autonomy)
         self.ai_only = bool(ai_only)
+        self.teacher_mode = bool(teacher_mode)
         self.gpo_loadout = str(gpo_loadout or "default_melee")
         active_low_power = bool(
-            movement_only or self.quest_autonomy or self.ai_only)
+            movement_only or self.quest_autonomy
+            or self.ai_only or self.teacher_mode)
+
+        self.training_root = AGENT_ROOT / "runtime_state" / "training"
+        self.skill_library = SkillLibrary(
+            self.training_root / "skills.json")
 
         # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
         # canonical Brian2 subprocess is the dominant workload.
@@ -132,6 +141,10 @@ class DigitalFlyLab:
             # Brian2/planner are absent here. Spend a small amount of the freed
             # CPU on the cheap actuator loop, not on heavyweight vision.
             executor_hz = min(float(executor_hz), 30.0)
+            planner_hz = min(float(planner_hz), 0.5)
+        elif self.teacher_mode:
+            # Human demonstration capture should not start the fly or planner.
+            executor_hz = min(float(executor_hz), 10.0)
             planner_hz = min(float(planner_hz), 0.5)
         elif active_low_power:
             executor_hz = min(float(executor_hz), 20.0)
@@ -145,7 +158,8 @@ class DigitalFlyLab:
             # Brian2 workload, so spend that CPU budget on tracked humanoid
             # roles; the cloud controller needs a real enemy BODY distinct
             # from the red quest objective marker.
-            role_detection=(self.ai_only or not active_low_power),
+            role_detection=(self.ai_only or self.teacher_mode
+                            or not active_low_power),
             # Generic humanoid proposals are the expensive part of fast CV.
             # Cloud visual_target + AIVisualTracker handle identity between
             # calls, so run generic role proposals only every fifth frame.
@@ -175,6 +189,8 @@ class DigitalFlyLab:
         self.autonomy_requested = bool(
             autonomy and (
                 movement_only or self.quest_autonomy or self.ai_only))
+        if self.teacher_mode and self.autonomy_requested:
+            raise ValueError("teacher_mode is recording-only; autonomy must be off")
         if self.autonomy_requested and self.ai_only:
             backend = create_windows_ai_only_backend()
         elif self.autonomy_requested and self.quest_autonomy:
@@ -253,6 +269,23 @@ class DigitalFlyLab:
         self.ai_only_supervisor = (
             AIOnlyAutopilotSupervisor(self.bus, target_hz=15.0)
             if self.ai_only else None)
+        self.teacher_recorder = (
+            TeacherInputRecorder(
+                self.bus,
+                target_hwnd_getter=lambda: int(
+                    ((getattr(self.capture, "_target", None) or {})
+                     .get("handle") or 0)),
+                target_hz=20.0,
+            )
+            if self.teacher_mode else None)
+        self.trajectory = (
+            TrajectoryRecorder(
+                self.bus, self.session_dir,
+                persistent_root=self.training_root,
+                skill_library=self.skill_library,
+                target_hz=5.0,
+            )
+            if (self.ai_only or self.teacher_mode) else None)
         self.quest_supervisor = (
             QuestCombatSupervisor(
                 self.bus, self.value, target_hz=4.0,
@@ -265,7 +298,7 @@ class DigitalFlyLab:
             EvidenceRecorder(
                 self.bus, self.session_dir,
                 target_hz=(2.0 if self.ai_only else 1.0),
-                save_raw=bool(self.ai_only))
+                save_raw=bool(self.ai_only or self.teacher_mode))
             if active_low_power else None)
         self.dashboard_ui = None
         self.assessment_started_ns = None
@@ -298,7 +331,8 @@ class DigitalFlyLab:
         else:
             self.dashboard = None
         self.workers = [self.fast_vision, self.heavy_vision] + (
-                            [] if self.ai_only
+                            []
+                            if (self.ai_only or self.teacher_mode)
                             else [self.planner, self.encoder, self.brain]) + (
                             [self.semantic_coach]
                             if self.semantic_coach else []) + (
@@ -306,9 +340,12 @@ class DigitalFlyLab:
                             if self.ai_visual_tracker else []) + (
                             [self.ai_only_supervisor]
                             if self.ai_only_supervisor else []) + (
+                            [self.teacher_recorder]
+                            if self.teacher_recorder else []) + (
                             [self.quest_supervisor]
                             if self.quest_supervisor else []) + [
                         self.executor, self.replay] + (
+                            [self.trajectory] if self.trajectory else []) + (
                             [self.evidence] if self.evidence else []) + (
                             [self.dashboard] if self.dashboard else [])
 
@@ -325,7 +362,9 @@ class DigitalFlyLab:
         meta = {
             "app": "DigitalFlyLab", "version": __version__,
             "mode": (
-                "AI_ONLY_REQUESTED_DISARMED"
+                "TEACHER_RECORDING"
+                if self.teacher_mode
+                else "AI_ONLY_REQUESTED_DISARMED"
                 if self.autonomy_requested and self.ai_only
                 else "QUEST_PVE_REQUESTED_DISARMED"
                 if self.autonomy_requested and self.quest_autonomy
@@ -334,7 +373,8 @@ class DigitalFlyLab:
                 else ("PASSIVE" if not self.executor.autonomy_enabled
                       else "ACTIVE")),
             "gpo_mode": (
-                "ai_only_v1" if self.ai_only
+                "teacher_recording_v1" if self.teacher_mode
+                else "ai_only_v1" if self.ai_only
                 else "quest_pve_v1" if self.quest_autonomy
                 else "navigation_v1" if self.autonomy_requested
                 else "passive"),
@@ -353,10 +393,15 @@ class DigitalFlyLab:
                 "enabled": bool(self.semantic_coach is not None),
             },
             "runtime": (
-                "disabled_ai_only" if self.ai_only
+                "disabled_teacher" if self.teacher_mode
+                else "disabled_ai_only" if self.ai_only
                 else self.brain.runtime.runtime_label),
-            "chunk_ms": None if self.ai_only else self.brain.chunk_ms,
-            "decision_owner": "cloud_ai" if self.ai_only else "hybrid_fly",
+            "chunk_ms": (
+                None if (self.ai_only or self.teacher_mode)
+                else self.brain.chunk_ms),
+            "decision_owner": (
+                "human_teacher" if self.teacher_mode
+                else "cloud_ai" if self.ai_only else "hybrid_fly"),
             "capture_config": {
                 "fps": float(getattr(self.capture, "target_fps",
                                      getattr(self.capture, "fps", 0.0))),
@@ -378,9 +423,11 @@ class DigitalFlyLab:
                 "fast_role_detection": self.fast_vision.role_detection,
                 "heavy": self.heavy_vision.governor.target_hz,
                 "planner": (
-                    None if self.ai_only else self.planner.governor.target_hz),
+                    None if (self.ai_only or self.teacher_mode)
+                    else self.planner.governor.target_hz),
                 "encoder": (
-                    None if self.ai_only else self.encoder.governor.target_hz),
+                    None if (self.ai_only or self.teacher_mode)
+                    else self.encoder.governor.target_hz),
                 "executor": self.executor.governor.target_hz,
                 "coach": (
                     self.semantic_coach.governor.target_hz
@@ -769,6 +816,13 @@ class DigitalFlyLab:
             "bus": self.bus.metrics(),
             "workers": {w.name: dict(w.stats) for w in self.workers},
             "memory": self.memory.stats(),
+            "training": (
+                dict(self.trajectory.stats)
+                if self.trajectory is not None else None),
+            "skills": self.skill_library.snapshot(),
+            "teacher": (
+                dict(self.teacher_recorder.stats)
+                if self.teacher_recorder is not None else None),
             "input_backend": self.executor.backend.backend_health(),
             "coach_state": (
                 (lambda e: (e.payload if e is not None else None))(
@@ -799,7 +853,9 @@ class DigitalFlyLab:
         return out
 
     def status_line(self) -> str:
-        brain = {} if self.ai_only else (self.brain.current or {})
+        brain = (
+            {} if (self.ai_only or self.teacher_mode)
+            else (self.brain.current or {}))
         intention = (brain.get("intention") or {}).get("name", "-")
         qenv = self.bus.state("quest.state").read()
         quest_phase = (
@@ -818,9 +874,12 @@ class DigitalFlyLab:
         coach_plans = (
             int(self.semantic_coach.stats.get("plans", 0))
             if self.semantic_coach is not None else 0)
-        brain_chunks = 0 if self.ai_only else self.brain.stats["steps"]
+        brain_chunks = (
+            0 if (self.ai_only or self.teacher_mode)
+            else self.brain.stats["steps"])
         runtime_label = (
-            "disabled_ai_only" if self.ai_only
+            "disabled_teacher" if self.teacher_mode
+            else "disabled_ai_only" if self.ai_only
             else self.brain.runtime.runtime_label)
         return (f"[lab] frames={self.capture.frames.published} "
                 f"brain_chunks={brain_chunks} "
@@ -897,6 +956,8 @@ def main(argv=None) -> int:
                     help="Gate-7: low-power quest + starter-PvE hybrid agent")
     ap.add_argument("--ai-only-autonomy", action="store_true",
                     help="AI-only branch: cloud AI owns all gameplay decisions; fly brain is not started")
+    ap.add_argument("--teacher-mode", action="store_true",
+                    help="record human gameplay demonstrations; no AI/fly input is emitted")
     ap.add_argument("--gpo-loadout", default="default_melee",
                     help="observed equipped GPO loadout profile")
     ap.add_argument("--semantic-coach", action="store_true",
@@ -925,10 +986,14 @@ def main(argv=None) -> int:
         raise SystemExit(
             "choose exactly one active mode: movement-only, quest-autonomy, "
             "or ai-only-autonomy")
+    if args.teacher_mode and active_modes:
+        raise SystemExit(
+            "--teacher-mode is recording-only and cannot be combined with autonomy")
     if ((args.movement_only_autonomy or args.quest_autonomy
-         or args.ai_only_autonomy)
+         or args.ai_only_autonomy or args.teacher_mode)
             and args.capture != "windows"):
-        raise SystemExit("active GPO autonomy requires Windows capture")
+        raise SystemExit(
+            "active/teacher GPO modes require Windows capture")
     if args.semantic_coach and not (
             args.quest_autonomy or args.ai_only_autonomy):
         raise SystemExit(
@@ -961,6 +1026,7 @@ def main(argv=None) -> int:
                         movement_only=bool(args.movement_only_autonomy),
                         quest_autonomy=bool(args.quest_autonomy),
                         ai_only=bool(args.ai_only_autonomy),
+                        teacher_mode=bool(args.teacher_mode),
                         gpo_loadout=args.gpo_loadout,
                         semantic_coach=bool(args.semantic_coach),
                         coach_provider=args.coach_provider,
@@ -978,7 +1044,13 @@ def main(argv=None) -> int:
                         brain_transport=args.brain_transport)
     lab.start()
     try:
-        if args.ai_only_autonomy:
+        if args.teacher_mode:
+            print(
+                "[lab] TEACHER mode: recording human gameplay controls + "
+                "perception; no autonomous input is emitted",
+                flush=True,
+            )
+        elif args.ai_only_autonomy:
             print(
                 "[lab] AI-ONLY mode: fruit-fly brain is NOT started; "
                 "cloud AI is the sole gameplay decision-maker",
