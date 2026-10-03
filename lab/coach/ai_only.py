@@ -123,11 +123,20 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
 
         perception = schema["properties"]["perception"]
         perception["required"] = [
-            "quest_state", "dialogue_visible",
+            "quest_state", "quest_hud_visible", "dialogue_visible",
             "interaction_prompt_visible", "enemy_actor_visible",
             "player_dead", "safezone_visible",
             "equipped_slot_visible", "melee_ready_visible",
         ]
+        perception["properties"]["quest_hud_visible"] = {
+            "type": "boolean"
+        }
+        perception["properties"]["quest_progress_text"] = {
+            "type": "string"
+        }
+        perception["properties"]["equipped_style_visible"] = {
+            "type": "string"
+        }
         visual = schema["properties"]["visual_target"]
         visual["required"] = [
             "kind", "x_norm", "y_norm", "bbox_norm",
@@ -421,7 +430,10 @@ OPTIONAL — include only when useful for THIS action:
 - observed_ability only for a move visibly read from the current HUD.
 - visual_target when you can ground the chosen quest giver/enemy/UI target.
 - ui_click only for a clearly visible in-game button.
-- perception only for facts you can actually see now.
+- perception only for facts you can actually see now. In particular,
+  quest_hud_visible must mean the CURRENT frame actually shows the accepted
+  quest/progress HUD, and quest_progress_text should copy only the short
+  visible objective/progress phrase (for example "Defeat Corrupt Marines 1/8").
 - knowledge_query only when current GPO detail is genuinely missing.
 - memory_updates only for high-confidence persistent facts.
 
@@ -441,6 +453,9 @@ Do not pad the response with empty/default objects. Do not repeat the rules.
             qstate = "unknown"
         plan["perception"] = {
             "quest_state": qstate,
+            "quest_hud_visible": bool(p.get("quest_hud_visible")),
+            "quest_progress_text": str(
+                p.get("quest_progress_text") or "")[:96],
             "dialogue_visible": bool(p.get("dialogue_visible")),
             "interaction_prompt_visible": bool(
                 p.get("interaction_prompt_visible")),
@@ -449,6 +464,8 @@ Do not pad the response with empty/default objects. Do not repeat the rules.
             "safezone_visible": bool(p.get("safezone_visible")),
             "equipped_slot_visible": (
                 str(p.get("equipped_slot_visible") or "unknown").strip()),
+            "equipped_style_visible": str(
+                p.get("equipped_style_visible") or "unknown")[:96],
             "melee_ready_visible": bool(p.get("melee_ready_visible")),
         }
 
