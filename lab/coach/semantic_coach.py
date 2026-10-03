@@ -422,7 +422,11 @@ Return ONLY a JSON object with exactly these fields:
                         "type": "object",
                         "properties": {
                             "key": {"type": "string"},
-                            "value": {},
+                            # Keep the controller schema simple and
+                            # portable across Flash-Lite generations. Numeric
+                            # facts may be emitted as strings and normalized
+                            # later by the profile layer.
+                            "value": {"type": "string"},
                             "confidence": {"type": "number"},
                             "evidence": {"type": "string"},
                         },
