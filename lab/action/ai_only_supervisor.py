@@ -708,18 +708,22 @@ class AIOnlyAutopilotSupervisor(Worker):
                     and fight_control.startswith("equip_slot_")
                     and self._last_fight_equip_plan_id != pid):
                 slot = fight_control.rsplit("_", 1)[-1]
-                if slot in set("0123456789"):
+                # Physical equip state persists until another equip command or
+                # high-confidence HUD observation says otherwise. Do not
+                # hammer the same number key on every fresh cloud FIGHT plan.
+                if slot in set("0123456789") and slot != self._last_equipped_slot:
                     self._emit(
                         "EQUIP_SLOT", now, reason=reason,
                         slot=slot,
                         coach_plan_id=pid,
                         coach_confidence=confidence)
                     self._last_equipped_slot = slot
-                    self._last_fight_equip_plan_id = pid
                     self._action_epoch += 1
                     self.stats["one_shot_commands"] += 1
                     self._publish_state(now, obs, plan)
+                    self._last_fight_equip_plan_id = pid
                     return
+                self._last_fight_equip_plan_id = pid
 
             # Never M1 a red objective dot. Require the persistent NPC body
             # associated with the active quest.
@@ -927,12 +931,14 @@ class AIOnlyAutopilotSupervisor(Worker):
                 cid = str(plan.get("control_id") or "")
                 if cid.startswith("equip_slot_"):
                     slot = cid.rsplit("_", 1)[-1]
-                    if slot in set("0123456789"):
+                    if (slot in set("0123456789")
+                            and slot != self._last_equipped_slot):
                         self._emit(
                             "EQUIP_SLOT", now, reason=reason, slot=slot,
                             coach_plan_id=pid,
                             coach_confidence=confidence)
                         self._last_equipped_slot = slot
+                        self._action_epoch += 1
                         self.stats["one_shot_commands"] += 1
 
         elif skill == "EXEC_CONTROL":
