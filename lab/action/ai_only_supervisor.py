@@ -75,6 +75,8 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._recovery_stage = 0
         self._last_recovery_ns = 0
         self._recovery_target = None
+        self._nav_recovery_attempts = 0
+        self._nav_recovery_suppress_until_ns = 0
 
         self.stats.update({
             "commands": 0,
@@ -96,6 +98,9 @@ class AIOnlyAutopilotSupervisor(Worker):
             "climb_recoveries": 0,
             "backtrack_recoveries": 0,
             "camera_recoveries": 0,
+            "invalid_progress_targets_ignored": 0,
+            "navigation_recovery_cycles": 0,
+            "navigation_recovery_suppressed": 0,
             "combat_recoveries": 0,
             "combat_reacquire_searches": 0,
             "combat_reposition_recoveries": 0,
@@ -239,9 +244,36 @@ class AIOnlyAutopilotSupervisor(Worker):
         else:
             self._quest_status = "unknown"
 
-        # Progress monitor uses the current sensory target, not the AI prose.
-        target_key = ttype if ttype != "none" else None
-        if target_key != self._progress_target:
+        # Progress monitoring must follow the CURRENT SEMANTIC goal.
+        # A yellow quest giver can remain visible after quest acceptance. In
+        # lab_20261004_005047 the generic detector kept reporting that giver
+        # while the AI correctly tried to leave for the active objective.
+        # Moving away therefore looked like "no progress" and triggered 289
+        # bogus JUMP/CLIMB/DASH/SEARCH recoveries. Ignore sensory targets that
+        # are incompatible with the current quest state.
+        if self._quest_status == "active" or self._quest_active_latched:
+            progress_types = {
+                "quest_enemy_marker", "quest_enemy_actor",
+                "recommended_quest_waypoint",
+            }
+        else:
+            progress_types = {
+                "quest_marker", "recommended_quest_waypoint",
+            }
+        target_key = ttype if ttype in progress_types else None
+
+        if target_key is None:
+            if self._progress_target is not None:
+                self.stats["invalid_progress_targets_ignored"] += 1
+            self._progress_target = None
+            self._best_proximity = None
+            self._last_progress_ns = now_ns
+            self._direction_history.clear()
+            self._stuck = False
+            self._circling = False
+            self._recovery_stage = 0
+            self._nav_recovery_attempts = 0
+        elif target_key != self._progress_target:
             self._progress_target = target_key
             self._best_proximity = proximity
             self._last_progress_ns = now_ns
@@ -249,13 +281,12 @@ class AIOnlyAutopilotSupervisor(Worker):
             self._stuck = False
             self._circling = False
             self._recovery_stage = 0
+            self._nav_recovery_attempts = 0
             self._recovery_target = target_key
         elif proximity is not None:
             # "Not getting closer" is a navigation failure signal, but it is
             # NOT a combat failure signal. Orbiting/guarding around a nearby
-            # enemy intentionally keeps distance roughly constant. The old
-            # monitor therefore fired generic JUMP/CLIMB/DASH recovery in the
-            # middle of healthy fights.
+            # enemy intentionally keeps distance roughly constant.
             in_close_combat = bool(
                 ttype == "quest_enemy_actor" and proximity >= 0.34)
             if in_close_combat:
@@ -264,6 +295,7 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self._stuck = False
                 self._circling = False
                 self._recovery_stage = 0
+                self._nav_recovery_attempts = 0
             elif (self._best_proximity is None
                     or proximity > self._best_proximity + 0.035):
                 self._best_proximity = proximity
@@ -271,12 +303,15 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self._stuck = False
                 self._circling = False
                 self._recovery_stage = 0
+                self._nav_recovery_attempts = 0
             elif (self._last_progress_ns
-                  and now_ns - self._last_progress_ns > int(3.2e9)
-                  and proximity < 0.72):
+                  and now_ns - self._last_progress_ns > int(4.0e9)
+                  and proximity < 0.72
+                  and now_ns >= self._nav_recovery_suppress_until_ns):
                 self._stuck = True
 
-        if direction is not None and abs(direction) >= 0.26:
+        if (target_key is not None
+                and direction is not None and abs(direction) >= 0.26):
             sign = -1 if direction < 0 else 1
             self._direction_history.append((now_ns, sign))
             cutoff = now_ns - int(5.0e9)
@@ -379,29 +414,49 @@ class AIOnlyAutopilotSupervisor(Worker):
         round-trip after detecting no progress makes walls feel fatal. These
         are bounded locomotor primitives only; they do not choose a new goal.
         """
+        if now_ns < self._nav_recovery_suppress_until_ns:
+            self.stats["navigation_recovery_suppressed"] += 1
+            return False
         if self._recovery_target != target_type:
             self._recovery_target = target_type
             self._recovery_stage = 0
+            self._nav_recovery_attempts = 0
         if (self._last_recovery_ns
-                and now_ns - self._last_recovery_ns < int(1.00e9)):
+                and now_ns - self._last_recovery_ns < int(1.10e9)):
             return False
 
-        stage = self._recovery_stage % 4
+        # One bounded recovery episode only. Blind JUMP/CLIMB were removed:
+        # they require visible obstacle evidence and remain available when
+        # Gemini explicitly selects those skills from a fresh screenshot.
+        if self._nav_recovery_attempts >= 3:
+            self._nav_recovery_suppress_until_ns = now_ns + int(6.0e9)
+            self._nav_recovery_attempts = 0
+            self._recovery_stage = 0
+            self._stuck = False
+            self._circling = False
+            self._last_progress_ns = now_ns
+            self._best_proximity = None
+            self.stats["navigation_recovery_cycles"] += 1
+            return False
+
+        stage = self._recovery_stage % 3
         if stage == 0:
-            name, extra = "JUMP", {}
-            self.stats["jump_recoveries"] += 1
+            dx = 56 if (direction is None or direction >= 0) else -56
+            name, extra = "SEARCH_CAMERA", {"dx": dx}
+            self.stats["camera_recoveries"] += 1
         elif stage == 1:
-            name, extra = "CLIMB", {"hold_s": 1.10}
-            self.stats["climb_recoveries"] += 1
-        elif stage == 2:
             name, extra = "DASH_BACK", {}
             self.stats["backtrack_recoveries"] += 1
         else:
-            # Search toward the last-known target bearing, but keep cursor
-            # confinement/camera drag at the Windows backend boundary.
-            dx = 64 if (direction is None or direction >= 0) else -64
-            name, extra = "SEARCH_CAMERA", {"dx": dx}
-            self.stats["camera_recoveries"] += 1
+            if direction is not None:
+                name, extra = "STEER_TARGET", {
+                    "direction": float(direction),
+                    "hold_s": 0.55,
+                    "camera_align": True,
+                }
+            else:
+                name, extra = "SEARCH_CAMERA", {"dx": -56}
+                self.stats["camera_recoveries"] += 1
 
         self._emit(
             name, now_ns,
@@ -410,6 +465,7 @@ class AIOnlyAutopilotSupervisor(Worker):
             target_type=target_type, **extra)
         self._last_recovery_ns = now_ns
         self._recovery_stage += 1
+        self._nav_recovery_attempts += 1
         self.stats["micro_recoveries"] += 1
         return True
 
@@ -634,33 +690,51 @@ class AIOnlyAutopilotSupervisor(Worker):
                     nav_type, nav_dir, nav_prox = (
                         ttype, direction, proximity)
 
-            if self._stuck or self._circling:
-                self._recover_navigation(
+            # A stuck flag is valid only when it was measured against
+            # the SAME semantic target we are about to navigate toward.
+            # Never let a stale yellow-giver progress monitor veto an active
+            # quest waypoint selected by Gemini/AIVisualTracker.
+            progress_matches_nav = bool(
+                nav_type is not None
+                and self._progress_target == nav_type)
+            if ((self._stuck or self._circling)
+                    and not progress_matches_nav):
+                self._stuck = False
+                self._circling = False
+                self._recovery_stage = 0
+                self._nav_recovery_attempts = 0
+
+            recovered = False
+            if ((self._stuck or self._circling)
+                    and progress_matches_nav):
+                recovered = self._recover_navigation(
                     now, pid=pid, confidence=confidence,
                     reason=reason, direction=nav_dir,
-                    target_type=nav_type or ttype or "objective")
-            elif nav_type and nav_dir is not None and nav_prox is not None:
-                self._steer(
-                    now, direction=nav_dir, pid=pid,
-                    confidence=confidence, reason=reason,
                     target_type=nav_type)
-            elif (ai_visual_kind in {
-                    "quest_giver", "quest_enemy_actor",
-                    "quest_objective", "waypoint"}
-                  and ai_visual_conf >= 0.82
-                  and ai_visual_dir is not None):
-                # The VLM selected this target; local tracking realizes the
-                # same goal while the next cloud call is in flight.
-                if not (self._quest_status == "active"
-                        and ai_visual_kind == "quest_giver"):
+
+            if not recovered:
+                if nav_type and nav_dir is not None and nav_prox is not None:
                     self._steer(
-                        now, direction=ai_visual_dir, pid=pid,
-                        confidence=min(confidence, ai_visual_conf),
-                        reason=reason,
-                        target_type="ai_visual_" + ai_visual_kind,
-                        hold_s=0.78)
-                    if track_fresh:
-                        self.stats["visual_track_steers"] += 1
+                        now, direction=nav_dir, pid=pid,
+                        confidence=confidence, reason=reason,
+                        target_type=nav_type)
+                elif (ai_visual_kind in {
+                        "quest_giver", "quest_enemy_actor",
+                        "quest_objective", "waypoint"}
+                      and ai_visual_conf >= 0.82
+                      and ai_visual_dir is not None):
+                    # The VLM selected this target; local tracking realizes
+                    # the same goal while the next cloud call is in flight.
+                    if not (self._quest_status == "active"
+                            and ai_visual_kind == "quest_giver"):
+                        self._steer(
+                            now, direction=ai_visual_dir, pid=pid,
+                            confidence=min(confidence, ai_visual_conf),
+                            reason=reason,
+                            target_type="ai_visual_" + ai_visual_kind,
+                            hold_s=0.78)
+                        if track_fresh:
+                            self.stats["visual_track_steers"] += 1
 
         elif skill in {"TAKE_QUEST", "INTERACT"}:
             # Never retake while perception says an objective is already live.
