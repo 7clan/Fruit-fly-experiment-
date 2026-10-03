@@ -1673,3 +1673,19 @@ def test_ai_visual_tracker_carries_same_goal_when_next_plan_omits_bbox():
     assert second.payload["plan_id"] == 701
     assert second.payload["kind"] == "quest_enemy_actor"
     assert tracker.stats["plan_carries"] == 1
+
+
+
+def test_ai_visual_tracker_semantic_key_ignores_generic_target_words():
+    k1 = AIVisualTracker._semantic_plan_key({
+        "skill": "FIGHT_QUEST_TARGET",
+        "target": "Corrupt Marine",
+        "visual_target": {"kind": "quest_enemy_actor"},
+    })
+    k2 = AIVisualTracker._semantic_plan_key({
+        "skill": "FIGHT_QUEST_TARGET",
+        "target": "the quest enemy Corrupt Marine NPC",
+        "visual_target": {"kind": "none"},
+    })
+    assert k1[0] == k2[0]
+    assert k1[1] == k2[1] == "corrupt marine"
