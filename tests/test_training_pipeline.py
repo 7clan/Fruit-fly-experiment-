@@ -4,6 +4,7 @@ import json
 
 from lab.action.ai_only_supervisor import AIOnlyAutopilotSupervisor
 from lab.bus import Bus
+from lab.clock import SHARED_CLOCK
 from lab.skills import SkillLibrary
 from lab.training.reward import OnlineReward
 from lab.training.trajectory import TrajectoryRecorder
@@ -127,7 +128,8 @@ def test_trajectory_recorder_writes_persistent_training_data(tmp_path):
 
 def _combat_bus(target_type: str, distance: float, direction: float):
     bus = Bus()
-    bus.state("action.meta").write({"autonomy": True})
+    now = SHARED_CLOCK.now_ns()
+    bus.state("action.meta").write({"autonomy": True}, ts_ns=now)
     notes = {
         "quest_enemy_marker_detected": True,
         "quest_enemy_marker_direction": direction,
@@ -141,7 +143,7 @@ def _combat_bus(target_type: str, distance: float, direction: float):
             "confidence": 0.95,
         }
     bus.state("world.observation").write({
-        "ts_ns": 1,
+        "ts_ns": now,
         "target": {
             "type": target_type,
             "direction": direction,
@@ -149,10 +151,10 @@ def _combat_bus(target_type: str, distance: float, direction: float):
             "confidence": 0.95,
         },
         "notes": notes,
-    })
+    }, ts_ns=now)
     bus.state("coach.plan").write({
         "plan_id": 1,
-        "ts_ns": 1,
+        "ts_ns": now,
         "skill": "FIGHT_QUEST_TARGET",
         "confidence": 0.95,
         "explanation": "fight target",
@@ -176,7 +178,7 @@ def _combat_bus(target_type: str, distance: float, direction: float):
             "confidence": 0.95 if target_type == "quest_enemy_actor" else 0.0,
             "melee_ready": target_type == "quest_enemy_actor",
         },
-    })
+    }, ts_ns=now)
     return bus
 
 
