@@ -1060,7 +1060,7 @@ def test_ai_only_gemini_controller_reuses_same_ai_only_contract():
     assert coach.provider == "gemini_ai_only"
     assert coach.stats["decision_owner"] == "cloud_ai"
     assert coach.stats["fruit_fly_control"] is False
-    assert coach.max_output_tokens == 560
+    assert coach.max_output_tokens == 420
     prompt = coach._prompt(
         {"target": {"type": "none"}, "player": {}, "notes": {}},
         {"quest_status": "unknown"},
@@ -1422,7 +1422,7 @@ def test_gemini_plan_schema_requires_core_decision_plus_grounding():
     assert "ui_click" not in schema["required"]
     assert "bbox_norm" in (
         schema["properties"]["visual_target"]["required"])
-    assert coach.max_output_tokens == 560
+    assert coach.max_output_tokens == 420
 
 
 
@@ -1620,3 +1620,56 @@ def test_positive_quest_dialogue_allows_one_tracked_followup_click():
     sup.step()
     third = bus.state("action.command").read()
     assert third.payload["command_id"] == second_id
+
+
+
+def test_ai_visual_tracker_carries_same_goal_when_next_plan_omits_bbox():
+    bus = Bus()
+    tracker = AIVisualTracker(bus, target_hz=8.0, max_width=320)
+
+    img = np.zeros((200, 320, 3), dtype=np.uint8)
+    img[55:145, 105:165, :] = 35
+    img[62:102, 112:136, 1] = 230
+    img[108:138, 137:160, 2] = 210
+    img[86:95, 108:162, 0] = 175
+
+    bus.state("coach.plan").write({
+        "plan_id": 700,
+        "skill": "FIGHT_QUEST_TARGET",
+        "target": "Corrupt Marine",
+        "visual_target": {
+            "kind": "quest_enemy_actor",
+            "x_norm": 135/320,
+            "y_norm": 100/200,
+            "bbox_norm": [105/320, 55/200, 165/320, 145/200],
+            "confidence": 0.95,
+        },
+    })
+    bus.state("capture.frames.latest").write({"data_ref": img})
+    tracker.step()
+    first = bus.state("ai.visual.track").read()
+    assert first is not None
+    assert first.payload["plan_id"] == 700
+
+    # Compact replan keeps the same semantic goal but omits bbox. The local
+    # tracker should carry the AI-selected target instead of dropping it and
+    # waiting another cloud round-trip.
+    bus.state("coach.plan").write({
+        "plan_id": 701,
+        "skill": "FIGHT_QUEST_TARGET",
+        "target": "Corrupt Marine",
+        "visual_target": {
+            "kind": "none",
+            "x_norm": 0.5,
+            "y_norm": 0.5,
+            "bbox_norm": None,
+            "confidence": 0.0,
+        },
+    })
+    bus.state("capture.frames.latest").write({"data_ref": img.copy()})
+    tracker.step()
+    second = bus.state("ai.visual.track").read()
+    assert second is not None
+    assert second.payload["plan_id"] == 701
+    assert second.payload["kind"] == "quest_enemy_actor"
+    assert tracker.stats["plan_carries"] == 1
