@@ -5,6 +5,7 @@ import json
 from lab.action.ai_only_supervisor import AIOnlyAutopilotSupervisor
 from lab.bus import Bus
 from lab.clock import SHARED_CLOCK
+from lab.evidence import EvidenceRecorder
 from lab.skills import SkillLibrary
 from lab.training.reward import OnlineReward
 from lab.training.trajectory import TrajectoryRecorder
@@ -210,3 +211,50 @@ def test_lost_combat_target_uses_reacquire_not_climb_jump():
     assert cmd.payload["name"] in {"SEARCH_CAMERA", "STEER_TARGET", "DASH_BACK"}
     assert cmd.payload["name"] not in {"JUMP", "CLIMB"}
     assert sup.stats["combat_recoveries"] == 1
+
+
+def test_teacher_evidence_is_compact_raw_only_and_aligned(tmp_path):
+    import numpy as np
+
+    bus = Bus()
+    now = SHARED_CLOCK.now_ns()
+    bus.state("capture.frames.latest").write({
+        "frame_id": 42,
+        "ts_ns": now,
+        "width": 640,
+        "height": 360,
+        "format": "bgr",
+        "copy_count": 1,
+        "data_ref": np.zeros((360, 640, 3), dtype=np.uint8),
+    }, ts_ns=now)
+    bus.state("world.observation").write({
+        "ts_ns": now,
+        "notes": {},
+    }, ts_ns=now)
+    bus.state("teacher.action").write({
+        "ts_ns": now,
+        "enabled": True,
+        "focused": True,
+        "actions": ["m1"],
+    }, ts_ns=now)
+
+    rec = EvidenceRecorder(
+        bus, tmp_path, target_hz=1.0,
+        save_raw=True, save_annotated=False,
+        max_width=320, jpeg_quality=68)
+    rec.step()
+    rec.on_stop()
+
+    files = sorted((tmp_path / "evidence").glob("*.jpg"))
+    assert len(files) == 1
+    assert files[0].name == "teacher_frame_00000042_raw.jpg"
+    manifest = [
+        json.loads(line)
+        for line in (tmp_path / "evidence" / "manifest.jsonl")
+        .read_text(encoding="utf-8").splitlines()
+        if line.strip()
+    ]
+    assert manifest[0]["frame_id"] == 42
+    assert manifest[0]["teacher_actions"] == ["m1"]
+    assert manifest[0]["width"] == 320
+    assert manifest[0]["annotated_file"] is None
