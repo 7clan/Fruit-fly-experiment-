@@ -49,12 +49,13 @@ if ([string]::IsNullOrWhiteSpace($env:GEMINI_API_KEY)) {
     throw "Gemini API key missing. Run .\setup_semantic_coach_windows.ps1 once, then retry."
 }
 
-Write-Host "Testing Gemini Flash-Lite text + REQUIRED image vision..." -ForegroundColor Cyan
+Write-Host "Benchmarking available Gemini Flash-Lite vision models for the lowest startup latency..." -ForegroundColor Cyan
 $gemProbeArgs = @(
     "-m", "lab.coach.probe",
     "--model", $env:GEMINI_MODEL,
     "--timeout", "15",
-    "--require-vision"
+    "--require-vision",
+    "--fastest-vision"
 )
 $gemProbe = @(& $mainPython @gemProbeArgs)
 $gemExit = $LASTEXITCODE
