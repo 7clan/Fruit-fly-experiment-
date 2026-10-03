@@ -128,7 +128,12 @@ class DigitalFlyLab:
 
         # LOW-POWER LIVE PROFILE. On the target i7-5500U (2C/4T), the
         # canonical Brian2 subprocess is the dominant workload.
-        if active_low_power:
+        if self.ai_only:
+            # Brian2/planner are absent here. Spend a small amount of the freed
+            # CPU on the cheap actuator loop, not on heavyweight vision.
+            executor_hz = min(float(executor_hz), 30.0)
+            planner_hz = min(float(planner_hz), 0.5)
+        elif active_low_power:
             executor_hz = min(float(executor_hz), 20.0)
             planner_hz = min(float(planner_hz), 0.5)
 
@@ -141,7 +146,10 @@ class DigitalFlyLab:
             # roles; the cloud controller needs a real enemy BODY distinct
             # from the red quest objective marker.
             role_detection=(self.ai_only or not active_low_power),
-            role_detection_stride=(3 if self.ai_only else 1))
+            # Generic humanoid proposals are the expensive part of fast CV.
+            # Cloud visual_target + AIVisualTracker handle identity between
+            # calls, so run generic role proposals only every fifth frame.
+            role_detection_stride=(5 if self.ai_only else 1))
         self.heavy_vision = HeavyVisionWorker(self.bus, target_hz=heavy_hz)
         self.planner = PlannerWorker(self.bus, target_hz=planner_hz)
         self.encoder = FlyChannelEncoder(self.bus, target_hz=fast_hz)
@@ -240,10 +248,10 @@ class DigitalFlyLab:
         else:
             self.semantic_coach = None
         self.ai_visual_tracker = (
-            AIVisualTracker(self.bus, target_hz=8.0, max_width=560)
+            AIVisualTracker(self.bus, target_hz=10.0, max_width=480)
             if self.ai_only else None)
         self.ai_only_supervisor = (
-            AIOnlyAutopilotSupervisor(self.bus, target_hz=10.0)
+            AIOnlyAutopilotSupervisor(self.bus, target_hz=15.0)
             if self.ai_only else None)
         self.quest_supervisor = (
             QuestCombatSupervisor(
