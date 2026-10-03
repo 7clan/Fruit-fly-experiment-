@@ -479,12 +479,34 @@ class AIOnlyAutopilotSupervisor(Worker):
                     ux = uy = -1.0
                 ui_label = str(ui.get("label") or "")[:96]
                 ui_low = ui_label.strip().lower()
+
+                # A multimodal response sometimes grounds the button in
+                # visual_target but omits duplicate ui_click coordinates.
+                # Reuse the SAME AI-selected UI target rather than waiting for
+                # a second cloud answer.
+                if (dialogue
+                        and (not bool(ui.get("needed"))
+                             or not (0.0 <= ux <= 1.0
+                                     and 0.0 <= uy <= 1.0))
+                        and ai_visual_kind == "ui"
+                        and ai_visual_conf >= 0.82
+                        and ai_visual_x is not None):
+                    ux = float(ai_visual_x)
+                    try:
+                        uy = float(ai_visual.get("y_norm", 0.5))
+                    except (TypeError, ValueError):
+                        uy = 0.5
+                    ui["needed"] = True
+                    if not ui_label:
+                        ui_label = "AI grounded dialogue button"
+                        ui_low = ui_label.lower()
+
                 ui_safe = bool(
                     dialogue
                     and ui.get("needed")
                     and confidence >= 0.80
-                    and 0.14 <= ux <= 0.86
-                    and 0.40 <= uy <= 0.99
+                    and 0.10 <= ux <= 0.90
+                    and 0.30 <= uy <= 0.99
                     and not any(x in ui_low for x in (
                         "quit", "cancel", "decline", "no thanks")))
                 if ui_safe:
@@ -513,16 +535,13 @@ class AIOnlyAutopilotSupervisor(Worker):
                 yprox = self._f(notes.get("quest_marker_proximity"))
                 prompt_seen = bool(
                     ai_perception.get("interaction_prompt_visible"))
-                explicit_interact = (
-                    str(plan.get("control_id") or "") == "interact")
 
-                # The VLM can literally read the on-screen "T Interact"
-                # prompt even when the cheap yellow-marker detector misses.
-                # In that case T is safer and faster than wandering around
-                # trying to satisfy stale geometry.
+                # TAKE_QUEST / INTERACT is already the AI's decision. Once the
+                # CURRENT frame visibly shows the interaction prompt, do not
+                # waste another cloud round-trip asking the model to repeat
+                # control_id=interact; execute the semantic skill immediately.
                 direct_ai_interact = bool(
-                    prompt_seen and explicit_interact
-                    and confidence >= 0.86)
+                    prompt_seen and confidence >= 0.82)
 
                 geometry_ready = bool(
                     yellow and ydir is not None and yprox is not None
@@ -848,6 +867,17 @@ class AIOnlyAutopilotSupervisor(Worker):
         elif skill in {"UI_CLICK", "BUY_ITEM"}:
             if self._one_shot(pid):
                 ui = plan.get("ui_click") or {}
+                if (not bool(ui.get("needed"))
+                        and ai_visual_kind == "ui"
+                        and ai_visual_conf >= 0.82
+                        and ai_visual_x is not None):
+                    ui = dict(ui)
+                    ui["needed"] = True
+                    ui["x_norm"] = ai_visual_x
+                    ui["y_norm"] = ai_visual.get("y_norm", 0.5)
+                    ui["label"] = (
+                        str(ui.get("label") or "")
+                        or "AI grounded UI target")
                 if bool(ui.get("needed")) and confidence >= 0.80:
                     try:
                         x = float(ui.get("x_norm"))
