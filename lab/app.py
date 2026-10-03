@@ -298,7 +298,9 @@ class DigitalFlyLab:
         self.evidence = (
             EvidenceRecorder(
                 self.bus, self.session_dir,
-                target_hz=(2.0 if self.ai_only else 1.5),
+                target_hz=(
+                    2.0 if self.ai_only
+                    else 5.0 if self.teacher_mode else 1.0),
                 save_raw=bool(self.ai_only or self.teacher_mode),
                 save_annotated=not self.teacher_mode,
                 max_width=(640 if self.teacher_mode else 0),
