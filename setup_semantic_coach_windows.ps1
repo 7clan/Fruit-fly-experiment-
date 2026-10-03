@@ -26,6 +26,35 @@ if ([string]::IsNullOrWhiteSpace($key)) {
     throw "No API key entered."
 }
 
+# Normalize common copy/paste forms without printing the secret.
+$key = $key.Trim()
+foreach ($prefix in @("GEMINI_API_KEY=", "GOOGLE_API_KEY=", "x-goog-api-key:")) {
+    if ($key.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+        $key = $key.Substring($prefix.Length).Trim()
+        break
+    }
+}
+if ($key.Length -ge 2) {
+    $first = $key.Substring(0,1)
+    $last = $key.Substring($key.Length-1,1)
+    if (($first -eq [char]34 -and $last -eq [char]34) -or
+        ($first -eq [char]39 -and $last -eq [char]39)) {
+        $key = $key.Substring(1, $key.Length-2).Trim()
+    }
+}
+$key = $key.Replace([char]13, "").Replace([char]10, "").Trim()
+if ([string]::IsNullOrWhiteSpace($key)) {
+    throw "API key became empty after removing quotes/prefixes."
+}
+$keyKind = if ($key.StartsWith("AIza")) {
+    "Google API key"
+} elseif ($key.StartsWith("AQ.")) {
+    "Google auth key"
+} else {
+    "unrecognized key format"
+}
+Write-Host "Key shape: $keyKind, length=$($key.Length) (secret not printed)." -ForegroundColor DarkCyan
+
 $model = Read-Host "Model [gemini-3.5-flash-lite]"
 if ([string]::IsNullOrWhiteSpace($model)) {
     $model = "gemini-3.5-flash-lite"
