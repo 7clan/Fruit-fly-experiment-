@@ -148,6 +148,10 @@ class WindowsInputBackend:
         self.failures = 0
         self.last_error = None
         self._target_hwnd = 0
+        self.camera_drags = 0
+        self.cursor_recenters = 0
+        self.cursor_escape_corrections = 0
+        self.cursor_clip_failures = 0
 
     def _send(self, inp: _INPUT, label: str) -> None:
         ctypes.set_last_error(0)
@@ -246,7 +250,10 @@ class WindowsInputBackend:
         left, top, right, bottom = bounds
         cx = int((left + right) // 2)
         cy = int(top + (bottom - top) * 0.48)
-        return bool(_user32.SetCursorPos(cx, cy))
+        ok = bool(_user32.SetCursorPos(cx, cy))
+        if ok:
+            self.cursor_recenters += 1
+        return ok
 
     def camera_drag(self, dx: int, dy: int = 0) -> None:
         """Roblox/GPO camera look without letting the cursor escape Roblox.
@@ -274,10 +281,13 @@ class WindowsInputBackend:
                 _user32.ClipCursor(
                     ctypes.cast(
                         ctypes.byref(clip_rect), ctypes.c_void_p)))
+            if not clip_active:
+                self.cursor_clip_failures += 1
         else:
             dx = max(-140, min(140, int(dx)))
             dy = max(-90, min(90, int(dy)))
 
+        self.camera_drags += 1
         self.mouse_down("right")
         try:
             self.mouse_move(int(dx), int(dy))
@@ -285,6 +295,20 @@ class WindowsInputBackend:
             self.mouse_up("right")
             if clip_active:
                 _user32.ClipCursor(None)
+            # Verify containment before recentering. This turns the user's
+            # "mouse went outside Roblox" observation into a measurable
+            # session-report counter.
+            bounds_after = self._client_screen_rect()
+            pos = _POINT()
+            escaped = False
+            if (bounds_after is not None
+                    and bool(_user32.GetCursorPos(ctypes.byref(pos)))):
+                left, top, right, bottom = bounds_after
+                escaped = not (
+                    left <= int(pos.x) <= right
+                    and top <= int(pos.y) <= bottom)
+            if escaped:
+                self.cursor_escape_corrections += 1
             # Leave the pointer in a deterministic safe place inside Roblox.
             self.center_cursor_in_target()
 
@@ -390,6 +414,11 @@ class WindowsInputBackend:
             "input_struct_expected": _EXPECTED_INPUT_SIZE,
             "target_hwnd": int(self._target_hwnd or 0),
             "ui_click_supported": True,
+            "camera_drags": int(self.camera_drags),
+            "cursor_recenters": int(self.cursor_recenters),
+            "cursor_escape_corrections": int(
+                self.cursor_escape_corrections),
+            "cursor_clip_failures": int(self.cursor_clip_failures),
         }
 
 
