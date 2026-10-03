@@ -315,3 +315,37 @@ def test_motor_executor_applies_only_training_ready_attack_timing():
     ex2 = MotorExecutor(bus2, combat_priors=insufficient)
     assert ex2.stats["teacher_attack_timing_applied"] is False
     assert ex2.stats["bundle_attack_interval_s"] == 0.26
+
+
+def test_navigation_skill_policy_upgrade_retires_old_buggy_rewards(tmp_path):
+    path = tmp_path / "skills.json"
+    path.write_text(json.dumps({
+        "schema_version": 1,
+        "ENGINEERED": True,
+        "skills": {
+            "NAVIGATE_OBJECTIVE": {
+                "skill_id": "NAVIGATE_OBJECTIVE",
+                "category": "navigation",
+                "preconditions": ["objective_or_waypoint_visible"],
+                "success_conditions": ["objective_reached"],
+                "failure_conditions": ["no_progress"],
+                "attempts": 3,
+                "positive_outcomes": 0,
+                "negative_outcomes": 2,
+                "neutral_outcomes": 1,
+                "reward_sum": -144.5,
+                "last_reward": -85.5,
+                "last_seen_ns": 123,
+                "policy_version": 1
+            }
+        }
+    }), encoding="utf-8")
+
+    lib = SkillLibrary(path)
+    nav = lib.snapshot()["skills"]["NAVIGATE_OBJECTIVE"]
+    assert nav["policy_version"] == 2
+    assert nav["attempts"] == 0
+    assert nav["negative_outcomes"] == 0
+    assert nav["reward_sum"] == 0.0
+    assert nav["retired_versions"][-1]["policy_version"] == 1
+    assert nav["retired_versions"][-1]["reward_sum"] == -144.5
