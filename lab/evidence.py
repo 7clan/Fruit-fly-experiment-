@@ -6,6 +6,7 @@ chunk appears. It reads latest-state snapshots only and never blocks control.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from .bus import Bus
@@ -16,7 +17,8 @@ class EvidenceRecorder(Worker):
     name = "evidence_recorder"
 
     def __init__(self, bus: Bus, session_dir: Path, target_hz: float = 5.0,
-                 save_raw: bool = True):
+                 save_raw: bool = True, save_annotated: bool = True,
+                 max_width: int = 0, jpeg_quality: int = 78):
         super().__init__(bus, target_hz=target_hz)
         self.capture = bus.state("capture.frames.latest")
         self.brain = bus.state("brain.output")
@@ -29,6 +31,12 @@ class EvidenceRecorder(Worker):
         self._last_plan = None
         self._last_teacher_ts = -1
         self.save_raw = bool(save_raw)
+        self.save_annotated = bool(save_annotated)
+        self.max_width = int(max_width)
+        self.jpeg_quality = max(40, min(95, int(jpeg_quality)))
+        self.manifest_path = self.out_dir / "manifest.jsonl"
+        self._manifest_fh = open(
+            self.manifest_path, "a", encoding="utf-8")
         self.stats.update({
             "saved": 0, "raw_saved": 0,
             "brain_frames": 0, "ai_plan_frames": 0,
@@ -74,14 +82,21 @@ class EvidenceRecorder(Worker):
             frame = img
             if frame.ndim == 3 and frame.shape[2] == 4:
                 frame = cv2.cvtColor(frame, cv2.COLOR_BGRA2BGR)
+            if self.max_width > 0 and frame.shape[1] > self.max_width:
+                scale = self.max_width / float(frame.shape[1])
+                frame = cv2.resize(
+                    frame,
+                    (self.max_width,
+                     max(1, int(round(frame.shape[0] * scale)))),
+                    interpolation=cv2.INTER_AREA)
             raw = frame.copy() if self.save_raw else None
-            annotated = frame.copy()
-            h, w = annotated.shape[:2]
+            annotated = frame.copy() if self.save_annotated else None
+            h, w = frame.shape[:2]
 
             o = self.obs.read()
             obs = o.payload if o is not None else {}
             notes = (obs or {}).get("notes") or {}
-            for tr in notes.get("entity_tracks") or []:
+            for tr in (notes.get("entity_tracks") or []) if annotated is not None else []:
                 box = tr.get("bbox") or []
                 if len(box) != 4:
                     continue
@@ -100,7 +115,8 @@ class EvidenceRecorder(Worker):
 
             wp = notes.get("recommended_waypoint_xy")
             dshape = notes.get("detect_shape")
-            if (wp and dshape and len(dshape) >= 2
+            if (annotated is not None and wp and dshape
+                    and len(dshape) >= 2
                     and float(dshape[1]) > 0 and float(dshape[0]) > 0):
                 sx = w / float(dshape[1])
                 sy = h / float(dshape[0])
@@ -113,7 +129,7 @@ class EvidenceRecorder(Worker):
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1,
                     cv2.LINE_AA)
 
-            if source == "teacher_sample":
+            if source == "teacher_sample" and annotated is not None:
                 actions = ", ".join(
                     str(x) for x in (teacher_payload.get("actions") or []))
                 cv2.putText(
@@ -124,7 +140,7 @@ class EvidenceRecorder(Worker):
                     (255, 255, 255), 2, cv2.LINE_AA)
 
             # Overlay the exact visual target the cloud AI grounded.
-            if p is not None:
+            if p is not None and annotated is not None:
                 plan = p.payload or {}
                 vt = plan.get("visual_target") or {}
                 box = vt.get("bbox_norm")
@@ -144,15 +160,40 @@ class EvidenceRecorder(Worker):
                     except (TypeError, ValueError):
                         pass
 
-            stem = f"{source}_{int(source_id):06d}"
+            frame_id = c.payload.get("frame_id")
+            if source == "teacher_sample" and frame_id is not None:
+                stem = f"teacher_frame_{int(frame_id):08d}"
+            else:
+                stem = f"{source}_{int(source_id):06d}"
+            raw_name = None
+            ann_name = None
             if self.save_raw:
+                raw_name = f"{stem}_raw.jpg"
                 cv2.imwrite(
-                    str(self.out_dir / f"{stem}_raw.jpg"), raw,
-                    [int(cv2.IMWRITE_JPEG_QUALITY), 78])
+                    str(self.out_dir / raw_name), raw,
+                    [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality])
                 self.stats["raw_saved"] += 1
-            cv2.imwrite(
-                str(self.out_dir / f"{stem}_annotated.jpg"), annotated,
-                [int(cv2.IMWRITE_JPEG_QUALITY), 78])
+            if self.save_annotated and annotated is not None:
+                ann_name = f"{stem}_annotated.jpg"
+                cv2.imwrite(
+                    str(self.out_dir / ann_name), annotated,
+                    [int(cv2.IMWRITE_JPEG_QUALITY), self.jpeg_quality])
+            self._manifest_fh.write(json.dumps({
+                "source": source,
+                "source_id": int(source_id),
+                "frame_id": frame_id,
+                "capture_ts_ns": c.payload.get("ts_ns", c.ts_ns),
+                "teacher_ts_ns": (
+                    teacher_ts if source == "teacher_sample" else None),
+                "teacher_actions": (
+                    teacher_payload.get("actions") or []
+                    if source == "teacher_sample" else []),
+                "raw_file": raw_name,
+                "annotated_file": ann_name,
+                "width": int(w),
+                "height": int(h),
+            }, default=str) + "\n")
+            self._manifest_fh.flush()
             if source == "teacher_sample":
                 self._last_teacher_ts = teacher_ts
                 self.stats["teacher_frames"] += 1
@@ -166,3 +207,11 @@ class EvidenceRecorder(Worker):
         except Exception as exc:
             self.stats["errors"] += 1
             self.stats["last_error"] = repr(exc)
+
+    def on_stop(self) -> None:
+        try:
+            self._manifest_fh.flush()
+            self._manifest_fh.close()
+        except Exception:
+            pass
+
