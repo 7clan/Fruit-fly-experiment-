@@ -1065,7 +1065,7 @@ def test_ai_only_gemini_controller_reuses_same_ai_only_contract():
     assert coach.provider == "gemini_ai_only"
     assert coach.stats["decision_owner"] == "cloud_ai"
     assert coach.stats["fruit_fly_control"] is False
-    assert coach.max_output_tokens == 420
+    assert coach.max_output_tokens == 640
     prompt = coach._prompt(
         {"target": {"type": "none"}, "player": {}, "notes": {}},
         {"quest_status": "unknown"},
