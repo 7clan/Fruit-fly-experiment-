@@ -141,6 +141,7 @@ class SemanticCoachWorker(Worker):
 
         self._last_call_ns = 0
         self._last_signature = None
+        self.drop_stale_responses = False
         self._previous_image_b64 = None
         self._plan_id = 0
         self._disabled_published = False
@@ -151,6 +152,7 @@ class SemanticCoachWorker(Worker):
             "plans": 0,
             "skips": 0,
             "api_errors": 0,
+            "stale_responses": 0,
             "jpeg_ms_total": 0.0,
             "api_ms_total": 0.0,
             "last_api_ms": None,
@@ -632,6 +634,25 @@ Return ONLY a JSON object with exactly these fields:
                     self.stats["refinement_calls"] += 1
 
             plan = self._validate_plan(raw, catalog)
+
+            # Cloud inference can take long enough for the physical game state
+            # to change (quest accepted, UI opened, target appeared, etc.).
+            # AI-only mode opts into dropping a response that was generated
+            # for an older semantic state instead of executing stale advice.
+            if bool(getattr(self, "drop_stale_responses", False)):
+                cur_obs = self._state(self.world_state)
+                cur_quest = self._state(self.quest_state)
+                cur_brain = self._state(self.brain_state)
+                cur_sig = self._signature(cur_obs, cur_quest, cur_brain)
+                if cur_sig != sig:
+                    self.stats["stale_responses"] += 1
+                    self._last_signature = None
+                    self.events.publish({
+                        "kind": "coach_stale_response_dropped",
+                        "ts_ns": SHARED_CLOCK.now_ns(),
+                        "model": self.model,
+                    })
+                    return
         except (urllib.error.URLError, urllib.error.HTTPError,
                 TimeoutError, json.JSONDecodeError, ValueError,
                 RuntimeError) as exc:
