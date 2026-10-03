@@ -29,6 +29,7 @@ REPLAY_TOPICS = (
     "brain.events",
     "coach.events",
     "action.inputs",
+    "teacher.events",
 )
 
 
