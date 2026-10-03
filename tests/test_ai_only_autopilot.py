@@ -1236,3 +1236,95 @@ def test_ai_only_cloud_workers_drop_stale_responses():
     coach = AIOnlyOllamaCoachWorker(
         bus, model="gemma4:cloud", api_key="test-only")
     assert coach.drop_stale_responses is True
+
+
+
+def test_take_quest_visible_prompt_does_not_require_control_id():
+    bus = _armed_bus(
+        {
+            "type": "none",
+            "direction": None,
+            "distance": None,
+            "confidence": 0.0,
+        },
+        {
+            "plan_id": 90,
+            "skill": "TAKE_QUEST",
+            "target": "quest giver",
+            "control_id": "",
+            "confidence": 0.93,
+            "explanation": "T Interact prompt is visible",
+            "perception": {
+                "quest_state": "available",
+                "interaction_prompt_visible": True,
+                "dialogue_visible": False,
+                "enemy_actor_visible": False,
+                "player_dead": False,
+                "safezone_visible": False,
+                "equipped_slot_visible": "unknown",
+                "melee_ready_visible": False,
+            },
+            "visual_target": {
+                "kind": "quest_giver",
+                "x_norm": 0.52,
+                "y_norm": 0.48,
+                "bbox_norm": [0.45, 0.28, 0.59, 0.68],
+                "confidence": 0.92,
+                "melee_ready": False,
+            },
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "INTERACT_QUEST"
+
+
+def test_dialogue_ui_visual_target_can_supply_click_coordinates():
+    bus = _armed_bus(
+        {
+            "type": "none",
+            "direction": None,
+            "distance": None,
+            "confidence": 0.0,
+        },
+        {
+            "plan_id": 91,
+            "skill": "TAKE_QUEST",
+            "target": "Accept button",
+            "confidence": 0.94,
+            "explanation": "quest dialogue is open",
+            "perception": {
+                "quest_state": "pending_accept",
+                "interaction_prompt_visible": False,
+                "dialogue_visible": True,
+                "enemy_actor_visible": False,
+                "player_dead": False,
+                "safezone_visible": False,
+                "equipped_slot_visible": "unknown",
+                "melee_ready_visible": False,
+            },
+            "ui_click": {
+                "needed": False,
+                "x_norm": 0.0,
+                "y_norm": 0.0,
+                "label": "",
+            },
+            "visual_target": {
+                "kind": "ui",
+                "x_norm": 0.63,
+                "y_norm": 0.73,
+                "bbox_norm": [0.55, 0.68, 0.71, 0.79],
+                "confidence": 0.93,
+                "melee_ready": False,
+            },
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "UI_CLICK"
+    assert abs(cmd.payload["x_norm"] - 0.63) < 1e-6
+    assert abs(cmd.payload["y_norm"] - 0.73) < 1e-6
