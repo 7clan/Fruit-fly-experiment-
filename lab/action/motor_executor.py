@@ -260,7 +260,18 @@ class AIOnlyBackend(QuestingBackend):
 
     name = "windows_ai_only_v1"
 
+    def _ensure_target_foreground(self) -> None:
+        ensure = getattr(self.inner, "ensure_target_foreground", None)
+        if ensure is not None and not bool(ensure()):
+            raise RuntimeError(
+                "AI-only input blocked: authorized Roblox window not foreground")
+
+    def key_down(self, code: str) -> None:
+        self._ensure_target_foreground()
+        super().key_down(code)
+
     def mouse_move(self, dx: int, dy: int) -> None:
+        self._ensure_target_foreground()
         # Roblox camera look is a RMB drag, not an arbitrary cursor move.
         dragger = getattr(self.inner, "camera_drag", None)
         if dragger is not None:
@@ -275,6 +286,7 @@ class AIOnlyBackend(QuestingBackend):
         return bool(center()) if center is not None else False
 
     def mouse_button_down(self, button: str) -> None:
+        self._ensure_target_foreground()
         # SendInput mouse clicks go to the window under the OS pointer, not
         # magically to the foreground game. In AI-only mode center the pointer
         # inside the authorized Roblox client before every combat M1.
@@ -284,6 +296,7 @@ class AIOnlyBackend(QuestingBackend):
 
     def ui_click(self, x_norm: float, y_norm: float,
                  button: str = "left", restore_cursor: bool = True) -> None:
+        self._ensure_target_foreground()
         # In AI-only mode there is no human cursor ownership to restore. Keep
         # the pointer inside the authorized Roblox client after UI clicks so
         # subsequent camera drags/attacks cannot begin on the desktop.
