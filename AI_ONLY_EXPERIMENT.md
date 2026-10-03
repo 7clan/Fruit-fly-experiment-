@@ -69,3 +69,41 @@ A clean AI-only run should show:
 
 This makes attribution simple: if an input appears in the replay, it must come
 from an AI plan (apart from the explicit F8-F12 safety/control hotkeys).
+
+
+## Compound combat controller
+
+The cloud AI no longer chooses only one physical key/action during combat.
+Every FIGHT plan includes five channels:
+
+- locomotion: approach / orbit left / orbit right / retreat / hold / recovery
+- offense: M1 or a move whose binding is visibly grounded in the HUD
+- defense: none / guard-between-attacks / evade
+- camera: track target / explicit search
+- equipment: optional verified hotbar slot
+
+The local executor runs those AI-selected channels concurrently/interleaved at
+high frequency while the slow cloud plan remains current. This is intentionally
+a latency bridge, not a second combat policy.
+
+## Quest truth
+
+The accepted quest HUD is authoritative. A visible objective/progress panel
+(e.g. Defeat X n/m + Rewards/QUIT) latches quest-active state even when the
+enemy body is hidden. The red quest dot remains a pursuit cue through walls.
+The AI only treats ordinary red UI elements as non-targets.
+
+## Input ownership on Windows
+
+A normal Windows desktop has one shared OS cursor and one foreground keyboard
+input stream. This branch therefore cannot create a truly independent second
+mouse through SendInput.
+
+Instead, AI camera/UI/M1 operations use short cursor leases: save the user's
+cursor location, perform the bounded Roblox interaction, then restore the exact
+desktop cursor location. F12 remains the emergency stop.
+
+If truly independent simultaneous human + agent input is required later, use a
+separate game session/VM or investigate a controller/virtual-gamepad backend;
+Roblox supports gamepad input, but GPO's exact bindings would need to be
+verified before replacing the tested keyboard/mouse backend.
