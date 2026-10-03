@@ -107,3 +107,21 @@ If truly independent simultaneous human + agent input is required later, use a
 separate game session/VM or investigate a controller/virtual-gamepad backend;
 Roblox supports gamepad input, but GPO's exact bindings would need to be
 verified before replacing the tested keyboard/mouse backend.
+
+
+## Training / skill learning
+
+AI-only sessions now record persistent training trajectories and measured
+skill outcomes under `runtime_state/training/`. Those files survive normal
+code pulls because runtime_state is gitignored.
+
+For human demonstrations, run:
+
+```powershell
+.\run_teacher_windows.ps1
+```
+
+Teacher mode records only the verified gameplay control set while the
+authorized game window is foreground and emits no autonomous gameplay input.
+See `AI_COMBAT_TRAINING.md` for the trajectory, reward, skill-library and
+dataset-export contract.
