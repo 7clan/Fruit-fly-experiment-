@@ -284,7 +284,7 @@ class DigitalFlyLab:
                 self.bus, self.session_dir,
                 persistent_root=self.training_root,
                 skill_library=self.skill_library,
-                target_hz=5.0,
+                target_hz=(20.0 if self.teacher_mode else 5.0),
             )
             if (self.ai_only or self.teacher_mode) else None)
         self.quest_supervisor = (
@@ -298,8 +298,11 @@ class DigitalFlyLab:
         self.evidence = (
             EvidenceRecorder(
                 self.bus, self.session_dir,
-                target_hz=(2.0 if self.ai_only else 1.0),
-                save_raw=bool(self.ai_only or self.teacher_mode))
+                target_hz=(2.0 if self.ai_only else 1.5),
+                save_raw=bool(self.ai_only or self.teacher_mode),
+                save_annotated=not self.teacher_mode,
+                max_width=(640 if self.teacher_mode else 0),
+                jpeg_quality=(68 if self.teacher_mode else 78))
             if active_low_power else None)
         self.dashboard_ui = None
         self.assessment_started_ns = None
