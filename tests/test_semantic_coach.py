@@ -10,7 +10,7 @@ from lab.coach.llama_probe import choose_model as choose_llama_model
 from lab.coach.gpo_skills import (
     select_skill_cards, render_skill_cards, procedural_skill_plan,
 )
-from lab.coach.probe import choose_model
+from lab.coach.probe import choose_model, sanitize_api_key
 from lab.action.quest_combat_supervisor import QuestCombatSupervisor
 from lab.world.value import ValueTable
 
@@ -745,3 +745,12 @@ def test_coach_plan_waits_for_actionable_geometry_before_consuming():
     assert sup._last_coach_plan_id == 77
     assert sup.stats["coach_commands"] == 1
     assert sup.stats["coach_plans_seen"] == 1
+
+
+def test_gemini_key_sanitizer_handles_common_copy_paste_forms():
+    key = "AIza" + "x" * 35
+    assert sanitize_api_key(key) == key
+    assert sanitize_api_key('"' + key + '"') == key
+    assert sanitize_api_key("GEMINI_API_KEY=" + key) == key
+    assert sanitize_api_key("GOOGLE_API_KEY='" + key + "'") == key
+    assert sanitize_api_key("x-goog-api-key: " + key + "\r\n") == key
