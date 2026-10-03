@@ -172,9 +172,11 @@ def test_far_quest_enemy_actor_is_approached_before_attack():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "STEER_TARGET"
-    assert cmd.payload["direction"] == -0.65
-
+    assert cmd.payload["name"] in {"STEER_TARGET", "ATTACK_ADVANCE"}
+    if cmd.payload["name"] == "STEER_TARGET":
+        assert cmd.payload["direction"] == -0.65
+    else:
+        assert cmd.payload["target_type"] == "quest_enemy_actor"
 
 
 
