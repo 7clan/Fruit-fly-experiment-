@@ -302,6 +302,14 @@ class WindowsInputBackend:
         else:
             self._target_hwnd = 0
 
+    def ensure_target_foreground(self) -> bool:
+        hwnd = int(self._target_hwnd or 0)
+        if hwnd <= 0 or not bool(_user32.IsWindow(wt.HWND(hwnd))):
+            return False
+        if int(_user32.GetForegroundWindow() or 0) == hwnd:
+            return True
+        return bool(focus_window(hwnd))
+
     def ui_click(self, x_norm: float, y_norm: float,
                  button: str = "left", restore_cursor: bool = True) -> None:
         """Click a normalized point inside the authorized Roblox client.
