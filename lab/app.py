@@ -240,7 +240,7 @@ class DigitalFlyLab:
         else:
             self.semantic_coach = None
         self.ai_visual_tracker = (
-            AIVisualTracker(self.bus, target_hz=8.0, max_width=480)
+            AIVisualTracker(self.bus, target_hz=8.0, max_width=560)
             if self.ai_only else None)
         self.ai_only_supervisor = (
             AIOnlyAutopilotSupervisor(self.bus, target_hz=10.0)
