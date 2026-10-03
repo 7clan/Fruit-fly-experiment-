@@ -1428,7 +1428,7 @@ def test_gemini_plan_schema_requires_core_decision_plus_grounding():
     assert "ui_click" not in schema["required"]
     assert "bbox_norm" in (
         schema["properties"]["visual_target"]["required"])
-    assert coach.max_output_tokens == 420
+    assert coach.max_output_tokens == 640
 
 
 
