@@ -915,8 +915,12 @@ def test_stuck_navigation_runs_fast_bounded_recovery_without_cloud_wait():
     assert sup._stuck is True
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "JUMP"
+    # Automatic recovery is geometry-agnostic here, so it may search/back up
+    # but must never invent a jump/climb obstacle.
+    assert cmd.payload["name"] == "SEARCH_CAMERA"
     assert sup.stats["micro_recoveries"] == 1
+    assert sup.stats["jump_recoveries"] == 0
+    assert sup.stats["climb_recoveries"] == 0
     assert sup.stats["jump_recoveries"] == 1
 
 def test_active_quest_latches_through_brief_marker_loss():
