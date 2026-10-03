@@ -10,7 +10,9 @@ from lab.coach.llama_probe import choose_model as choose_llama_model
 from lab.coach.gpo_skills import (
     select_skill_cards, render_skill_cards, procedural_skill_plan,
 )
-from lab.coach.probe import choose_model, sanitize_api_key
+from lab.coach.probe import (
+    choose_model, sanitize_api_key, valid_api_key_shape,
+)
 from lab.action.quest_combat_supervisor import QuestCombatSupervisor
 from lab.world.value import ValueTable
 
@@ -754,3 +756,20 @@ def test_gemini_key_sanitizer_handles_common_copy_paste_forms():
     assert sanitize_api_key("GEMINI_API_KEY=" + key) == key
     assert sanitize_api_key("GOOGLE_API_KEY='" + key + "'") == key
     assert sanitize_api_key("x-goog-api-key: " + key + "\r\n") == key
+
+
+
+def test_gemini_key_shape_rejects_masked_and_truncated_values():
+    assert valid_api_key_shape("*") is False
+    assert valid_api_key_shape("A") is False
+    assert valid_api_key_shape("AIza-short") is False
+    assert valid_api_key_shape("AQ.short") is False
+
+
+def test_gemini_key_shape_accepts_standard_and_auth_key_forms():
+    assert valid_api_key_shape(
+        "AIza" + "x" * 32
+    ) is True
+    assert valid_api_key_shape(
+        "AQ." + "y" * 40
+    ) is True
