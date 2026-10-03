@@ -2,6 +2,10 @@
 # One-time Gemini API-key setup for the low-rate semantic coach.
 # The key is stored in the current Windows USER environment, never in git.
 
+param(
+    [switch]$ReplaceKey
+)
+
 $ErrorActionPreference = "Stop"
 
 Write-Host "== DigitalFlyLab semantic coach setup ==" -ForegroundColor Cyan
@@ -13,43 +17,67 @@ Write-Host ""
 Write-Host "Opening Google AI Studio API-key page..." -ForegroundColor Cyan
 Start-Process "https://aistudio.google.com/apikey"
 
-$secure = Read-Host "Paste your Gemini API key here (input hidden)" -AsSecureString
-$ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+function Normalize-GeminiKey([string]$Value) {
+    if ($null -eq $Value) { return "" }
+    $k = $Value.Trim()
+    foreach ($prefix in @("GEMINI_API_KEY=", "GOOGLE_API_KEY=", "x-goog-api-key:")) {
+        if ($k.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
+            $k = $k.Substring($prefix.Length).Trim()
+            break
+        }
+    }
+    if ($k.Length -ge 2) {
+        $first = $k.Substring(0,1)
+        $last = $k.Substring($k.Length-1,1)
+        if (($first -eq [char]34 -and $last -eq [char]34) -or
+            ($first -eq [char]39 -and $last -eq [char]39)) {
+            $k = $k.Substring(1, $k.Length-2).Trim()
+        }
+    }
+    return $k.Replace([char]13, "").Replace([char]10, "").Trim()
+}
+
+function Test-GeminiKeyShape([string]$Value) {
+    if ([string]::IsNullOrWhiteSpace($Value)) { return $false }
+    if ($Value.Length -lt 20) { return $false }
+    return ($Value.StartsWith("AIza") -or $Value.StartsWith("AQ."))
+}
+
+Write-Host ""
+Write-Host "In AI Studio, COPY the complete API key." -ForegroundColor Yellow
+Write-Host "Then come back here and press Enter. I will read it from the clipboard, save it securely as a USER environment variable, and clear the clipboard." -ForegroundColor DarkYellow
+[void](Read-Host "Press Enter after copying the full key")
+
+$key = ""
 try {
-    $key = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr)
+    $key = Normalize-GeminiKey ([string](Get-Clipboard -Raw))
 }
-finally {
-    [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
+catch {
+    $key = ""
 }
+try { Set-Clipboard -Value "" } catch {}
 
-if ([string]::IsNullOrWhiteSpace($key)) {
-    throw "No API key entered."
-}
-
-# Normalize common copy/paste forms without printing the secret.
-$key = $key.Trim()
-foreach ($prefix in @("GEMINI_API_KEY=", "GOOGLE_API_KEY=", "x-goog-api-key:")) {
-    if ($key.StartsWith($prefix, [System.StringComparison]::OrdinalIgnoreCase)) {
-        $key = $key.Substring($prefix.Length).Trim()
-        break
+if (-not (Test-GeminiKeyShape $key)) {
+    Write-Host "Clipboard did not contain a complete Gemini key. Falling back to hidden paste." -ForegroundColor Yellow
+    $secure = Read-Host "Paste the COMPLETE Gemini API key here (input hidden)" -AsSecureString
+    $ptr = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secure)
+    try {
+        $key = Normalize-GeminiKey ([Runtime.InteropServices.Marshal]::PtrToStringBSTR($ptr))
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($ptr)
     }
 }
-if ($key.Length -ge 2) {
-    $first = $key.Substring(0,1)
-    $last = $key.Substring($key.Length-1,1)
-    if (($first -eq [char]34 -and $last -eq [char]34) -or
-        ($first -eq [char]39 -and $last -eq [char]39)) {
-        $key = $key.Substring(1, $key.Length-2).Trim()
-    }
+
+if (-not (Test-GeminiKeyShape $key)) {
+    throw "The value is not a complete Gemini API key. Expected a full AI Studio key beginning with AIza or AQ. (not '*', not a masked value, and not a one-character placeholder). Nothing was saved."
 }
-$key = $key.Replace([char]13, "").Replace([char]10, "").Trim()
-if ([string]::IsNullOrWhiteSpace($key)) {
-    throw "API key became empty after removing quotes/prefixes."
-}
+
+# The key was already normalized and validated above.
 $keyKind = if ($key.StartsWith("AIza")) {
-    "Google API key"
+    "Google standard API key"
 } elseif ($key.StartsWith("AQ.")) {
-    "Google auth key"
+    "Google authorization API key"
 } else {
     "unrecognized key format"
 }
