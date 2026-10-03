@@ -1,11 +1,11 @@
-"""Cheap Gemini semantic-coach preflight.
+"""Cheap native Gemini semantic-coach preflight.
 
-Uses Gemini's documented OpenAI-compatible REST endpoint with
-Authorization: Bearer.  This is important for current AI Studio auth keys:
-new AI Studio keys are authorization keys, and the OpenAI-compatible surface
-provides a clean, documented bearer-auth path.
+Uses Google's direct Gemini generateContent REST API with x-goog-api-key.
+Google recommends the native API when OpenAI compatibility is not required.
+This also avoids the compatibility-layer HTTP 400 failures seen on the target
+Windows machine.
 
-No game screenshot is sent.
+No game screenshot is sent except a 1x1 PNG used to verify image input.
 """
 
 from __future__ import annotations
@@ -26,7 +26,6 @@ PREFERRED_MODELS = (
     "gemini-3.8-flash",
 )
 
-# Valid 1x1 PNG used only to verify that this exact key/model accepts images.
 TINY_PNG_B64 = (
     "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwC"
     "AAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII="
@@ -42,7 +41,8 @@ def _request(url: str, key: str, *, data: dict | None = None,
         headers={
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "Authorization": f"Bearer {key}",
+            "x-goog-api-key": key,
+            "x-goog-api-client": "digitalflylab-native/1.0",
             "User-Agent": "DigitalFlyLab/1.0",
         },
         method="POST" if data is not None else "GET",
@@ -51,15 +51,26 @@ def _request(url: str, key: str, *, data: dict | None = None,
         return json.loads(resp.read().decode("utf-8"))
 
 
-def openai_models(key: str, timeout_s: float = 10.0) -> set[str]:
+def native_models(key: str, timeout_s: float = 10.0) -> set[str]:
     payload = _request(
-        "https://generativelanguage.googleapis.com/v1beta/openai/models",
+        "https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",
         key, timeout_s=timeout_s)
     out = set()
-    for rec in payload.get("data") or []:
-        mid = str(rec.get("id") or "").strip()
-        if mid:
-            out.add(mid)
+    for rec in payload.get("models") or []:
+        methods = {
+            str(x).lower()
+            for x in (rec.get("supportedGenerationMethods") or [])
+        }
+        if "generatecontent" not in methods:
+            continue
+        name = str(rec.get("name") or "").strip()
+        if name.startswith("models/"):
+            name = name[7:]
+        if name:
+            out.add(name)
+        base = str(rec.get("baseModelId") or "").strip()
+        if base:
+            out.add(base)
     return out
 
 
@@ -78,61 +89,63 @@ def choose_model(requested: str | None, available: set[str]) -> str | None:
             return model
     compatible = sorted(
         m for m in available
-        if m.startswith("gemini-") and "flash-lite" in m
-        and "image" not in m and "tts" not in m and "live" not in m)
+        if m.startswith("gemini-")
+        and ("flash-lite" in m or m == "gemini-3.8-flash")
+        and "image" not in m
+        and "tts" not in m
+        and "live" not in m)
     return compatible[-1] if compatible else None
 
 
-def _probe_chat(model: str, key: str, timeout_s: float) -> bool:
-    payload = _request(
-        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        key,
+def _extract_text(payload: dict) -> str:
+    parts = (((payload.get("candidates") or [{}])[0]
+              .get("content") or {}).get("parts") or [])
+    return "".join(
+        str(p.get("text") or "") for p in parts if isinstance(p, dict)
+    ).strip()
+
+
+def _generate(model: str, key: str, parts: list[dict],
+              timeout_s: float) -> dict:
+    endpoint = (
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"{model}:generateContent")
+    return _request(
+        endpoint, key,
         data={
-            "model": model,
-            "messages": [
-                {"role": "user", "content": "Reply with exactly: OK"}
-            ],
-            "max_tokens": 16,
+            "contents": [{
+                "role": "user",
+                "parts": parts,
+            }],
+            "generationConfig": {
+                "maxOutputTokens": 24,
+            },
         },
-        timeout_s=timeout_s,
-    )
-    choices = payload.get("choices") or []
-    if not choices:
-        return False
-    content = (((choices[0].get("message") or {}).get("content")) or "")
-    return bool(str(content).strip())
+        timeout_s=timeout_s)
+
+
+def _probe_chat(model: str, key: str, timeout_s: float) -> bool:
+    payload = _generate(
+        model, key,
+        [{"text": "Reply with exactly: OK"}],
+        timeout_s)
+    return bool(_extract_text(payload))
 
 
 def _probe_vision(model: str, key: str, timeout_s: float) -> bool:
-    payload = _request(
-        "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions",
-        key,
-        data={
-            "model": model,
-            "messages": [{
-                "role": "user",
-                "content": [
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": "data:image/png;base64," + TINY_PNG_B64,
-                        },
-                    },
-                    {
-                        "type": "text",
-                        "text": "Reply with exactly: OK",
-                    },
-                ],
-            }],
-            "max_tokens": 16,
-        },
-        timeout_s=timeout_s,
-    )
-    choices = payload.get("choices") or []
-    if not choices:
-        return False
-    content = (((choices[0].get("message") or {}).get("content")) or "")
-    return bool(str(content).strip())
+    payload = _generate(
+        model, key,
+        [
+            {
+                "inline_data": {
+                    "mime_type": "image/png",
+                    "data": TINY_PNG_B64,
+                },
+            },
+            {"text": "Reply with exactly: OK"},
+        ],
+        timeout_s)
+    return bool(_extract_text(payload))
 
 
 def _error_detail(exc: urllib.error.HTTPError) -> str:
@@ -153,16 +166,16 @@ def probe(model: str | None = None,
     if not key:
         return False, "GEMINI_API_KEY is missing", None
 
-    # Model listing is helpful but not required. If listing is unavailable,
-    # directly probe the requested/preferred models.
     available: set[str] = set()
     list_note = ""
     try:
-        available = openai_models(key, timeout_s=timeout_s)
+        available = native_models(key, timeout_s=timeout_s)
     except urllib.error.HTTPError as exc:
-        list_note = f" models_list_http={exc.code}"
+        list_note = (
+            f" models_list_http={exc.code}:"
+            f"{_error_detail(exc)[:220]}")
     except Exception as exc:
-        list_note = f" models_list={type(exc).__name__}"
+        list_note = f" models_list={type(exc).__name__}:{exc}"
 
     candidates = []
     if requested:
@@ -176,9 +189,6 @@ def probe(model: str | None = None,
     seen = set()
     errors = []
 
-    # AI-only control benefits more from lower reaction latency than from a
-    # particular Flash-Lite generation. Benchmark one tiny multimodal request
-    # per accessible candidate at startup and keep the fastest successful one.
     if require_vision and prefer_fastest_vision:
         timed = []
         for candidate in candidates:
@@ -198,7 +208,7 @@ def probe(model: str | None = None,
             except urllib.error.HTTPError as exc:
                 errors.append(
                     f"{candidate}:vision_HTTP{exc.code}:"
-                    f"{_error_detail(exc)[:260]}")
+                    f"{_error_detail(exc)[:320]}")
             except Exception as exc:
                 errors.append(
                     f"{candidate}:vision_{type(exc).__name__}:{exc}")
@@ -211,13 +221,11 @@ def probe(model: str | None = None,
                 f"{m}={round(t,1)}ms" for t, m in sorted(timed))
             return (
                 True,
-                f"model={selected}{note} transport=openai_compat "
+                f"model={selected}{note} transport=native_generate_content "
                 f"vision=yes startup_vision_ms={round(ms,1)} "
                 f"bench=[{tested}]{list_note}",
                 selected,
             )
-        # Rebuild seen so the ordinary diagnostic loop can report text/vision
-        # failures consistently if every benchmark candidate failed.
         seen = set()
 
     for candidate in candidates:
@@ -233,49 +241,40 @@ def probe(model: str | None = None,
                 continue
             vision_note = ""
             if require_vision:
-                try:
-                    if not _probe_vision(candidate, key, timeout_s):
-                        errors.append(f"{candidate}:vision_empty_response")
-                        continue
-                    vision_note = " vision=yes"
-                except urllib.error.HTTPError as exc:
-                    errors.append(
-                        f"{candidate}:vision_HTTP{exc.code}:"
-                        f"{_error_detail(exc)[:260]}")
+                if not _probe_vision(candidate, key, timeout_s):
+                    errors.append(f"{candidate}:vision_empty_response")
                     continue
-                except Exception as exc:
-                    errors.append(
-                        f"{candidate}:vision_{type(exc).__name__}:{exc}")
-                    continue
+                vision_note = " vision=yes"
             note = ""
             if candidate != requested:
                 note = f" fallback_from={requested}"
             return (
                 True,
-                f"model={candidate}{note} transport=openai_compat"
+                f"model={candidate}{note} "
+                f"transport=native_generate_content"
                 f"{vision_note}{list_note}",
                 candidate,
             )
         except urllib.error.HTTPError as exc:
             errors.append(
-                f"{candidate}:HTTP{exc.code}:{_error_detail(exc)[:350]}")
+                f"{candidate}:HTTP{exc.code}:{_error_detail(exc)[:380]}")
         except Exception as exc:
             errors.append(f"{candidate}:{type(exc).__name__}:{exc}")
 
-    # Useful diagnostic without exposing the key.
     key_kind = (
         "auth_key" if key.startswith("AQ.")
         else "standard_or_unknown_key")
     return (
         False,
-        f"no Gemini model succeeded via OpenAI-compatible Bearer auth "
-        f"(key_type={key_kind}). Attempts: {' | '.join(errors)[:1800]}",
+        "no Gemini model succeeded via native generateContent "
+        f"(key_type={key_kind}). Attempts: {' | '.join(errors)[:2200]}"
+        f"{list_note}",
         None,
     )
 
 
 def main(argv=None) -> int:
-    ap = argparse.ArgumentParser("DigitalFlyLab semantic-coach preflight")
+    ap = argparse.ArgumentParser("DigitalFlyLab Gemini native preflight")
     ap.add_argument("--model", default=None)
     ap.add_argument("--timeout", type=float, default=12.0)
     ap.add_argument(
@@ -286,13 +285,14 @@ def main(argv=None) -> int:
         help="benchmark accessible Flash-Lite models and select the fastest")
     args = ap.parse_args(argv)
     ok, detail, selected = probe(
-        args.model, timeout_s=args.timeout,
+        args.model,
+        timeout_s=args.timeout,
         require_vision=bool(args.require_vision),
         prefer_fastest_vision=bool(args.fastest_vision))
     print(f"[coach-probe] {'OK' if ok else 'FAILED'} {detail}")
     if ok and selected:
         print(f"COACH_MODEL={selected}")
-        print("COACH_TRANSPORT=openai_compat")
+        print("COACH_TRANSPORT=native_generate_content")
     return 0 if ok else 2
 
 
