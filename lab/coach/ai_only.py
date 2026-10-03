@@ -262,10 +262,11 @@ CONTROL DISCIPLINE:
   reason to avoid or postpone fighting quest NPCs. Never invent a need to leave
   the safe zone before PvE.
 - TAKE_QUEST: move to the yellow QUEST/! giver. If the CURRENT screenshot
-  visibly shows the T/Interact prompt, set control_id="interact"; the actuator
-  will press T immediately even if geometric proximity is noisy. Otherwise it
-  approaches until ready, presses T once, then waits. If a quest dialogue/Accept/Yes button is visible, choose
-  UI_CLICK with its normalized center. Do not repeatedly press T while
+  visibly shows the T/Interact prompt, TAKE_QUEST itself is enough: the
+  actuator presses T immediately even if geometric proximity is noisy.
+  Otherwise it approaches until ready, presses T once, then waits. If a quest
+  dialogue/Accept/Yes button is visible, fill ui_click AND preferably ground
+  that same button as visual_target kind="ui". Do not repeatedly press T while
   awaiting_quest_confirmation=true.
 - FIGHT_QUEST_TARGET: the actuator closes distance on the tracked quest NPC and
   emits M1 clicks once melee geometry is reached. Do not attack ordinary players.
@@ -297,7 +298,9 @@ CONTROL DISCIPLINE:
 - BLOCK/EVADE are your decisions; no hidden combat policy chooses them.
 - LOOK_LEFT/LOOK_RIGHT are explicit camera actions for searching/recentering.
 - UI_CLICK/BUY_ITEM may click clearly visible ordinary in-game quest/menu/shop
-  buttons at confidence >= 0.80. Never confirm Robux, premium/gamepass,
+  buttons at confidence >= 0.80. When possible provide both ui_click normalized
+  center and visual_target kind="ui" bounding box so the local tracker can
+  preserve the AI-selected button without another cloud call. Never confirm Robux, premium/gamepass,
   account/security, external-link, or trade UI.
 - Use CURRENT screenshot/HUD + structured state as truth over static knowledge.
 - If the screenshot does not support a claim, do not invent it. Choose
