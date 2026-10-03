@@ -60,6 +60,8 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._last_ui_click_ns = 0
         self._last_ui_sig = None
         self._ai_enemy_confirmed_until_ns = 0
+        self._repeat_counts = {}
+        self._repeat_last_ns = {}
 
         # Progress/circling monitor. Proximity is the detector contract where
         # larger values mean visually closer.
@@ -143,6 +145,30 @@ class AIOnlyAutopilotSupervisor(Worker):
             return False
         self._last_one_shot_plan_id = pid
         return True
+
+    def _repeat_allowed(
+            self, pid: int, skill: str, now_ns: int,
+            *, interval_s: float, max_attempts: int) -> tuple[bool, int]:
+        """Bounded retry for a persistent AI-selected physical skill."""
+        key = (int(pid), str(skill).upper())
+        count = int(self._repeat_counts.get(key, 0))
+        if count >= int(max_attempts):
+            return False, count
+        last = int(self._repeat_last_ns.get(key, 0))
+        if last and now_ns - last < int(float(interval_s) * 1e9):
+            return False, count
+        count += 1
+        self._repeat_counts[key] = count
+        self._repeat_last_ns[key] = int(now_ns)
+        # Keep bookkeeping bounded as plans roll forward.
+        if len(self._repeat_counts) > 64:
+            keep = {k: v for k, v in self._repeat_counts.items()
+                    if k[0] >= pid - 8}
+            self._repeat_counts = keep
+            self._repeat_last_ns = {
+                k: v for k, v in self._repeat_last_ns.items()
+                if k in keep}
+        return True, count
 
     def _observe(self, now_ns: int, obs: dict) -> None:
         notes = obs.get("notes") or {}
@@ -687,27 +713,38 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "JUMP":
-            if self._one_shot(pid):
+            ok, attempt = self._repeat_allowed(
+                pid, "JUMP", now, interval_s=0.95, max_attempts=3)
+            if ok:
                 self._emit(
                     "JUMP", now, reason=reason,
-                    coach_plan_id=pid, coach_confidence=confidence)
-                self._action_epoch += 1
+                    coach_plan_id=pid, coach_confidence=confidence,
+                    skill_attempt=attempt)
+                if attempt == 1:
+                    self._action_epoch += 1
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "CLIMB":
-            if self._one_shot(pid):
+            ok, attempt = self._repeat_allowed(
+                pid, "CLIMB", now, interval_s=1.35, max_attempts=3)
+            if ok:
                 self._emit(
                     "CLIMB", now, reason=reason, ttl_s=2.0,
                     hold_s=1.20,
-                    coach_plan_id=pid, coach_confidence=confidence)
-                self._action_epoch += 1
+                    coach_plan_id=pid, coach_confidence=confidence,
+                    skill_attempt=attempt)
+                if attempt == 1:
+                    self._action_epoch += 1
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "GEPPO":
-            if now - self._last_emit_ns >= int(0.52e9):
+            ok, attempt = self._repeat_allowed(
+                pid, "GEPPO", now, interval_s=0.52, max_attempts=6)
+            if ok:
                 self._emit(
                     "GEPPO", now, reason=reason,
-                    coach_plan_id=pid, coach_confidence=confidence)
+                    coach_plan_id=pid, coach_confidence=confidence,
+                    skill_attempt=attempt)
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "SPRINT":
@@ -733,11 +770,14 @@ class AIOnlyAutopilotSupervisor(Worker):
                 self.stats["one_shot_commands"] += 1
 
         elif skill in {"LOOK_LEFT", "LOOK_RIGHT"}:
-            if self._one_shot(pid):
+            ok, attempt = self._repeat_allowed(
+                pid, skill, now, interval_s=0.90, max_attempts=3)
+            if ok:
                 self._emit(
                     "SEARCH_CAMERA", now, reason=reason,
-                    dx=(-105 if skill == "LOOK_LEFT" else 105),
-                    coach_plan_id=pid, coach_confidence=confidence)
+                    dx=(-78 if skill == "LOOK_LEFT" else 78),
+                    coach_plan_id=pid, coach_confidence=confidence,
+                    skill_attempt=attempt)
                 self.stats["one_shot_commands"] += 1
 
         elif skill == "GO_AROUND":
