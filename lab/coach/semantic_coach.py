@@ -1003,13 +1003,16 @@ Return ONLY a JSON object with exactly these fields:
         why = str(plan.get("explanation") or "").replace("\n", " ")
         if len(why) > 160:
             why = why[:157] + "..."
-        plan_log_sig = (
-            str(plan.get("skill") or ""),
-            str(plan.get("target") or ""),
-            why,
-        )
         suppress_dupes = bool(
             getattr(self, "suppress_duplicate_plan_logs", False))
+        plan_log_sig = (
+            (str(plan.get("skill") or ""),
+             str(plan.get("target") or ""))
+            if suppress_dupes else
+            (str(plan.get("skill") or ""),
+             str(plan.get("target") or ""),
+             why)
+        )
         if (not suppress_dupes
                 or plan_log_sig != getattr(
                     self, "_last_printed_plan_sig", None)):
