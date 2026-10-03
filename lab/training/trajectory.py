@@ -68,6 +68,7 @@ class TrajectoryRecorder(Worker):
             "plan_changes": 0,
             "command_changes": 0,
             "teacher_samples": 0,
+            "teacher_focused_samples": 0,
             "quest_completions": 0,
             "player_deaths": 0,
             "progress_increments": 0,
@@ -106,13 +107,19 @@ class TrajectoryRecorder(Worker):
         ai_track = self._payload(self.ai_track)
         teacher = self._payload(self.teacher)
 
-        now_ns = int(
-            world.get("ts_ns")
-            or quest.get("ts_ns")
-            or plan.get("ts_ns")
-            or command.get("ts_ns")
-            or self.clock.now_ns()
-        )
+        if teacher.get("enabled") and teacher.get("ts_ns"):
+            # Human action timing is the label clock in teacher mode. Using
+            # the slower CV timestamp here produced duplicate timestamps and
+            # lost the exact ordering of ~100 ms M1/block/dash transitions.
+            now_ns = int(teacher.get("ts_ns"))
+        else:
+            now_ns = int(
+                world.get("ts_ns")
+                or quest.get("ts_ns")
+                or plan.get("ts_ns")
+                or command.get("ts_ns")
+                or self.clock.now_ns()
+            )
         self._last_ts_ns = now_ns
 
         try:
@@ -155,6 +162,8 @@ class TrajectoryRecorder(Worker):
                         comp.get("delta", 1))
 
         focused = bool(teacher.get("focused"))
+        if focused:
+            self.stats["teacher_focused_samples"] += 1
         if focused and teacher.get("actions"):
             self.stats["teacher_samples"] += 1
 
