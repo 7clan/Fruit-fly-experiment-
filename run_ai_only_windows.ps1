@@ -29,6 +29,8 @@ Write-Host "Fruit-fly brain: DISABLED / NOT STARTED." -ForegroundColor Yellow
 Write-Host "Local CV only measures the screen and realizes the AI-selected target." -ForegroundColor Yellow
 Write-Host "The AI owns quests, navigation goals, combat, equipment, abilities, shops and progression." -ForegroundColor Yellow
 Write-Host "Vision profile: Gemini Flash-Lite + 6Hz marker CV + 10Hz AI-target tracking between cloud replies." -ForegroundColor Yellow
+Write-Host "Combat profile: one AI plan can orbit/approach + camera-track + M1/ability + guard/evade + equip concurrently." -ForegroundColor Yellow
+Write-Host "Cursor policy: Windows has one shared pointer; AI borrows it briefly for Roblox clicks/drags and restores your position." -ForegroundColor DarkYellow
 Write-Host "F8 enable, F9 disable, F10 refocus, F11 release keys, F12 emergency stop." -ForegroundColor Red
 
 & $mainPython -c "from lab.action.windows_input import _INPUT,_EXPECTED_INPUT_SIZE; import ctypes; s=ctypes.sizeof(_INPUT); print(f'[preflight] Win32 INPUT size={s} expected={_EXPECTED_INPUT_SIZE}'); raise SystemExit(0 if s==_EXPECTED_INPUT_SIZE else 2)"
