@@ -203,6 +203,8 @@ def test_visible_melee_enemy_does_not_trigger_navigation_recovery():
 def test_lost_combat_target_uses_reacquire_not_climb_jump():
     bus = _combat_bus("quest_enemy_marker", 0.40, 0.30)
     sup = AIOnlyAutopilotSupervisor(bus)
+    sup._quest_active_latched = True
+    sup._quest_status = "active"
     sup._progress_target = "quest_enemy_marker"
     sup._best_proximity = 0.40
     sup._last_progress_ns = sup.clock.now_ns() - int(5e9)
