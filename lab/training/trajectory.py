@@ -16,6 +16,7 @@ from pathlib import Path
 
 from ..worker import Worker
 from .reward import OnlineReward
+from .teacher_miner import rebuild_teacher_priors
 
 
 class TrajectoryRecorder(Worker):
@@ -215,12 +216,20 @@ class TrajectoryRecorder(Worker):
         self._persistent_fh.flush()
         self._local_fh.close()
         self._persistent_fh.close()
+        teacher_priors = None
+        if int(self.stats.get("teacher_focused_samples", 0)) > 0:
+            try:
+                teacher_priors = rebuild_teacher_priors(
+                    self.persistent_root)
+            except Exception as exc:
+                self.stats["teacher_prior_error"] = repr(exc)
         summary = {
             "schema_version": 1,
             "session_id": self.session_id,
             "trajectory": str(self.local_path),
             "persistent_trajectory": str(self.persistent_path),
             "stats": dict(self.stats),
+            "teacher_priors": teacher_priors,
         }
         text = json.dumps(summary, indent=1)
         self.summary_path.write_text(text, encoding="utf-8")
