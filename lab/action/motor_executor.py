@@ -970,6 +970,25 @@ class MotorExecutor(Worker):
                         -52 if camera == "look_left" else 52, 0)
 
                 move_hold = 0.34
+                desired_move = {
+                    "approach": {"W"},
+                    "orbit_left": {"W", "A"},
+                    "orbit_right": {"W", "D"},
+                    "retreat": {"S"},
+                    "sprint": {"W"},
+                    "jump": {"W"},
+                    "climb": {"W"},
+                    "hold": set(),
+                    "none": set(),
+                }.get(locomotion, set())
+                # Don't let old orbit keys overlap a new direction for a few
+                # hundred ms (A+D at once was visible as indecisive circling).
+                for code in ("W", "A", "S", "D"):
+                    if code in self._held and code not in desired_move:
+                        if self.autonomy_enabled:
+                            self.backend.key_up(code)
+                        self._held.pop(code, None)
+
                 if locomotion == "approach":
                     self._hold_key_locked("W", now_ns, move_hold)
                 elif locomotion == "orbit_left":
@@ -1034,8 +1053,7 @@ class MotorExecutor(Worker):
                           and (not self._bundle_last_attack_ns
                                or now_ns - self._bundle_last_attack_ns
                                >= int(0.26e9))):
-                        self.backend.mouse_button_down("left")
-                        self.backend.mouse_button_up("left")
+                        self._left_click_target_locked()
                         self._bundle_last_attack_ns = now_ns
                         self.stats["bundle_attacks"] += 1
 
