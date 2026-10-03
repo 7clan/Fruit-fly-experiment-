@@ -287,28 +287,34 @@ class AIOnlyBackend(QuestingBackend):
 
     def mouse_button_down(self, button: str) -> None:
         self._ensure_target_foreground()
-        # SendInput mouse clicks go to the window under the OS pointer, not
-        # magically to the foreground game. In AI-only mode center the pointer
-        # inside the authorized Roblox client before every combat M1.
-        if str(button).lower() == "left":
-            self.center_cursor_in_target()
         super().mouse_button_down(button)
+
+    def target_click(self, button: str = "left") -> None:
+        """Briefly click the Roblox client center and restore user cursor."""
+        self._ensure_target_foreground()
+        clicker = getattr(self.inner, "ui_click", None)
+        if clicker is None:
+            super().mouse_button_down(button)
+            super().mouse_button_up(button)
+            return
+        clicker(
+            0.50, 0.50, button=str(button).lower(),
+            restore_cursor=True)
 
     def ui_click(self, x_norm: float, y_norm: float,
                  button: str = "left", restore_cursor: bool = True) -> None:
         self._ensure_target_foreground()
-        # In AI-only mode there is no human cursor ownership to restore. Keep
-        # the pointer inside the authorized Roblox client after UI clicks so
-        # subsequent camera drags/attacks cannot begin on the desktop.
+        # There is one OS pointer on a normal Windows desktop. Borrow it for
+        # the shortest possible click and restore the user's position.
         super().ui_click(
-            x_norm, y_norm, button=button, restore_cursor=False)
-        self.center_cursor_in_target()
+            x_norm, y_norm, button=button, restore_cursor=True)
 
     def backend_health(self) -> dict:
         h = dict(super().backend_health())
         h["backend"] = self.name
         h["camera_drag"] = True
         h["mouse_move_enabled"] = True
+        h["shared_cursor_restore"] = True
         return h
 
 
@@ -739,6 +745,14 @@ class MotorExecutor(Worker):
             self.backend.key_down(code)
         self._held[code] = now_ns + int(max(0.03, hold_s) * 1e9)
 
+    def _left_click_target_locked(self) -> None:
+        clicker = getattr(self.backend, "target_click", None)
+        if clicker is not None:
+            clicker("left")
+            return
+        self.backend.mouse_button_down("left")
+        self.backend.mouse_button_up("left")
+
     def _consume_engineered_command(self, now_ns: int) -> None:
         """Execute one new semantic helper command.
 
@@ -770,7 +784,7 @@ class MotorExecutor(Worker):
             "ATTACK_ADVANCE", "AIR_COMBO", "GUT_PUNCH", "GROUND_SMASH",
             "BUSO_HAKI", "OBSERVATION_HAKI", "EQUIP_SLOT",
             "USE_OBSERVED_ABILITY", "EXEC_CONTROL", "UI_CLICK",
-            "BOARD_SHIP", "STEER_TARGET",
+            "BOARD_SHIP", "STEER_TARGET", "COMBAT_BUNDLE",
         }
         if name not in allowed:
             return
@@ -919,8 +933,7 @@ class MotorExecutor(Worker):
                 self._hold_key_locked("Q", now_ns, 0.16)
                 self.action_lock_until_ns = now_ns + int(0.30e9)
             elif name == "ATTACK_LIGHT":
-                self.backend.mouse_button_down("left")
-                self.backend.mouse_button_up("left")
+                self._left_click_target_locked()
                 self.action_lock_until_ns = now_ns + int(0.16e9)
             elif name == "COMBAT_BUNDLE":
                 # One AI plan may intentionally control several channels at
@@ -1032,13 +1045,11 @@ class MotorExecutor(Worker):
                 # Realize the AI's persistent FIGHT skill while the quest NPC
                 # is visible but just outside reliable melee geometry.
                 self._hold_key_locked("W", now_ns, 0.24)
-                self.backend.mouse_button_down("left")
-                self.backend.mouse_button_up("left")
+                self._left_click_target_locked()
                 self.action_lock_until_ns = now_ns + int(0.18e9)
             elif name == "AIR_COMBO":
                 self._hold_key_locked("SPACE", now_ns, 0.16)
-                self.backend.mouse_button_down("left")
-                self.backend.mouse_button_up("left")
+                self._left_click_target_locked()
                 self.action_lock_until_ns = now_ns + int(0.22e9)
             elif name == "GUT_PUNCH":
                 self._hold_key_locked("E", now_ns, 0.07)
@@ -1082,12 +1093,7 @@ class MotorExecutor(Worker):
                 self._release_movement_locked(
                     now_ns, reason="ui_click_freeze")
                 self.backend.ui_click(
-                    x, y, button="left", restore_cursor=False)
-                # AI-only backend/window backend keeps the cursor in Roblox;
-                # never restore it to an arbitrary desktop position.
-                center = getattr(self.backend, "center_cursor_in_target", None)
-                if center is not None:
-                    center()
+                    x, y, button="left", restore_cursor=True)
                 self.action_lock_until_ns = now_ns + int(0.70e9)
             elif name == "EXEC_CONTROL":
                 from .gpo_controls import control_map
