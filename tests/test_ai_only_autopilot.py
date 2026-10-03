@@ -1543,3 +1543,80 @@ def test_ai_only_stale_hook_keeps_persistent_nav_and_drops_stale_ui():
         {"skill": "FIGHT_QUEST_TARGET"}, old, new) is False
     assert coach._should_drop_stale_response(
         {"skill": "UI_CLICK"}, old, new) is True
+
+
+
+def test_positive_quest_dialogue_allows_one_tracked_followup_click():
+    bus = _armed_bus(
+        {"type": "quest_marker", "direction": 0.0,
+         "distance": 0.75, "confidence": 0.9},
+        {
+            "plan_id": 90,
+            "skill": "UI_CLICK",
+            "target": "Alright!",
+            "confidence": 0.96,
+            "explanation": "advance quest dialogue",
+            "perception": {
+                "quest_state": "pending_accept",
+                "dialogue_visible": True,
+                "interaction_prompt_visible": False,
+                "enemy_actor_visible": False,
+                "player_dead": False,
+                "safezone_visible": True,
+                "equipped_slot_visible": "unknown",
+                "melee_ready_visible": False,
+            },
+            "visual_target": {
+                "kind": "ui",
+                "x_norm": 0.50,
+                "y_norm": 0.80,
+                "bbox_norm": [0.43, 0.75, 0.57, 0.86],
+                "confidence": 0.95,
+                "melee_ready": False,
+            },
+            "ui_click": {
+                "needed": True,
+                "x_norm": 0.50,
+                "y_norm": 0.80,
+                "label": "Alright!",
+            },
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    first = bus.state("action.command").read()
+    assert first is not None
+    assert first.payload["name"] == "UI_CLICK"
+    first_id = first.payload["command_id"]
+
+    # Simulate the same AI-grounded positive button still tracked on the next
+    # dialogue page after the bounded retry interval.
+    now = sup.clock.now_ns()
+    sup._repeat_last_ns[(90, "QUEST_DIALOGUE_CLICK")] = (
+        now - int(1.1e9))
+    sup._last_ui_click_ns = now - int(1.1e9)
+    bus.state("ai.visual.track").write({
+        "plan_id": 90,
+        "kind": "ui",
+        "x_norm": 0.51,
+        "y_norm": 0.81,
+        "bbox_norm": [0.44, 0.76, 0.58, 0.87],
+        "direction": 0.02,
+        "proximity_hint": 0.5,
+        "confidence": 0.85,
+    })
+    sup.step()
+    second = bus.state("action.command").read()
+    assert second.payload["command_id"] > first_id
+    assert second.payload["name"] == "UI_CLICK"
+    assert sup.stats["quest_dialogue_followups"] == 1
+
+    # Hard cap: the same cloud plan cannot click a third time.
+    second_id = second.payload["command_id"]
+    now = sup.clock.now_ns()
+    sup._repeat_last_ns[(90, "QUEST_DIALOGUE_CLICK")] = (
+        now - int(1.1e9))
+    sup._last_ui_click_ns = now - int(1.1e9)
+    sup.step()
+    third = bus.state("action.command").read()
+    assert third.payload["command_id"] == second_id
