@@ -17,6 +17,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 import time
 import urllib.error
 import urllib.parse
@@ -185,6 +186,9 @@ class SemanticCoachWorker(Worker):
             "wiki_hits": 0,
             "wiki_errors": 0,
             "refinement_calls": 0,
+            "json_retries": 0,
+            "json_salvaged": 0,
+            "max_token_retries": 0,
             "disabled_reason": (
                 None if self.api_key else "GEMINI_API_KEY_missing"),
         })
@@ -327,6 +331,175 @@ Return ONLY a JSON object with exactly these fields:
   ]
 }}"""
 
+    def _plan_response_schema(self) -> dict:
+        """Compact schema for reliable controller output.
+
+        Only the six core decision fields are required. Rich perception/UI
+        structures are optional so a fast control decision does not waste
+        tokens filling irrelevant defaults.
+        """
+        return {
+            "type": "object",
+            "properties": {
+                "scene": {"type": "string"},
+                "objective": {"type": "string"},
+                "target": {"type": "string"},
+                "skill": {
+                    "type": "string",
+                    "enum": sorted(ALLOWED_SKILLS),
+                },
+                "control_id": {"type": "string"},
+                "observed_ability": {
+                    "type": "object",
+                    "properties": {
+                        "binding": {"type": "string"},
+                        "label": {"type": "string"},
+                    },
+                },
+                "visual_target": {
+                    "type": "object",
+                    "properties": {
+                        "kind": {
+                            "type": "string",
+                            "enum": [
+                                "none", "quest_giver",
+                                "quest_enemy_actor", "quest_objective",
+                                "waypoint", "ui",
+                            ],
+                        },
+                        "x_norm": {"type": "number"},
+                        "y_norm": {"type": "number"},
+                        "bbox_norm": {
+                            "type": "array",
+                            "items": {"type": "number"},
+                            "minItems": 4,
+                            "maxItems": 4,
+                        },
+                        "confidence": {"type": "number"},
+                        "melee_ready": {"type": "boolean"},
+                    },
+                },
+                "ui_click": {
+                    "type": "object",
+                    "properties": {
+                        "needed": {"type": "boolean"},
+                        "x_norm": {"type": "number"},
+                        "y_norm": {"type": "number"},
+                        "label": {"type": "string"},
+                    },
+                },
+                "confidence": {
+                    "type": "number",
+                    "minimum": 0.0,
+                    "maximum": 1.0,
+                },
+                "explanation": {"type": "string"},
+                "next_after_success": {"type": "string"},
+                "perception": {
+                    "type": "object",
+                    "properties": {
+                        "quest_state": {
+                            "type": "string",
+                            "enum": [
+                                "active", "available", "pending_accept",
+                                "completed", "unknown",
+                            ],
+                        },
+                        "dialogue_visible": {"type": "boolean"},
+                        "interaction_prompt_visible": {"type": "boolean"},
+                        "enemy_actor_visible": {"type": "boolean"},
+                        "player_dead": {"type": "boolean"},
+                        "safezone_visible": {"type": "boolean"},
+                        "equipped_slot_visible": {"type": "string"},
+                        "melee_ready_visible": {"type": "boolean"},
+                    },
+                },
+                "knowledge_query": {"type": "string"},
+                "memory_updates": {
+                    "type": "array",
+                    "maxItems": 4,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "key": {"type": "string"},
+                            "value": {},
+                            "confidence": {"type": "number"},
+                            "evidence": {"type": "string"},
+                        },
+                        "required": [
+                            "key", "value", "confidence", "evidence"
+                        ],
+                    },
+                },
+            },
+            "required": [
+                "scene", "objective", "target",
+                "skill", "confidence", "explanation",
+            ],
+        }
+
+    def _parse_plan_json(self, text: str) -> dict:
+        """Parse model JSON; fail-soft to a safe basic skill if truncated."""
+        raw_text = str(text or "").strip()
+        if raw_text.startswith("```"):
+            lines = raw_text.splitlines()
+            if lines and lines[0].startswith("```"):
+                lines = lines[1:]
+            if lines and lines[-1].strip().startswith("```"):
+                lines = lines[:-1]
+            raw_text = "\n".join(lines).strip()
+        try:
+            return json.loads(raw_text)
+        except json.JSONDecodeError:
+            # Try the common harmless trailing-comma failure first.
+            cleaned = re.sub(r",\s*([}\]])", r"\1", raw_text)
+            if cleaned != raw_text:
+                try:
+                    return json.loads(cleaned)
+                except json.JSONDecodeError:
+                    pass
+
+            # If the model was cut off after already emitting its core
+            # decision, preserve only low-risk skills. Never salvage UI,
+            # purchases, arbitrary controls, equipment, or ability bindings.
+            sm = re.search(
+                r'"skill"\s*:\s*"([A-Za-z_]+)"', raw_text)
+            if not sm:
+                raise
+            skill = sm.group(1).upper()
+            safe = {
+                "WAIT", "REOBSERVE", "TAKE_QUEST", "INTERACT",
+                "NAVIGATE_OBJECTIVE", "TRAVEL", "FIGHT_QUEST_TARGET",
+                "BLOCK", "EVADE", "JUMP", "CLIMB", "GO_AROUND",
+                "BACKTRACK", "SPRINT", "GEPPO", "LOOK_LEFT",
+                "LOOK_RIGHT", "BOARD_SHIP",
+            }
+            if skill not in safe:
+                raise
+            cm = re.search(
+                r'"confidence"\s*:\s*([0-9]*\.?[0-9]+)', raw_text)
+            confidence = (
+                max(0.0, min(1.0, float(cm.group(1))))
+                if cm else 0.70)
+            em = re.search(
+                r'"explanation"\s*:\s*"([^"\\]{0,220})', raw_text)
+            explanation = (
+                em.group(1) if em
+                else "salvaged core decision from truncated JSON")
+            self.stats["json_salvaged"] += 1
+            return {
+                "scene": "salvaged",
+                "objective": skill.lower(),
+                "target": "current grounded target",
+                "skill": skill,
+                "control_id": "",
+                "confidence": confidence,
+                "explanation": explanation,
+                "next_after_success": "reobserve",
+                "knowledge_query": "",
+                "memory_updates": [],
+            }
+
     def _call_gemini(
             self, prompt: str, image_b64: str | None,
             previous_image_b64: str | None = None) -> dict:
@@ -381,11 +554,21 @@ Return ONLY a JSON object with exactly these fields:
             # low-latency controller workload.
             thinking = {"thinkingLevel": "minimal"}
 
+        max_tokens = int(getattr(self, "max_output_tokens", 768))
+        schema = self._plan_response_schema()
         generation = {
-            "maxOutputTokens": int(
-                getattr(self, "max_output_tokens", 620)),
-            "responseMimeType": "application/json",
+            "maxOutputTokens": max_tokens,
+            "temperature": 0.0,
             "thinkingConfig": thinking,
+            # Current Gemini REST structured-output surface. This constrains
+            # syntax and avoids the all-run JSON truncation/parsing failure
+            # seen in lab_20261003_055259.
+            "responseFormat": {
+                "text": {
+                    "mimeType": "application/json",
+                    "schema": schema,
+                },
+            },
         }
         body = {
             "contents": [{
@@ -432,26 +615,61 @@ Return ONLY a JSON object with exactly these fields:
         try:
             payload = send(body)
         except urllib.error.HTTPError as exc:
-            # If a particular generation rejects structured JSON or a thinking
-            # field, keep the same native transport and retry with the common
-            # generateContent surface. The prompt itself still demands JSON.
             if int(getattr(exc, "code", 0)) != 400:
                 raise
-            fallback = {
+            # Older generateContent generations use the legacy fields. Keep
+            # schema enforcement instead of dropping straight to free-form.
+            legacy = {
                 "contents": body["contents"],
                 "generationConfig": {
-                    "maxOutputTokens": int(
-                        getattr(self, "max_output_tokens", 620)),
+                    "maxOutputTokens": max_tokens,
+                    "temperature": 0.0,
+                    "responseMimeType": "application/json",
+                    "responseSchema": schema,
+                    "thinkingConfig": thinking,
                 },
             }
-            payload = send(fallback)
+            try:
+                payload = send(legacy)
+            except urllib.error.HTTPError as legacy_exc:
+                if int(getattr(legacy_exc, "code", 0)) != 400:
+                    raise
+                # Final compatibility fallback. The parser below still has a
+                # safe skill-only salvage path.
+                payload = send({
+                    "contents": body["contents"],
+                    "generationConfig": {
+                        "maxOutputTokens": max(768, max_tokens),
+                        "temperature": 0.0,
+                    },
+                })
 
         candidates = payload.get("candidates") or []
         if not candidates:
             raise RuntimeError(
                 f"Gemini returned no candidates: {str(payload)[:600]}")
+
+        candidate = candidates[0]
+        finish = str(candidate.get("finishReason") or "").upper()
+        if finish in {"MAX_TOKENS", "MAX_OUTPUT_TOKENS"}:
+            # One retry with enough room is cheaper than running for minutes
+            # with zero executable plans.
+            retry_body = {
+                "contents": body["contents"],
+                "generationConfig": dict(generation),
+            }
+            retry_body["generationConfig"]["maxOutputTokens"] = max(
+                1024, max_tokens * 2)
+            self.stats["max_token_retries"] += 1
+            payload = send(retry_body)
+            candidates = payload.get("candidates") or []
+            if not candidates:
+                raise RuntimeError(
+                    "Gemini max-token retry returned no candidates")
+            candidate = candidates[0]
+
         out_parts = (
-            (candidates[0].get("content") or {}).get("parts") or [])
+            (candidate.get("content") or {}).get("parts") or [])
         text = "".join(
             str(p.get("text") or "")
             for p in out_parts if isinstance(p, dict)
@@ -460,14 +678,29 @@ Return ONLY a JSON object with exactly these fields:
             raise RuntimeError(
                 f"Gemini returned no text: {str(payload)[:600]}")
 
-        if text.startswith("```"):
-            lines = text.splitlines()
-            if lines and lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].strip().startswith("```"):
-                lines = lines[:-1]
-            text = "\n".join(lines).strip()
-        return json.loads(text)
+        try:
+            return self._parse_plan_json(text)
+        except json.JSONDecodeError:
+            # Rare schema/transport regression: retry once with a bigger
+            # structured budget before surfacing an API error to the worker.
+            self.stats["json_retries"] += 1
+            retry_body = {
+                "contents": body["contents"],
+                "generationConfig": dict(generation),
+            }
+            retry_body["generationConfig"]["maxOutputTokens"] = max(
+                1024, max_tokens * 2)
+            retry_payload = send(retry_body)
+            retry_candidates = retry_payload.get("candidates") or []
+            if not retry_candidates:
+                raise
+            retry_parts = (
+                (retry_candidates[0].get("content") or {}).get("parts") or [])
+            retry_text = "".join(
+                str(p.get("text") or "")
+                for p in retry_parts if isinstance(p, dict)
+            ).strip()
+            return self._parse_plan_json(retry_text)
 
     _PROFILE_KEYS = frozenset({
         "level", "peli", "island", "active_quest", "fruit",
