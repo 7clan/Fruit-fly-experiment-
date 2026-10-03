@@ -89,6 +89,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
             bool(quest.get("circling")),
             int(quest.get("ui_epoch") or 0),
             int(quest.get("visual_nav_epoch") or 0),
+            int(quest.get("target_reject_epoch") or 0),
             health_bucket,
         )
 
@@ -419,6 +420,10 @@ CONTROL DISCIPLINE:
   because the quest objective is somewhere behind that wall. If no safe
   visible path point is grounded, choose LOOK_LEFT/LOOK_RIGHT, GO_AROUND,
   BACKTRACK or REOBSERVE instead of fabricating a waypoint.
+- WATER IS NOT A WALKABLE WAYPOINT. Do not sprint off docks, seawalls or shore
+  into open water on foot; sharks can kill the player. A waypoint must be on
+  visible land, stairs, a bridge/dock surface, or another clearly walkable
+  surface, preferably in the lower portion of the current frame.
 - EQUIPMENT FOR COMBAT: inspect the CURRENT hotbar/hand/ability HUD. Report
   the visibly selected hotbar slot in perception.equipped_slot_visible. A
   selected fist/melee slot plus visible melee move HUD means the style is ready;
