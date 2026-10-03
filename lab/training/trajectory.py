@@ -24,6 +24,7 @@ class TrajectoryRecorder(Worker):
     def __init__(self, bus, session_dir: Path, persistent_root: Path,
                  skill_library=None, target_hz: float = 5.0):
         super().__init__(bus, target_hz=target_hz)
+        self.capture = bus.state("capture.frames.latest")
         self.world = bus.state("world.observation")
         self.quest = bus.state("quest.state")
         self.plan = bus.state("coach.plan")
@@ -96,6 +97,7 @@ class TrajectoryRecorder(Worker):
         self._persistent_fh.write(line + "\n")
 
     def step(self) -> None:
+        capture = self._payload(self.capture)
         world = self._payload(self.world)
         quest = self._payload(self.quest)
         plan = self._payload(self.plan)
@@ -165,6 +167,13 @@ class TrajectoryRecorder(Worker):
             "mode": (
                 "teacher" if teacher.get("enabled")
                 else "ai_only" if plan else "observation"),
+            "frame_ref": {
+                "frame_id": capture.get("frame_id"),
+                "width": capture.get("width"),
+                "height": capture.get("height"),
+                "format": capture.get("format", capture.get("fmt")),
+                "copy_count": capture.get("copy_count"),
+            },
             "world": world,
             "quest": quest,
             "plan": plan,
