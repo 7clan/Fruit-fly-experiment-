@@ -43,7 +43,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         # One frame + compact JSON is enough for this controller. Sending the
         # previous frame doubled vision work while local CV already measures
         # progress/stuck state.
-        self.max_output_tokens = 560
+        self.max_output_tokens = 420
         self.stats.update({
             "provider": self.provider,
             "decision_owner": "cloud_ai",
@@ -159,8 +159,10 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                     "TAKE_QUEST", "INTERACT", "UI_CLICK",
                     "BUY_ITEM", "EQUIP_SLOT", "USE_OBSERVED_ABILITY",
                 })
-            max_w = 896 if detail_mode else 640
-            quality = 72 if detail_mode else 62
+            # Navigation needs scene layout, not tiny UI text. Dialogue/shop
+            # pages get a larger frame only while they are actually active.
+            max_w = 800 if detail_mode else 576
+            quality = 70 if detail_mode else 60
             img = frame
             h, w = img.shape[:2]
             if w > max_w:
@@ -484,7 +486,7 @@ class AIOnlyGeminiCoachWorker(AIOnlyOllamaCoachWorker):
         self.provider = "gemini_ai_only"
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
-        self.max_output_tokens = 560
+        self.max_output_tokens = 420
         self.stats.update({
             "provider": self.provider,
             "model": self.model,
