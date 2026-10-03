@@ -96,6 +96,9 @@ class AIOnlyAutopilotSupervisor(Worker):
             "climb_recoveries": 0,
             "backtrack_recoveries": 0,
             "camera_recoveries": 0,
+            "combat_recoveries": 0,
+            "combat_reacquire_searches": 0,
+            "combat_reposition_recoveries": 0,
             "decision_owner": "cloud_ai",
             "fruit_fly_control": False,
         })
@@ -248,7 +251,20 @@ class AIOnlyAutopilotSupervisor(Worker):
             self._recovery_stage = 0
             self._recovery_target = target_key
         elif proximity is not None:
-            if (self._best_proximity is None
+            # "Not getting closer" is a navigation failure signal, but it is
+            # NOT a combat failure signal. Orbiting/guarding around a nearby
+            # enemy intentionally keeps distance roughly constant. The old
+            # monitor therefore fired generic JUMP/CLIMB/DASH recovery in the
+            # middle of healthy fights.
+            in_close_combat = bool(
+                ttype == "quest_enemy_actor" and proximity >= 0.34)
+            if in_close_combat:
+                self._best_proximity = proximity
+                self._last_progress_ns = now_ns
+                self._stuck = False
+                self._circling = False
+                self._recovery_stage = 0
+            elif (self._best_proximity is None
                     or proximity > self._best_proximity + 0.035):
                 self._best_proximity = proximity
                 self._last_progress_ns = now_ns
@@ -395,6 +411,50 @@ class AIOnlyAutopilotSupervisor(Worker):
         self._last_recovery_ns = now_ns
         self._recovery_stage += 1
         self.stats["micro_recoveries"] += 1
+        return True
+
+    def _recover_combat(
+            self, now_ns: int, *, pid: int, confidence: float,
+            reason: str, direction: float | None,
+            target_type: str) -> bool:
+        """Reacquire/reposition under an already AI-selected FIGHT goal.
+
+        Combat recovery intentionally excludes generic CLIMB/JUMP. Those are
+        navigation skills and caused the agent to look confused while already
+        in melee. Explicit cloud CLIMB/JUMP plans still work; this local bridge
+        only tries to regain target lock or create a small amount of space.
+        """
+        if self._recovery_target != "combat:" + str(target_type):
+            self._recovery_target = "combat:" + str(target_type)
+            self._recovery_stage = 0
+        if (self._last_recovery_ns
+                and now_ns - self._last_recovery_ns < int(0.90e9)):
+            return False
+
+        stage = self._recovery_stage % 3
+        if stage == 0:
+            dx = 58 if (direction is None or direction >= 0) else -58
+            name, extra = "SEARCH_CAMERA", {"dx": dx}
+            self.stats["combat_reacquire_searches"] += 1
+        elif stage == 1 and direction is not None:
+            name, extra = "STEER_TARGET", {
+                "direction": float(direction),
+                "hold_s": 0.55,
+                "camera_align": True,
+            }
+            self.stats["combat_reposition_recoveries"] += 1
+        else:
+            name, extra = "DASH_BACK", {}
+            self.stats["combat_reposition_recoveries"] += 1
+
+        self._emit(
+            name, now_ns,
+            reason=reason + f":combat_recovery_{stage + 1}",
+            coach_plan_id=pid, coach_confidence=confidence,
+            target_type=target_type, **extra)
+        self._last_recovery_ns = now_ns
+        self._recovery_stage += 1
+        self.stats["combat_recoveries"] += 1
         return True
 
     def step(self) -> None:
@@ -778,12 +838,19 @@ class AIOnlyAutopilotSupervisor(Worker):
                 return
 
             if self._stuck or self._circling:
-                self._recover_navigation(
-                    now, pid=pid, confidence=confidence,
-                    reason=reason, direction=target_dir,
-                    target_type=target_source or "quest_enemy")
-                self._publish_state(now, obs, plan)
-                return
+                if grounded:
+                    # Constant distance while orbiting a visible enemy is not
+                    # "stuck". Keep the AI-selected combat channels alive.
+                    self._stuck = False
+                    self._circling = False
+                    self._recovery_stage = 0
+                else:
+                    self._recover_combat(
+                        now, pid=pid, confidence=confidence,
+                        reason=reason, direction=target_dir,
+                        target_type=target_source or "quest_enemy")
+                    self._publish_state(now, obs, plan)
+                    return
 
             # AI channels are required by the schema. Keep conservative
             # defaults for old cached plans during branch upgrades.
