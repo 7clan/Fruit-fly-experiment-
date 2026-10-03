@@ -46,6 +46,15 @@ def sanitize_api_key(value: str | None) -> str:
     return key.replace("\r", "").replace("\n", "").strip()
 
 
+def valid_api_key_shape(value: str | None) -> bool:
+    """Reject obviously truncated/masked values before network traffic."""
+    key = sanitize_api_key(value)
+    return bool(
+        len(key) >= 20
+        and (key.startswith("AIza") or key.startswith("AQ."))
+    )
+
+
 def _query_key_url(url: str, key: str) -> str:
     parts = urllib.parse.urlsplit(url)
     query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
@@ -207,6 +216,13 @@ def probe(model: str | None = None,
         model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL).strip()
     if not key:
         return False, "GEMINI_API_KEY is missing", None
+    if not valid_api_key_shape(key):
+        return (
+            False,
+            "GEMINI_API_KEY is truncated/masked or not an AI Studio key "
+            f"(length={len(key)}). Re-run setup and copy the COMPLETE key.",
+            None,
+        )
 
     available: set[str] = set()
     list_note = ""
