@@ -74,8 +74,16 @@ def test_red_objective_marker_alone_never_becomes_melee_click():
             "target": "Corrupt Marine objective",
             "confidence": 0.96,
             "explanation": "fight the quest enemy",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": False,
+            },
         },
-        notes={"quest_enemy_marker_detected": True},
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.0,
+            "quest_enemy_marker_proximity": 0.82,
+        },
     )
     sup = AIOnlyAutopilotSupervisor(bus)
     sup.step()
@@ -107,6 +115,10 @@ def test_confirmed_close_quest_enemy_actor_is_attacked():
             "target": "Corrupt Marine",
             "confidence": 0.96,
             "explanation": "fight the tracked quest NPC",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": True,
+            },
         },
         notes={
             "quest_enemy_marker_detected": True,
@@ -145,6 +157,10 @@ def test_far_quest_enemy_actor_is_approached_before_attack():
             "target": "quest enemy",
             "confidence": 0.95,
             "explanation": "close distance to quest enemy",
+            "perception": {
+                "quest_state": "active",
+                "enemy_actor_visible": True,
+            },
         },
         notes={
             "quest_enemy_marker_detected": True,
@@ -1042,7 +1058,7 @@ def test_ai_only_gemini_controller_reuses_same_ai_only_contract():
     assert coach.provider == "gemini_ai_only"
     assert coach.stats["decision_owner"] == "cloud_ai"
     assert coach.stats["fruit_fly_control"] is False
-    assert coach.max_output_tokens == 768
+    assert coach.max_output_tokens == 560
     prompt = coach._prompt(
         {"target": {"type": "none"}, "player": {}, "notes": {}},
         {"quest_status": "unknown"},
@@ -1390,19 +1406,21 @@ def test_gemini_controller_never_salvages_risky_truncated_ui_action():
         coach._parse_plan_json(raw)
 
 
-def test_gemini_plan_schema_requires_only_core_decision_fields():
+def test_gemini_plan_schema_requires_core_decision_plus_grounding():
     bus = Bus()
     coach = AIOnlyGeminiCoachWorker(
         bus, model="gemini-3.5-flash-lite", api_key="test-only")
     schema = coach._plan_response_schema()
-    assert schema["required"] == [
-        "scene", "objective", "target",
-        "skill", "confidence", "explanation",
-    ]
+    for field in (
+            "scene", "objective", "target", "skill",
+            "confidence", "explanation", "perception", "visual_target"):
+        assert field in schema["required"]
     assert "FIGHT_QUEST_TARGET" in (
         schema["properties"]["skill"]["enum"])
     assert "ui_click" not in schema["required"]
-    assert coach.max_output_tokens >= 700
+    assert "bbox_norm" in (
+        schema["properties"]["visual_target"]["required"])
+    assert coach.max_output_tokens == 560
 
 
 
