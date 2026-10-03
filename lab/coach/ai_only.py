@@ -38,6 +38,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
         self.min_call_interval_s = 1.0
         self.unchanged_refresh_s = 18.0
         self.provider = "ollama_cloud_ai_only"
+        self.skill_state = bus.state("training.skills")
         self.drop_stale_responses = True
         self.suppress_duplicate_plan_logs = True
         # One frame + compact JSON is enough for this controller. Sending the
@@ -275,6 +276,26 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                 ),
             },
         }
+        skill_env = self.skill_state.read()
+        learned_skills = (
+            (skill_env.payload or {}).get("skills", {})
+            if skill_env is not None else {})
+        compact_skills = {}
+        for sid, rec in learned_skills.items():
+            if not isinstance(rec, dict):
+                continue
+            compact_skills[str(sid)] = {
+                "category": rec.get("category"),
+                "attempts": rec.get("attempts"),
+                "positive": rec.get("positive_outcomes"),
+                "negative": rec.get("negative_outcomes"),
+                "neutral": rec.get("neutral_outcomes"),
+                "last_reward": rec.get("last_reward"),
+                "preconditions": rec.get("preconditions"),
+                "success_conditions": rec.get("success_conditions"),
+                "failure_conditions": rec.get("failure_conditions"),
+            }
+
         situation = {
             "world": _compact(world_for_ai, 2600),
             "quest": _compact(quest, 2200),
@@ -284,6 +305,7 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                 "loadout": action_meta.get("gpo_loadout"),
             },
             "verified_controls": controls,
+            "learned_skill_library": _compact(compact_skills, 2600),
             "previous_plan": _compact(previous_plan, 1300),
             "persistent_character_profile": _compact(self.profile, 2400),
             "state_contract": {
@@ -301,6 +323,9 @@ class AIOnlyOllamaCoachWorker(OllamaCloudCoachWorker):
                 "action_epoch": (
                     "increments after one-shot physical actions so you can "
                     "verify the result on the next frame"),
+                "learned_skill_library": (
+                    "persistent measured outcomes from previous sessions; "
+                    "use it as experience, not as current visual truth"),
             },
         }
         situation_text = json.dumps(situation, default=str)
