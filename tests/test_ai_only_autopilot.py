@@ -89,8 +89,10 @@ def test_red_objective_marker_alone_never_becomes_melee_click():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "STEER_TARGET"
-    assert sup.stats["combat_commands"] == 0
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
+    assert cmd.payload["target_type"] == "quest_enemy_marker"
+    assert cmd.payload["attack"] is False
+    assert sup.stats["combat_commands"] == 1
 
 
 def test_confirmed_close_quest_enemy_actor_is_attacked():
@@ -130,8 +132,9 @@ def test_confirmed_close_quest_enemy_actor_is_attacked():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
     assert cmd.payload["target_type"] == "quest_enemy_actor"
+    assert cmd.payload["attack"] is True
     assert sup.stats["combat_commands"] == 1
 
 
@@ -172,11 +175,10 @@ def test_far_quest_enemy_actor_is_approached_before_attack():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] in {"STEER_TARGET", "ATTACK_ADVANCE"}
-    if cmd.payload["name"] == "STEER_TARGET":
-        assert cmd.payload["direction"] == -0.65
-    else:
-        assert cmd.payload["target_type"] == "quest_enemy_actor"
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
+    assert cmd.payload["direction"] == -0.65
+    assert cmd.payload["target_type"] == "quest_enemy_actor"
+    assert cmd.payload["attack"] is False
 
 
 
@@ -210,9 +212,9 @@ def test_close_red_marker_without_grounded_body_is_approached_not_attacked():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
     assert cmd.payload["target_type"] == "quest_enemy_marker"
-    assert sup.stats["combat_commands"] == 0
+    assert cmd.payload["attack"] is False
 
 def test_navigation_servo_does_not_reissue_same_command_every_worker_tick():
     bus = _armed_bus(
@@ -667,8 +669,7 @@ def test_attack_advance_physically_combines_w_and_m1():
     })
     ex.step()
     assert ("key_down", "W") in fake.events
-    assert ("mouse_down", "left") in fake.events
-    assert ("mouse_up", "left") in fake.events
+    assert ("ui_click", 0.5, 0.5, "left") in fake.events
 
 
 
@@ -741,8 +742,9 @@ def test_ai_visual_enemy_can_attack_when_local_body_tracker_misses():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "ATTACK_LIGHT"
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
     assert cmd.payload["target_type"] == "quest_enemy_actor_ai_visual"
+    assert cmd.payload["attack"] is True
     assert sup.stats["combat_commands"] == 1
 
 
@@ -778,8 +780,9 @@ def test_ai_visual_enemy_off_axis_steers_instead_of_clicking_empty_space():
     sup.step()
     cmd = bus.state("action.command").read()
     assert cmd is not None
-    assert cmd.payload["name"] == "STEER_TARGET"
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
     assert cmd.payload["target_type"] == "quest_enemy_actor_ai_visual"
+    assert cmd.payload["attack"] is False
 
 
 def test_ambiguous_edge_quest_dialogue_click_is_suppressed():
@@ -1187,16 +1190,17 @@ def test_fight_macro_can_equip_ai_selected_slot_then_continue_same_plan():
     sup.step()
     first = bus.state("action.command").read()
     assert first is not None
-    assert first.payload["name"] == "EQUIP_SLOT"
-    assert first.payload["slot"] == "1"
-    assert sup._last_fight_equip_plan_id == 502
+    assert first.payload["name"] == "COMBAT_BUNDLE"
+    assert first.payload["equip_slot"] == "1"
+    assert first.payload["attack"] is True
 
-    # Same cloud plan is still live; after the equipment precondition the
-    # adapter is allowed to execute the AI's fight macro.
-    sup._last_emit_ns = 0
+    # Same cloud fight plan keeps all selected channels alive after equipment
+    # has been selected; it does not require a separate cloud round-trip.
+    sup._last_combat_bundle_ns = 0
     sup.step()
     second = bus.state("action.command").read()
-    assert second.payload["name"] in {"ATTACK_LIGHT", "ATTACK_ADVANCE"}
+    assert second.payload["name"] == "COMBAT_BUNDLE"
+    assert second.payload["equip_slot"] == ""
 
 
 def test_take_quest_macro_can_click_visible_dialog_without_second_ai_call():
@@ -1248,14 +1252,11 @@ def test_ai_only_backend_ui_click_never_restores_cursor_outside_game():
 
 
 
-def test_ai_only_combat_click_is_centered_inside_game():
+def test_ai_only_combat_target_click_borrows_game_center():
     fake = _FakeCameraInput()
     backend = AIOnlyBackend(fake)
-    backend.mouse_button_down("left")
-    backend.mouse_button_up("left")
-    assert fake.events[0] == ("center_cursor",)
-    assert ("mouse_down", "left") in fake.events
-    assert ("mouse_up", "left") in fake.events
+    backend.target_click("left")
+    assert ("ui_click", 0.5, 0.5, "left") in fake.events
 
 
 def test_ai_only_recovery_skill_retries_are_bounded():
@@ -1689,3 +1690,148 @@ def test_ai_visual_tracker_semantic_key_ignores_generic_target_words():
     })
     assert k1[0] == k2[0]
     assert k1[1] == k2[1] == "corrupt marine"
+
+
+
+def test_compound_combat_bundle_runs_move_attack_and_guard_channels():
+    bus = Bus()
+    fake = _FakeCameraInput()
+    backend = AIOnlyBackend(fake)
+    ex = MotorExecutor(
+        bus,
+        backend=backend,
+        autonomy_enabled=True,
+        questing=True,
+        command_only=True,
+    )
+    now = ex.clock.now_ns()
+    bus.state("action.command").write({
+        "command_id": 700,
+        "name": "COMBAT_BUNDLE",
+        "source": "ai_only_autopilot",
+        "direction": 0.10,
+        "proximity": 0.70,
+        "locomotion": "orbit_right",
+        "offense": "m1",
+        "defense": "guard_between_attacks",
+        "camera": "track_target",
+        "attack": True,
+        "equip_slot": "1",
+        "ts_ns": now,
+        "expires_ns": now + int(2e9),
+    })
+    ex.step()
+    # First bundle can equip + orbit + guard together.
+    assert ("key_down", "1") in fake.events
+    assert ("key_down", "D") in fake.events
+    assert ("key_down", "W") in fake.events
+    assert ("key_down", "F") in fake.events
+    assert ex.stats["combat_bundles"] == 1
+    assert ex.stats["bundle_guards"] == 1
+
+    # Next bundle after guard cadence can attack while continuing movement.
+    ex._bundle_last_guard_ns = now
+    ex._last_command_id = -1
+    bus.state("action.command").write({
+        "command_id": 701,
+        "name": "COMBAT_BUNDLE",
+        "source": "ai_only_autopilot",
+        "direction": 0.05,
+        "proximity": 0.72,
+        "locomotion": "orbit_right",
+        "offense": "m1",
+        "defense": "guard_between_attacks",
+        "camera": "track_target",
+        "attack": True,
+        "equip_slot": "",
+        "ts_ns": now,
+        "expires_ns": now + int(2e9),
+    })
+    ex.step()
+    assert ("ui_click", 0.5, 0.5, "left") in fake.events
+    assert ex.stats["bundle_attacks"] >= 1
+
+
+def test_ai_only_schema_requires_compound_action_channels():
+    bus = Bus()
+    coach = AIOnlyGeminiCoachWorker(
+        bus, model="gemini-3.5-flash-lite", api_key="test-only")
+    schema = coach._plan_response_schema()
+    assert "action_channels" in schema["required"]
+    channels = schema["properties"]["action_channels"]
+    assert set(channels["required"]) == {
+        "locomotion", "offense", "defense",
+        "camera", "equip_control_id",
+    }
+
+
+def test_visible_quest_hud_latches_active_even_through_occlusion():
+    bus = _armed_bus(
+        {"type": "none", "direction": None, "distance": None,
+         "confidence": 0.0},
+        {
+            "plan_id": 702,
+            "skill": "REOBSERVE",
+            "target": "none",
+            "confidence": 0.96,
+            "explanation": "quest HUD visible while target is behind a wall",
+            "perception": {
+                "quest_state": "unknown",
+                "quest_hud_visible": True,
+                "quest_progress_text": "Defeat Corrupt Marines 1/8",
+                "enemy_actor_visible": False,
+            },
+        },
+        notes={},
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    sup.step()
+    state = bus.state("quest.state").read().payload
+    assert state["quest_status"] == "active"
+    assert state["quest_active_latched"] is True
+    assert state["quest_hud_ai_visible"] is True
+    assert state["quest_progress_text"] == "Defeat Corrupt Marines 1/8"
+
+
+def test_close_stable_red_marker_can_drive_attack_through_occlusion():
+    bus = _armed_bus(
+        {
+            "type": "quest_enemy_marker",
+            "direction": 0.02,
+            "distance": 0.82,
+            "confidence": 0.95,
+        },
+        {
+            "plan_id": 703,
+            "skill": "FIGHT_QUEST_TARGET",
+            "target": "quest enemy behind wall",
+            "confidence": 0.95,
+            "explanation": "red quest dot is close and centered",
+            "perception": {
+                "quest_state": "active",
+                "quest_hud_visible": True,
+                "enemy_actor_visible": False,
+            },
+            "action_channels": {
+                "locomotion": "approach",
+                "offense": "m1",
+                "defense": "guard_between_attacks",
+                "camera": "track_target",
+                "equip_control_id": "",
+            },
+        },
+        notes={
+            "quest_enemy_marker_detected": True,
+            "quest_enemy_marker_direction": 0.02,
+            "quest_enemy_marker_proximity": 0.82,
+        },
+    )
+    sup = AIOnlyAutopilotSupervisor(bus)
+    # Simulate the red marker remaining continuously tied to this objective.
+    sup._enemy_marker_since_ns = sup.clock.now_ns() - int(1.0e9)
+    sup.step()
+    cmd = bus.state("action.command").read()
+    assert cmd is not None
+    assert cmd.payload["name"] == "COMBAT_BUNDLE"
+    assert cmd.payload["target_type"] == "quest_enemy_marker"
+    assert cmd.payload["attack"] is True
