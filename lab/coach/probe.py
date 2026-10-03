@@ -15,6 +15,7 @@ import json
 import os
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 
 
@@ -32,23 +33,64 @@ TINY_PNG_B64 = (
 )
 
 
+def sanitize_api_key(value: str | None) -> str:
+    """Normalize common copy/paste forms without ever logging the secret."""
+    key = str(value or "").strip()
+    # Users often copy KEY=value or a quoted value from setup instructions.
+    for prefix in ("GEMINI_API_KEY=", "GOOGLE_API_KEY=", "x-goog-api-key:"):
+        if key.lower().startswith(prefix.lower()):
+            key = key[len(prefix):].strip()
+            break
+    if len(key) >= 2 and key[0] == key[-1] and key[0] in {"'", '"'}:
+        key = key[1:-1].strip()
+    return key.replace("\r", "").replace("\n", "").strip()
+
+
+def _query_key_url(url: str, key: str) -> str:
+    parts = urllib.parse.urlsplit(url)
+    query = urllib.parse.parse_qsl(parts.query, keep_blank_values=True)
+    query = [(k, v) for k, v in query if k.lower() != "key"]
+    query.append(("key", key))
+    return urllib.parse.urlunsplit((
+        parts.scheme, parts.netloc, parts.path,
+        urllib.parse.urlencode(query), parts.fragment))
+
+
 def _request(url: str, key: str, *, data: dict | None = None,
              timeout_s: float = 10.0) -> dict:
+    """Send the exact documented REST shape.
+
+    The target Windows machine repeatedly received an HTML HTTP 400 before
+    Gemini parsed the request when the API key was sent as a custom header.
+    Google's own multimodal shell example also documents ?key= authentication,
+    so retry that transport only for this pre-routing style failure.
+    """
+    key = sanitize_api_key(key)
     raw = None if data is None else json.dumps(data).encode("utf-8")
-    req = urllib.request.Request(
-        url,
-        data=raw,
-        headers={
-            "Accept": "application/json",
-            "Content-Type": "application/json",
-            "x-goog-api-key": key,
-            "x-goog-api-client": "digitalflylab-native/1.0",
-            "User-Agent": "DigitalFlyLab/1.0",
-        },
-        method="POST" if data is not None else "GET",
-    )
-    with urllib.request.urlopen(req, timeout=float(timeout_s)) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    method = "POST" if data is not None else "GET"
+
+    def send(target_url: str, use_header: bool):
+        headers = {"Content-Type": "application/json"}
+        if use_header:
+            headers["x-goog-api-key"] = key
+        req = urllib.request.Request(
+            target_url, data=raw, headers=headers, method=method)
+        with urllib.request.urlopen(
+                req, timeout=float(timeout_s)) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+
+    try:
+        return send(url, True)
+    except urllib.error.HTTPError as exc:
+        try:
+            body = exc.read().decode("utf-8", errors="replace")
+        except Exception:
+            body = ""
+        # HTML 400 means the request died before Gemini's normal JSON error
+        # surface. Retry Google's documented query-key REST form.
+        if int(getattr(exc, "code", 0)) != 400 or "<html" not in body.lower():
+            raise
+    return send(_query_key_url(url, key), False)
 
 
 def native_models(key: str, timeout_s: float = 10.0) -> set[str]:
@@ -160,7 +202,7 @@ def probe(model: str | None = None,
           timeout_s: float = 10.0,
           require_vision: bool = False,
           prefer_fastest_vision: bool = False) -> tuple[bool, str, str | None]:
-    key = str(os.getenv("GEMINI_API_KEY") or "").strip()
+    key = sanitize_api_key(os.getenv("GEMINI_API_KEY"))
     requested = str(
         model or os.getenv("GEMINI_MODEL") or DEFAULT_MODEL).strip()
     if not key:
@@ -262,8 +304,9 @@ def probe(model: str | None = None,
             errors.append(f"{candidate}:{type(exc).__name__}:{exc}")
 
     key_kind = (
-        "auth_key" if key.startswith("AQ.")
-        else "standard_or_unknown_key")
+        "google_api_key" if key.startswith("AIza")
+        else "auth_key" if key.startswith("AQ.")
+        else f"unknown_prefix_len_{len(key)}")
     return (
         False,
         "no Gemini model succeeded via native generateContent "
